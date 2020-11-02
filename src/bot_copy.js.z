@@ -1,0 +1,173 @@
+const path = require('path');
+const Discord = require('discord.js');
+const mongoose = require('mongoose');
+// const mongo_util = require('./utils/mongo_util');
+const { prefix, production, token, mongo_url } = require(path.resolve('./config/config.json'));
+const { general_util, other_util, link_util } = require(path.resolve('./src/utils/util'));
+const Guilds = require('../models/Guilds');
+const play_clips = require(path.resolve('./src/commands/indirect/play_clips.js'));
+const events = require(path.resolve('./src/events/events.js'))
+
+const mins = general_util.DELETE_TO_MINUTES;
+const secs = general_util.DELETE_TO_SECONDS;
+
+const client = new Discord.Client();
+client.commands = new Discord.Collection();
+
+mongoose.connect(mongo_url, { useNewUrlParser: true, useFindAndModify: true, useCreateIndex: true, useUnifiedTopology: true })
+  .then(async () => {
+    console.log("Connected to mongodb");
+  }).catch(err => console.log("Error connecting to mongodb", err));
+
+// loading all of the commands
+let command_files = other_util.get_command_files();
+for (const file of command_files) {
+  const command = require(file);
+  client.commands.set(command.name, command);
+}
+
+const cooldowns = new Discord.Collection();
+
+client.once('ready', () => {
+  console.log('Ready!');
+});
+
+/**
+ * This is what gets called every time a message is deleted from a 
+ * channel in a guild we are in.
+ */
+client.on('messageDelete', message => {
+  events.messageDelete(message);
+})
+
+/**
+ * This is what gets called when this bot joins a guild.
+ */
+client.on('guildCreate', guild => {
+  events.guildCreate(guild);
+})
+
+/**
+ * This is what gets called when a message gets sent in a channel
+ * we have access to.
+ */
+client.on('message', async (message) => {
+  let guild_doc = await Guilds.findOne({ guild_id: message.guild.id });
+
+  if (!guild_doc) {
+    // guild_doc = await mongo_util.setup_guild(message.guild.id);
+  }
+
+  const config_doc = guild_doc.config;
+
+  /*
+  getting the guilds prefix
+  if not in production (google cloud) then we will use the *
+  if in production we look up what they have set for their guild's prefix
+  */
+  let guild_prefix;
+  if (production) {
+    guild_prefix = config_doc.prefix;
+  } else {
+    guild_prefix = prefix;
+  }
+
+  // regex escapes all special characters
+  const escape_regex = new RegExp(/[-\/\\^$*+?.()|[\]{}]/g);
+
+  // lookup from table  
+  const delete_prefix = config_doc.autodelete_prefixes.some(prefix => new RegExp('^[/s]*' + prefix.replace(escape_regex, '\\$&') + '[/w]*').test(message.content));
+  const delete_member = config_doc.autodelete_members.some(member_id => member_id == message.author.id);
+  const is_command = new RegExp('^[/s]*' + guild_prefix.replace(escape_regex, '\\$&') + '[/w]*').test(message.content)
+  // deletes messages to gerlad and messages from gerald after a minute
+  if (delete_prefix || is_command || delete_member) {
+    general_util.delete_message(message, 1 * mins);
+  }
+
+  if (!is_command || message.author.bot) return;
+
+  const args = message.content.slice(guild_prefix.length).split(/ +/);
+  const commandName = args.shift().toLowerCase();
+
+  const command = client.commands.get(commandName)
+    || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+
+
+  general_util.delete_message(message, 15 * secs);
+
+  // PLAY LINK ENTRY POINT
+  if (!command) {
+    const guild_id = message.guild.id;
+    const link = await link_util.lookup_link(guild_id, commandName);
+
+    if (link && link.type == 'clip') {
+      // voice clip
+      const vc = message.member.voice.channel;
+
+      vc ?
+        play_clips.execute(vc, link, message.channel) :
+        general_util.reply_util(message, "You must be connected to a voice channel to use this command", 15 * secs);
+
+    }
+    else if (link && link.type == 'link') {
+      // static link
+      // just sending them the link
+      general_util.send_to_channel(message.channel, link.link, 10 * mins);
+    }
+    else {
+      general_util.send_to_channel(message.channel, "This is not a command I know of.", 15 * secs);
+    }
+
+    return;
+
+  }
+
+  if (command.guildOnly && message.channel.type !== 'text') {
+    general_util.send_util(message.reply('I can\'t execute that command inside DMs!'), 1 * mins)
+
+    return
+  }
+
+  if (command.args && !args.length) {
+    let reply = `You didn't provide any arguments, ${message.author}!`;
+
+    if (command.usage) {
+      reply += `\nThe proper usage would be: \`${guild_prefix}${command.name} ${command.usage}\``;
+    }
+
+    general_util.send_util(message.channel.send(reply), 15 * secs);
+    return
+  }
+
+  if (!cooldowns.has(command.name)) {
+    cooldowns.set(command.name, new Discord.Collection());
+  }
+
+  const now = Date.now();
+  const timestamps = cooldowns.get(command.name);
+  const cooldownAmount = (command.cooldown || 1) * secs;
+
+  if (timestamps.has(message.author.id)) {
+    const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
+
+    if (now < expirationTime) {
+      const timeLeft = (expirationTime - now) / secs;
+      general_util.send_util(message.reply(`please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${command.name}\` command.`), 15 * secs)
+      return
+    }
+  }
+
+  timestamps.set(message.author.id, now);
+  setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+
+  try {
+    command.execute(message, args, guild_prefix);
+  } catch (error) {
+    console.error(error);
+    general_util.send_util(message.reply('there was an error trying to execute that command!'), 15 * secs)
+    return
+  }
+});
+
+
+client.login(token);
