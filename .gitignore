@@ -1,0 +1,9 @@
+config/
+coverage/
+node_modules/
+.vscode/
+*.swp
+*.l16
+.prettierrc
+globalConfig.json
+.env
