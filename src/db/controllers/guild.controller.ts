@@ -1,10 +1,13 @@
-import Guild, { IGuild } from "../models/guild.model";
-import { CreateQuery } from "mongoose";
-import { findOrCreateResponse } from "../db.interfaces";
-import { Resolver } from "dns";
-import { create } from "domain";
+import Guild, { IAlias, IGuild } from "../models/guild.model";
+import {
+  CreateQuery,
+  MongooseUpdateQuery,
+  QueryUpdateOptions,
+  UpdateQuery,
+} from "mongoose";
+import { findOrCreateResponse, updateOneResponse } from "../db.interfaces";
 
-async function InitializeGuild({
+export async function InitializeGuild({
   guild_id,
 }: CreateQuery<IGuild>): Promise<findOrCreateResponse> {
   // making my own findorcreate here as
@@ -17,6 +20,7 @@ async function InitializeGuild({
           resolve({
             created: false,
             message: "Already exists",
+            doc: data,
           });
         } else {
           //   need to make it
@@ -24,7 +28,7 @@ async function InitializeGuild({
             .then((createData: IGuild) => {
               resolve({
                 created: true,
-                message: "This user has been created",
+                message: `${guild_id} has been created.`,
                 doc: createData,
               });
             })
@@ -36,5 +40,41 @@ async function InitializeGuild({
       .catch((error: Error) => {
         reject(error);
       });
+  });
+}
+
+export async function CreateAlias(
+  { guild_id }: CreateQuery<IGuild>,
+  { id, type }: IAlias,
+  names: string[]
+): Promise<updateOneResponse> {
+  const updateResponse = `Alias for ${id} has been created`;
+  const noUpdateResponse = `Alias for ${id} has not been created`;
+
+  interface z {
+    name: string;
+    id: string;
+    type: string;
+  }
+
+  const alias_objs = names.map((new_name) => {
+    const z: UpdateQuery<z> = { name: new_name, id: "", type: "" };
+
+    return z;
+  });
+
+  return new Promise((resolve, reject) => {
+    if (alias_objs.length == 0) {
+      reject("Bad");
+      return;
+    }
+    Guild.updateOne(
+      { guild_id: guild_id },
+      {
+        $push: {
+          aliases: alias_objs,
+        },
+      }
+    );
   });
 }

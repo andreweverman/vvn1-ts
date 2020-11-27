@@ -30,6 +30,7 @@ const AliasSchema = new mongoose.Schema({
   type: { type: String, required: true },
 });
 
+
 export interface IConfig extends Document {
   prefix: string;
   autodelete_members: Array<string>;

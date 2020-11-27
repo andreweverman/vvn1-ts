@@ -2,8 +2,9 @@ import { Client, Collection, Message, TextChannel } from "discord.js";
 import dotenv from "dotenv";
 
 import { NumberConstants } from "./util/constants";
-import * as other_util from "./util/other_util";
+import * as other_util from "./util/file_util";
 import { messageEvent } from "./events/message.event";
+import connect from "./db/connect";
 
 dotenv.config();
 
@@ -60,4 +61,11 @@ client.on("message", async (message) => {
   messageEvent(message, client, commands, cooldowns, dev);
 });
 
+// discord connect
 client.login(process.env.TOKEN);
+
+// mongo connect
+const db = process.env.MONGO_URL;
+if (!db){console.log('No mongo url. Set MONGO_URL in .env');process.exit(1)}
+connect({db});
+
