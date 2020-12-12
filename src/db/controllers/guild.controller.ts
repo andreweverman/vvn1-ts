@@ -1,4 +1,4 @@
-import Guild, { IAlias, IGuild } from "../models/guild.model";
+import Guild, { IGuild, IAlias, IGuildDoc } from "../models/guild.model";
 import {
   CreateQuery,
   MongooseUpdateQuery,
@@ -7,15 +7,20 @@ import {
 } from "mongoose";
 import { findOrCreateResponse, updateOneResponse } from "../db.interfaces";
 
-export async function InitializeGuild({
+export interface IAliasNoName {
+  id: string,
+  type: string
+}
+
+export async function initializeGuild({
   guild_id,
-}: CreateQuery<IGuild>): Promise<findOrCreateResponse> {
+}: CreateQuery<IGuildDoc>): Promise<findOrCreateResponse> {
   // making my own findorcreate here as
   // there is no good type definition
 
   return new Promise((resolve, reject) => {
     Guild.findOne({ guild_id: guild_id })
-      .then((data: IGuild | null) => {
+      .then((data: IGuildDoc | null) => {
         if (data) {
           resolve({
             created: false,
@@ -25,7 +30,7 @@ export async function InitializeGuild({
         } else {
           //   need to make it
           Guild.create({ guild_id: guild_id })
-            .then((createData: IGuild) => {
+            .then((createData: IGuildDoc) => {
               resolve({
                 created: true,
                 message: `${guild_id} has been created.`,
@@ -43,38 +48,40 @@ export async function InitializeGuild({
   });
 }
 
-export async function CreateAlias(
-  { guild_id }: CreateQuery<IGuild>,
-  { id, type }: IAlias,
+export async function createAlias(
+  { guild_id }: IGuild,
+  { id, type }: IAliasNoName,
   names: string[]
 ): Promise<updateOneResponse> {
   const updateResponse = `Alias for ${id} has been created`;
   const noUpdateResponse = `Alias for ${id} has not been created`;
 
-  interface z {
-    name: string;
-    id: string;
-    type: string;
-  }
-
   const alias_objs = names.map((new_name) => {
-    const z: UpdateQuery<z> = { name: new_name, id: "", type: "" };
+    const z: UpdateQuery<IAlias> = { name: new_name, id: id, type: type };
 
     return z;
   });
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (alias_objs.length == 0) {
       reject("Bad");
       return;
     }
-    Guild.updateOne(
-      { guild_id: guild_id },
-      {
-        $push: {
-          aliases: alias_objs,
-        },
+
+    const guild = await Guild.findOne({ guild_id: guild_id });
+
+    if (!guild) { reject('No') }
+
+    const query: MongooseUpdateQuery<IGuildDoc> = {
+      //@ts-ignore
+      $push: {
+        aliases: alias_objs
       }
-    );
+    };
+
+    resolve(Guild.updateOne({ guild_id: guild_id },
+      query));
+
+
   });
 }

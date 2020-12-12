@@ -8,7 +8,7 @@ const command: commandProperties = {
   cooldown: 1,
   guildOnly: true,
   execute(p: CommandParams) {
-      console.log('got there')
+    console.log('got there');
   },
 };
 

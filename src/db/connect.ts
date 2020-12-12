@@ -1,18 +1,24 @@
 import mongoose from 'mongoose';
+import { createAlias } from './controllers/guild.controller';
 
 type TInput = {
   db: string;
 }
-export default ({db}: TInput) => {
-  
+export default ({ db }: TInput) => {
+
   const connect = () => {
     mongoose
       .connect(
         db,
-        { useNewUrlParser: true }
+        {
+          useNewUrlParser: true,
+          useUnifiedTopology: true
+        }
       )
       .then(() => {
+        
         return console.info(`Successfully connected to ${db}`);
+
       })
       .catch(error => {
         console.error('Error connecting to database: ', error);
