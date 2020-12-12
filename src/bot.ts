@@ -2,7 +2,7 @@ import { Client, Collection, Message, TextChannel } from "discord.js";
 import dotenv from "dotenv";
 
 import { NumberConstants } from "./util/constants";
-import * as other_util from "./util/file_util";
+import * as other_util from "./util/file.util";
 import { messageEvent } from "./events/message.event";
 import connect from "./db/connect";
 

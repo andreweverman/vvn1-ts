@@ -4,6 +4,7 @@ export enum NumberConstants {
   hours = mins * 60,
 }
 
-export enum StringConstants{
-
+export enum StringConstants {
+  quit = 'quit',
+  valid = 'valid',
 }

@@ -8,6 +8,8 @@ export interface ILink extends Document {
   volume: number;
 }
 
+export interface ILinkDoc extends ILink, Document { }
+
 const LinkSchema: Schema = new Schema({
   names: { type: Array, default: [] },
   link: { type: String, required: true },
@@ -18,10 +20,14 @@ const LinkSchema: Schema = new Schema({
   volume: { type: mongoose.Schema.Types.Number, required: false },
 });
 
-export interface IAlias extends Document {
+export interface IAlias {
   name: string;
   id: string;
   type: string;
+}
+
+export interface IAliasDoc extends IAlias, Document { 
+  id:string
 }
 
 const AliasSchema = new mongoose.Schema({
@@ -31,7 +37,7 @@ const AliasSchema = new mongoose.Schema({
 });
 
 
-export interface IConfig extends Document {
+export interface IConfig {
   prefix: string;
   autodelete_members: Array<string>;
   audodelete_prefixes: Array<string>;
@@ -41,6 +47,8 @@ export interface IConfig extends Document {
   };
   tz: { name: string };
 }
+
+export interface IConfigDoc extends IConfig, Document { }
 
 const ConfigSchema = new mongoose.Schema({
   prefix: { type: String, default: "?" },
@@ -56,7 +64,8 @@ const ConfigSchema = new mongoose.Schema({
   },
 });
 
-export interface IMovie extends Document {
+
+export interface IMovie {
   default_password: string;
   sounds: {
     name: string;
@@ -78,6 +87,8 @@ export interface IMovie extends Document {
     user: string;
   }>;
 }
+
+export interface IMovieDoc extends IMovie, Document { }
 
 const MovieSchema = new mongoose.Schema({
   default_password: { type: String, default: "" },
@@ -129,13 +140,15 @@ const MovieSchema = new mongoose.Schema({
 
 
 // ? all over the shits because guild_id is the only key
-export interface IGuild extends Document {
+export interface IGuild {
   guild_id: string;
   config?: IConfig;
   aliases?: Array<IAlias>;
   movie?: IMovie;
   links?: Array<ILink>;
 }
+
+export interface IGuildDoc extends IGuild, Document { }
 
 const GuildSchema = new mongoose.Schema({
   guild_id: { type: String, unique: true, index: true },
@@ -145,4 +158,4 @@ const GuildSchema = new mongoose.Schema({
   links: [LinkSchema],
 });
 
-export default mongoose.model<IGuild>("Guild", GuildSchema);
+export default mongoose.model<IGuildDoc>("Guild", GuildSchema);
