@@ -4,7 +4,8 @@ export enum NumberConstants {
   hours = mins * 60,
 }
 
-export enum StringConstants {
-  quit = 'quit',
-  valid = 'valid',
-}
+
+export const quit = 'quit';
+export const valid = 'valid';
+export const messageCollectorTimeout = 'time';
+

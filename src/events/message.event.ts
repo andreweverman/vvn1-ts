@@ -1,6 +1,7 @@
 import { Message, Collection, Client } from "discord.js";
 import { commandCollection, commandCooldowns } from "../bot";
 import { NumberConstants } from "../util/constants";
+import { sendUtil, deleteMessage } from "../util/prompt.util";
 
 export function messageEvent(
   message: Message,
@@ -21,8 +22,15 @@ export function messageEvent(
       process.exit(1);
     }
     const prefix = guildPrefix != "" ? guildPrefix : hardPrefix;
+    const messageContent = message.content.trim();
     const args = message.content.slice(prefix.length).split(/ +/);
     const commandName = args.shift()?.toLowerCase();
+
+    const escape_regex = new RegExp(/[-\/\\^$*+?.()|[\]{}]/g);
+    const is_command = new RegExp('^[/s]*' + prefix.replace(escape_regex, '\\$&') + '[/w]*').test(message.content)
+
+
+    if (!is_command || message.author.bot) return;
 
     if (!commandName) {
       console.log("Somehow got a command without a command name");
@@ -39,6 +47,9 @@ export function messageEvent(
     if (!command) {
       // TODO : the links stuff
     } else {
+
+      deleteMessage(message,15*NumberConstants.secs);
+
       if (command.args && !args.length) {
         let reply = `You didn't provide any arguments for a command that requires them.`;
 
@@ -47,10 +58,14 @@ export function messageEvent(
         }
 
         //   TODO send message
-        return
-        
+
+
         reject('incorrect usage of command');
       } else {
+
+        if (command.guildOnly && message.channel.type !== 'text') {
+          sendUtil(message.reply('I can\'t execute that command inside DMs!'), true, 1 * NumberConstants.mins)
+        }
         if (!cooldowns.has(command.name)) {
           cooldowns.set(command.name, new Collection());
         }

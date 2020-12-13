@@ -13,7 +13,7 @@ export interface CommandParams {
   client: Client;
   args: string[];
   dev: boolean;
-  guild_id: string | undefined;
+  guild_id?: string;
   prefix: string;
 }
 
@@ -29,10 +29,10 @@ export interface commandProperties {
 }
 
 export interface commandCollection
-  extends Collection<string, commandProperties> {}
+  extends Collection<string, commandProperties> { }
 
 export interface commandCooldowns
-  extends Collection<string, Collection<string, number>> {}
+  extends Collection<string, Collection<string, number>> { }
 
 const dev: boolean = process.env.NODE_ENV == "dev" ? true : false;
 const client = new Client(),
@@ -66,6 +66,6 @@ client.login(process.env.TOKEN);
 
 // mongo connect
 const db = process.env.MONGO_URL;
-if (!db){console.log('No mongo url. Set MONGO_URL in .env');process.exit(1)}
-connect({db});
+if (!db) { console.log('No mongo url. Set MONGO_URL in .env'); process.exit(1) }
+connect({ db });
 

@@ -1,7 +1,8 @@
 import { CommandParams, commandProperties } from "../../bot";
 import * as lodash from 'lodash';
-import * as Discord from 'discord.js'
+import { TextChannel } from 'discord.js'
 import { createAlias } from "../../db/controllers/guild.controller";
+import { getSameUserInput, sameUserFilter } from "../../util/prompt.util";
 
 
 const command: commandProperties = {
@@ -12,13 +13,21 @@ const command: commandProperties = {
   usage: 'Follow the prompts!',
   cooldown: 1,
   guildOnly: true,
-  execute(p: CommandParams) {
+  async execute(e: CommandParams) {
     console.log('in createalias');
 
-    const guildID = p.message.id;
+    const userID = e.message.author.id;
+    const textChannel = e.message.channel;
+
+    const guildID = e.message.id;
+
+    const gsuiResult = await getSameUserInput(userID, textChannel, 'Enter the id', sameUserFilter(userID))
+
+    if (!gsuiResult) return false
+
+    let j = 0;
 
     
-
   },
 };
 
