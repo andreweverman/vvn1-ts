@@ -1,6 +1,7 @@
-import { Message, MessageEmbed, TextChannel, CollectorFilter } from "discord.js";
-import { NumberConstants, StringConstants } from './constants'
+import { Message, MessageEmbed, TextChannel, CollectorFilter, DMChannel, GroupDMChannel } from "discord.js";
+import { NumberConstants, quit, valid, messageCollectorTimeout } from './constants'
 
+export type AsyncCollectorFilter = (...args: any[]) => Promise<boolean>;
 
 export function quitFilter(): CollectorFilter {
     return (m: Message) => m.cleanContent.trim().toLowerCase() == 'quit'
@@ -10,7 +11,8 @@ export function sameUserFilter(userID: string): CollectorFilter {
     return (m: Message) => m.author.id === userID
 }
 
-export function deleteMessage(message: Message, time: number): Promise<Message | boolean> {
+export type DeleteResponse = (Message | boolean);
+export function deleteMessage(message: Message, time: number): Promise<DeleteResponse> {
 
     return new Promise((resolve, reject) => {
 
@@ -24,35 +26,44 @@ export function deleteMessage(message: Message, time: number): Promise<Message |
                 } else {
                     resolve(true);
                 }
-
-            })
+            });
     })
 }
 
-export function sendUtil(message: Promise<Message>, autoDelete: boolean, autoDeleteTime = 15 * NumberConstants.secs): Promise<Message | boolean | (Message | boolean)[]> {
+
+export interface sendUtilResponse {
+    messages: Message[],
+    deleteResponses: Promise<DeleteResponse>[]
+}
+
+export function sendUtil(message: Promise<Message>, autoDelete: boolean, autoDeleteTime = 15 * NumberConstants.secs): Promise<sendUtilResponse> {
+
+    const result: sendUtilResponse = {
+        messages: [],
+        deleteResponses: []
+    };
+
+    const postSend = (sentMessage: Message) => {
+        if (autoDelete) {
+            result.messages.push(sentMessage);
+            result.deleteResponses.push(deleteMessage(sentMessage, autoDeleteTime));
+        }
+    }
 
     return new Promise((resolve, reject) => {
 
         message.then(async (sentMessage: Message | Message[]) => {
 
             if (sentMessage instanceof Message) {
-                deleteMessage(sentMessage, autoDeleteTime).then((x: Message | boolean) => {
-                    resolve(x);
-                }).catch((error: Error) => {
-                    reject(error);
-                })
+                postSend(sentMessage);
             }
             else {
-                let resArr: Array<Message | boolean> = []
                 sentMessage.forEach(individualMessage => {
-                    deleteMessage(individualMessage, autoDeleteTime).then((x: Message | boolean) => {
-                        resArr.push(x);
-                    }).catch((error: Error) => {
-                        reject(error);
-                    });
-                })
-                resolve(resArr)
+                    postSend(individualMessage);
+                });
             }
+
+            resolve(result);
 
         }).catch((error: Error) => {
             reject(error);
@@ -61,15 +72,15 @@ export function sendUtil(message: Promise<Message>, autoDelete: boolean, autoDel
     })
 }
 
-export function sendToChannel(channel: TextChannel, statement: String, autoDelete = true, autoDeleteTime = 15 * NumberConstants.secs): Promise<Message | boolean | (Message | boolean)[]> {
+export function sendToChannel(channel: TextChannel | DMChannel | GroupDMChannel, statement: String, autoDelete = true, autoDeleteTime = 15 * NumberConstants.secs): Promise<sendUtilResponse> {
 
     return sendUtil(channel.send(statement), autoDelete, autoDeleteTime);
 
 }
 
 
-
-export function getSameUserInput(userID: string, textChannel: TextChannel, messagePrompt: string | MessageEmbed, filter: CollectorFilter, time = 30 * NumberConstants.secs) {
+// want to return the message 
+export function getSameUserInput(userID: string, textChannel: TextChannel | DMChannel | GroupDMChannel, messagePrompt: string | MessageEmbed, filter: AsyncCollectorFilter | CollectorFilter, time = 30 * NumberConstants.secs): Promise<Message | null> {
 
     return new Promise((resolve, reject) => {
 
@@ -89,25 +100,33 @@ export function getSameUserInput(userID: string, textChannel: TextChannel, messa
 
                 let completed: Boolean = true;
 
-                const filterResult = await filter(m)
+
+                const filterResult = await filter(m);
                 if (filterResult) {
-                    messageCollector.stop('valid');
+                    messageCollector.stop(valid);
                 } else if (quitFilter()(m)) {
-                    messageCollector.stop(StringConstants.quit);
+                    messageCollector.stop(quit);
                 } else {
-                    sendToChannel(textChannel, "Invalid response. Please try again.", true, 10 * NumberConstants.secs)
+                    sendToChannel(textChannel, "Invalid response. Please try again.", true, 10 * NumberConstants.secs);
                     completed = false;
                 }
 
                 if (completed) deleteMessage(promptMessage, 10 * NumberConstants.secs);
+                deleteMessage(m, 10 * NumberConstants.secs);
 
                 messageCollector.on('end', (collected, reason) => {
 
-                    let resolve_obj
-                })
+                    [quit, messageCollectorTimeout].includes(reason) ?
+                        resolve(null) :
+                        resolve(collected.last())
+
+                });
 
             });
 
+        }).catch((err) => {
+            console.error(err);
+            reject(new Error('Error sending prompt message'));
         })
 
     })
