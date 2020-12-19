@@ -1,35 +1,49 @@
 import { Message, Collection, Client } from "discord.js";
 import { commandCollection, commandCooldowns } from "../bot";
 import { NumberConstants } from "../util/constants";
-import { sendUtil, deleteMessage } from "../util/prompt.util";
+import { deleteMessage, replyUtil, sendToChannel } from "../util/message.util";
+import { Config } from '../db/controllers/guild.controller'
 
 export function messageEvent(
   message: Message,
   client: Client,
   commands: commandCollection,
   cooldowns: commandCooldowns,
-  dev: boolean
+  prod: boolean
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const guildPrefix = "";
+  return new Promise(async (resolve, reject) => {
+    // getting the guild prefix if it is a guild message
+    let guildPrefix: string = '';
+    const guildID: string | undefined = message.guild?.id;
+    if (guildID) {
+      try {
+        guildPrefix = await Config.getGuildPrefix(guildID);
+      } catch (error) {
+        console.error(error);
+      }
+    }
 
-    const hardPrefix = dev ? process.env.DEV_PREFIX : process.env.PROD_PREFIX;
 
+    // rollback prefix if can't find one
+    const hardPrefix = prod ? process.env.PROD_PREFIX : process.env.DEV_PREFIX
     if (!hardPrefix) {
       console.error(
         "Please set the DEV_PREFIX and/or PROD_PREFIX in the .env file"
       );
       process.exit(1);
     }
-    const prefix = guildPrefix != "" ? guildPrefix : hardPrefix;
-    const messageContent = message.content.trim();
+
+    // resolving final prefix that we will search for to do the command
+    const prefix = guildPrefix != "" && prod ? guildPrefix : hardPrefix;
     const args = message.content.slice(prefix.length).split(/ +/);
     const commandName = args.shift()?.toLowerCase();
 
     const escape_regex = new RegExp(/[-\/\\^$*+?.()|[\]{}]/g);
     const is_command = new RegExp('^[/s]*' + prefix.replace(escape_regex, '\\$&') + '[/w]*').test(message.content)
 
+    // TODO: autodelete message flow here
 
+    // not a command, get out
     if (!is_command || message.author.bot) return;
 
     if (!commandName) {
@@ -48,7 +62,7 @@ export function messageEvent(
       // TODO : the links stuff
     } else {
 
-      deleteMessage(message,15*NumberConstants.secs);
+      deleteMessage(message, 15 * NumberConstants.secs);
 
       if (command.args && !args.length) {
         let reply = `You didn't provide any arguments for a command that requires them.`;
@@ -57,15 +71,18 @@ export function messageEvent(
           reply += `\nThe proper usage would be something like: ${command.usage}`;
         }
 
-        //   TODO send message
 
-
+        sendToChannel(message.channel, reply);
         reject('incorrect usage of command');
       } else {
 
         if (command.guildOnly && message.channel.type !== 'text') {
-          sendUtil(message.reply('I can\'t execute that command inside DMs!'), true, 1 * NumberConstants.mins)
+          replyUtil(message, 'I can\'t execute that command inside DMs!', false);
+          return;
         }
+
+
+        //setting cooldown information
         if (!cooldowns.has(command.name)) {
           cooldowns.set(command.name, new Collection());
         }
@@ -80,7 +97,7 @@ export function messageEvent(
 
           if (now < expirationTime) {
             const timeLeft = (expirationTime - now) / NumberConstants.secs;
-
+            replyUtil(message, `Please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${command.name}\` command.`, true, 10 * NumberConstants.secs).catch((error) => console.error(error));
             reject('command was on cooldown');
           }
         } else if (timestamps) {
@@ -90,15 +107,17 @@ export function messageEvent(
             cooldownAmount
           );
 
-          const guild_id: string | undefined = message.guild?.id;
           try {
+
+            //running the command
             command.execute({
               message,
               client,
               args,
-              dev,
-              guild_id,
+              prod: prod,
+              guildID,
               prefix,
+
             });
 
             resolve('good')

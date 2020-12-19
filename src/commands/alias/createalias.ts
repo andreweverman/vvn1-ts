@@ -1,11 +1,13 @@
 import { CommandParams, commandProperties } from "../../bot";
 import * as lodash from 'lodash';
-import { TextChannel } from 'discord.js'
-import { createAlias } from "../../db/controllers/guild.controller";
-import { getSameUserInput, sameUserFilter } from "../../util/prompt.util";
-
+import { TextChannel, Message } from 'discord.js'
+import { Alias } from "../../db/controllers/guild.controller";
+import { Prompt, Filter } from "../../util/message.util";
+import { validGuildMember, extractChannels } from "../../util/discord.util"
 
 const command: commandProperties = {
+
+
   name: 'createalias',
   aliases: ['ca', 'addalias'],
   args: false,
@@ -13,21 +15,85 @@ const command: commandProperties = {
   usage: 'Follow the prompts!',
   cooldown: 1,
   guildOnly: true,
-  async execute(e: CommandParams) {
-    console.log('in createalias');
 
-    const userID = e.message.author.id;
-    const textChannel = e.message.channel;
+  execute(e: CommandParams) {
+    return new Promise(async (resolve, reject) => {
 
-    const guildID = e.message.id;
+      const options: Prompt.optionSelectElement[] = [
+        { name: 'Create alias for yourself', function: selectSelf },
+        { name: 'Create alias by id', function: selectID }
+      ];
 
-    const gsuiResult = await getSameUserInput(userID, textChannel, 'Enter the id', sameUserFilter(userID))
 
-    if (!gsuiResult) return false
+      Prompt.optionSelect(e.message.author.id, e.message.channel, options).catch((error) => {
+        throw error
+      })
 
-    let j = 0;
+      async function selectSelf() {
+        promptNames(e.message.author.id, Alias.Types.text)
+      }
 
-    
+      async function selectID() {
+        const prompt = 'Please reply with the id for a user or channel:'
+
+        const selectFilters: Filter.multipleFiltersInput = {
+          some: [
+            Filter.validUserFilter(e.message.guild!),
+            Filter.validChannelFilter(e.message.guild!)
+          ]
+        }
+        const filter = Filter.multipleFilters(selectFilters);
+
+        Prompt.getSameUserInput(
+          e.message.author.id,
+          e.message.channel,
+          prompt,
+          filter
+        ).then((m: Message) => {
+          const extractedUsers = validGuildMember(m.content, e.client);
+          const extractedChannels = extractChannels(m.content, e.message.guild!);
+
+          let id: string;
+          let type: Alias.Types;
+          if (extractedUsers.length > 0) {
+            id = extractedUsers[0].id
+            type = Alias.Types.user;
+          } else {
+            id = extractedChannels[0].id
+            type = extractedChannels[0].type == 'text'
+              ? Alias.Types.text : Alias.Types.voice
+          }
+          promptNames(id, type)
+        })
+          .catch((error) => {
+            Prompt.handleGetSameUserInputError(error, reject);
+          })
+      }
+
+      async function promptNames(id: string, type: Alias.Types) {
+
+        const prompt = "Enter the aliases that you would like to add (one word, can add multiple with spaces between):"
+
+        Prompt.getSameUserInput(
+          e.message.author.id,
+          e.message.channel,
+          prompt,
+          Filter.anyFilter()
+        ).then((m: Message) => {
+
+          const names = m.content.trim().split(' ');
+          Alias.createAlias(e.message.guild!.id, { id, type }, names, e.message.channel).then(() => {
+            resolve(true)
+          }).catch((error) => {
+            throw error
+          });
+
+        }).catch((error) => {
+          Prompt.handleGetSameUserInputError(error, reject);
+        })
+      }
+
+    })
   },
 };
 

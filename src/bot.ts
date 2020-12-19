@@ -1,4 +1,4 @@
-import { Client, Collection, Message, TextChannel } from "discord.js";
+import { Client, Collection, Message, TextChannel, User } from "discord.js";
 import dotenv from "dotenv";
 
 import { NumberConstants } from "./util/constants";
@@ -9,12 +9,12 @@ import connect from "./db/connect";
 dotenv.config();
 
 export interface CommandParams {
-  message: Message;
-  client: Client;
+  message: Message;  
   args: string[];
-  dev: boolean;
-  guild_id?: string;
+  client: Client;
   prefix: string;
+  prod: boolean;
+  guildID?: string;
 }
 
 export interface commandProperties {
@@ -35,6 +35,7 @@ export interface commandCooldowns
   extends Collection<string, Collection<string, number>> { }
 
 const dev: boolean = process.env.NODE_ENV == "dev" ? true : false;
+const prod: boolean = process.env.prod == '1' ? true : false
 const client = new Client(),
   commands: Collection<string, commandProperties> = new Collection(),
   cooldowns: Collection<string, Collection<string, number>> = new Collection();
@@ -44,7 +45,7 @@ client.once("ready", () => {
 });
 
 // loading all of the commands
-const commandFiles: string[] | null = other_util.get_command_files();
+const commandFiles: string[] | null = other_util.getCommandFiles();
 if (!commandFiles) {
   !dev
     ? process.exit(1)
@@ -58,7 +59,10 @@ if (!commandFiles) {
 
 client.on("message", async (message) => {
   // todo get this from mongo again
-  messageEvent(message, client, commands, cooldowns, dev);
+  messageEvent(message, client, commands, cooldowns, prod).catch((error)=>{
+    // todo: use winston to log this 
+    console.log(error)
+  });
 });
 
 // discord connect
