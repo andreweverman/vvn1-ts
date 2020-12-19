@@ -1,31 +1,25 @@
 import mongoose from 'mongoose';
-import { createAlias } from './controllers/guild.controller';
 
 type TInput = {
   db: string;
 }
-export default ({ db }: TInput) => {
+export default async ({ db }: TInput, topology = true) => {
 
-  const connect = () => {
-    mongoose
-      .connect(
-        db,
-        {
-          useNewUrlParser: true,
-          useUnifiedTopology: true
-        }
-      )
-      .then(() => {
-        
-        return console.info(`Successfully connected to ${db}`);
+  mongoose
+    .connect(
+      db,
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: topology,
+        useCreateIndex: true
+      }
+    )
+    .then(() => {
+      return console.info(`Successfully connected to ${db}`);
+    })
+    .catch(error => {
+      console.error('Error connecting to database: ', error);
+      return process.exit(1);
+    });
 
-      })
-      .catch(error => {
-        console.error('Error connecting to database: ', error);
-        return process.exit(1);
-      });
-  };
-  connect();
-
-  mongoose.connection.on('disconnected', connect);
 };

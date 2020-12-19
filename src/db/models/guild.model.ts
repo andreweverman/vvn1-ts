@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface ILink extends Document {
-  names: Array<string>;
+  names: string[];
   link: string;
   uploader: string;
   type: string;
-  volume: number;
+  volume?: number;
 }
 
 export interface ILinkDoc extends ILink, Document { }
@@ -15,8 +15,6 @@ const LinkSchema: Schema = new Schema({
   link: { type: String, required: true },
   uploader: { type: String },
   type: { type: String, required: true },
-  begin: { type: String },
-  duration: { type: Number },
   volume: { type: mongoose.Schema.Types.Number, required: false },
 });
 
@@ -26,8 +24,8 @@ export interface IAlias {
   type: string;
 }
 
-export interface IAliasDoc extends IAlias, Document { 
-  id:string
+export interface IAliasDoc extends IAlias, Document {
+  id: string
 }
 
 const AliasSchema = new mongoose.Schema({
@@ -39,8 +37,8 @@ const AliasSchema = new mongoose.Schema({
 
 export interface IConfig {
   prefix: string;
-  autodelete_members: Array<string>;
-  audodelete_prefixes: Array<string>;
+  autodelete_members: string[];
+  audodelete_prefixes: string[];
   archive: {
     enabled: boolean;
     channel: string;
@@ -71,21 +69,21 @@ export interface IMovie {
     name: string;
     enabled: boolean;
   };
-  emojis: Array<{
+  emojis: {
     name: string;
     emoji: string;
     backup: string;
-  }>;
-  movies: Array<{
+  }[];
+  movies: {
     name: string;
     link: string;
     user: string;
     password: string;
-  }>;
-  requests: Array<{
+  }[];
+  requests: {
     name: string;
     user: string;
-  }>;
+  }[];
 }
 
 export interface IMovieDoc extends IMovie, Document { }
@@ -142,10 +140,10 @@ const MovieSchema = new mongoose.Schema({
 // ? all over the shits because guild_id is the only key
 export interface IGuild {
   guild_id: string;
-  config?: IConfig;
-  aliases?: Array<IAlias>;
-  movie?: IMovie;
-  links?: Array<ILink>;
+  config: IConfigDoc;
+  aliases: IAliasDoc[];
+  movie: IMovieDoc;
+  links: ILinkDoc[];
 }
 
 export interface IGuildDoc extends IGuild, Document { }

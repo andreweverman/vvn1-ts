@@ -4,7 +4,7 @@ import * as walk from "walk";
 const dev = process.env.NODE_ENV=='dev'? true:false
 const commands_path = `./${!dev?'dist':'src'}/commands`;
 
-export function get_command_files(): Array<string>|null {
+export function getCommandFiles(): Array<string>|null {
   let files: Array<string> = [];
   let options = {
     listeners: {

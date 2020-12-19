@@ -1,12 +1,12 @@
 {
-    "compilerOptions": {
-    "target": "es2015",
-    "module": "commonjs",
-    "strict": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist"
-  },
-  
+	"compilerOptions": {
+		"target": "es2015",
+		"module": "commonjs",
+		"strict": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"outDir": "./dist",
+		"skipLibCheck": true
+	}
 }
