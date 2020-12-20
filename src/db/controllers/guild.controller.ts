@@ -310,6 +310,11 @@ export namespace Link {
     rejectedNames: string[]
   }
   export function createLink(guildID: string, linkObj: ILink, textChannel?: MessageChannel) {
+
+    const strings: updateOneStrings = {
+      success: 'Link created successfully',
+      failure: 'Error creating link'
+    }
     return new Promise((resolve, reject) => {
       Guild.getGuild(guildID).then((guildDoc) => {
 
@@ -328,7 +333,7 @@ export namespace Link {
           if (approved.length > 0) msg.addField('Approved Names', approved.join('\n'), false);
           if (rejected.length > 0) msg.addField('Rejected Names', rejected.join('\n'), false);
 
-          sendToChannel(textChannel, msg, true, 30 * NumberConstants.secs);
+          sendToChannel(textChannel, msg, true);
         }
         if (approved.length == 0) {
           if (textChannel)
@@ -343,10 +348,16 @@ export namespace Link {
           return;
         }
 
-        if (linkObj.type == LinkTypes.clip && !linkObj.volume) linkObj.volume = .5
-        Guilds.updateOne({ guild_id: guildID }, {
-          $push: { linkObj }
-        })
+        if (linkObj.type == LinkTypes.clip && !linkObj.volume) { linkObj.volume = .5 }
+
+        Guilds.updateOne({ guild_id: guildID }
+          , {
+            $push:
+              //@ts-ignore
+              { links: linkObj }
+          }).then((response: updateOneResponse) => {
+            updateOneResponseHandler(response, strings, textChannel).then(x => resolve(x)).catch(error => { reject(error) })
+          })
       }).catch(
         (error) => reject(error)
       )

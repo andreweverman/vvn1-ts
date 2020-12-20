@@ -87,6 +87,12 @@ export namespace Filter {
             return regex.test(inputStr)
         }
     }
+
+    export function regexFilter(regex: RegExp, trimInput = true): CollectorFilter {
+        return (response: Message) => {
+            return regex.test(trimInput ? response.content.trim() : response.content)
+        }
+    }
 }
 
 
@@ -292,7 +298,7 @@ export namespace Prompt {
         const time = options?.time ? options.time : 15 * NumberConstants.mins;
         const offset = options?.customOffset ? options.customOffset : 1;
         return new Promise(async (resolve, reject) => {
-            const optionsString = "Reply with the number of the option you would like to select:\n" + functionArray.map((option, i) => `${i + offset}: ${option.name}`).join('\n') + `\n(or "quit" to exit)`;
+            const optionsString = "Reply with the number of the option you would like to select:\n" + functionArray.map((option, i) => `${i + offset}. ${option.name}`).join('\n') + `\n(or "quit" to exit)`;
 
             const optionFilter = Filter.numberRangeFilter(offset, functionArray.length);
 

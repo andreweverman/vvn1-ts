@@ -1,10 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { Link } from '../controllers/guild.controller'
 
-export interface ILink extends Document {
+export interface ILink {
   names: string[];
   link: string;
   uploader: string;
-  type: string;
+  type: Link.LinkTypes;
   volume?: number;
 }
 
