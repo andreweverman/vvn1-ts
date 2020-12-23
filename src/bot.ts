@@ -1,75 +1,73 @@
-import { Client, Collection, Message, TextChannel, User } from "discord.js";
-import dotenv from "dotenv";
+import { Client, Collection, Message, TextChannel, User } from 'discord.js'
+import dotenv from 'dotenv'
 
-import { NumberConstants } from "./util/constants";
-import * as other_util from "./util/file.util";
-import { messageEvent } from "./events/message.event";
-import connect from "./db/connect";
+import { NumberConstants } from './util/constants'
+import * as other_util from './util/file.util'
+import { messageEvent } from './events/message.event'
+import connect from './db/connect'
 
-dotenv.config();
+dotenv.config()
 
 export interface CommandParams {
-  message: Message;  
-  args: string[];
-  client: Client;
-  prefix: string;
-  prod: boolean;
-  guildID?: string;
+    message: Message
+    args: string[]
+    client: Client
+    prefix: string
+    prod: boolean
+    guildID?: string
 }
 
 export interface commandProperties {
-  name: string;
-  aliases?: string[];
-  args: boolean;
-  description: string;
-  usage: string;
-  cooldown: number;
-  guildOnly: boolean;
-  execute: (event: CommandParams) => any;
+    name: string
+    aliases?: string[]
+    args: boolean
+    description: string
+    usage: string
+    cooldown: number
+    guildOnly: boolean
+    execute: (event: CommandParams) => any
 }
 
-export interface commandCollection
-  extends Collection<string, commandProperties> { }
+export interface commandCollection extends Collection<string, commandProperties> {}
 
-export interface commandCooldowns
-  extends Collection<string, Collection<string, number>> { }
+export interface commandCooldowns extends Collection<string, Collection<string, number>> {}
 
-const dev: boolean = process.env.NODE_ENV == "dev" ? true : false;
+const dev: boolean = process.env.NODE_ENV == 'dev' ? true : false
 const prod: boolean = process.env.prod == '1' ? true : false
 const client = new Client(),
-  commands: Collection<string, commandProperties> = new Collection(),
-  cooldowns: Collection<string, Collection<string, number>> = new Collection();
+    commands: Collection<string, commandProperties> = new Collection(),
+    cooldowns: Collection<string, Collection<string, number>> = new Collection()
 
-client.once("ready", () => {
-  console.log("Ready!");
-});
+client.once('ready', () => {
+    console.log('Ready!')
+})
 
 // loading all of the commands
-const commandFiles: string[] | null = other_util.getCommandFiles();
+const commandFiles: string[] | null = other_util.getCommandFiles()
 if (!commandFiles) {
-  !dev
-    ? process.exit(1)
-    : console.log("WARNING: There are no commands configured");
+    !dev ? process.exit(1) : console.log('WARNING: There are no commands configured')
 } else {
-  for (const file of commandFiles) {
-    const command = require(file).default;
-    commands.set(command.name, command);
-  }
+    for (const file of commandFiles) {
+        const command = require(file).default
+        commands.set(command.name, command)
+    }
 }
 
-client.on("message", async (message) => {
-  // todo get this from mongo again
-  messageEvent(message, client, commands, cooldowns, prod).catch((error)=>{
-    // todo: use winston to log this 
-    console.log(error)
-  });
-});
+client.on('message', async (message) => {
+    // todo get this from mongo again
+    messageEvent(message, client, commands, cooldowns, prod).catch((error) => {
+        // todo: use winston to log this
+        console.log(error)
+    })
+})
 
 // discord connect
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN)
 
 // mongo connect
-const db = process.env.MONGO_URL;
-if (!db) { console.log('No mongo url. Set MONGO_URL in .env'); process.exit(1) }
-connect({ db });
-
+const db = process.env.MONGO_URL
+if (!db) {
+    console.log('No mongo url. Set MONGO_URL in .env')
+    process.exit(1)
+}
+connect({ db })
