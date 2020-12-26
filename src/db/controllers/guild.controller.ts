@@ -10,6 +10,8 @@ import Guilds, {
     IMovieDoc,
     IMovieContainer,
     IMovieContainerDoc,
+    IAutoDeletePrefix,
+    IAutoDeletePrefixDoc,
 } from '../models/guild.model'
 import { CreateQuery, MongooseDocument, MongooseUpdateQuery, QueryUpdateOptions, UpdateQuery } from 'mongoose'
 import {
@@ -25,7 +27,7 @@ import { keywords, NumberConstants } from '../../util/constants'
 import { MessageEmbed } from 'discord.js'
 import { sendToChannel, MessageChannel, Prompt } from '../../util/message.util'
 import { stringMatch } from '../../util/string.util'
-import { linkSync } from 'fs'
+import moment from 'moment-timezone'
 
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
@@ -91,32 +93,6 @@ export namespace Guild {
         } catch (error) {
             throw error
         }
-    }
-}
-
-export namespace Config {
-    export function getGuildConfig(guildID: string): Promise<IConfigDoc> {
-        return new Promise(async (resolve, reject) => {
-            Guild.getGuild(guildID)
-                .then((guildDoc) => {
-                    guildDoc && guildDoc.config ? resolve(guildDoc.config) : reject(null)
-                })
-                .catch((error) => {
-                    reject(error)
-                })
-        })
-    }
-
-    export function getGuildPrefix(guildID: string): Promise<string> {
-        return new Promise(async (resolve, reject) => {
-            getGuildConfig(guildID)
-                .then((config) => {
-                    resolve(config.prefix)
-                })
-                .catch((err) => {
-                    reject(err)
-                })
-        })
     }
 }
 
@@ -421,9 +397,7 @@ export namespace Link {
                         let startCount = overallCount
                         const linkChunk = arr.slice(i, i + chunk)
                         const linkMessage = linkChunk.map((x, k) => {
-                            return `${'**' + (overallCount + i + k + offset) + '**. '}[${x.names.join(', ')}](${
-                                x.link
-                            } 'Link')`
+                            return `${'**' + (i + k + offset) + '**. '}[${x.names.join(', ')}](${x.link} 'Link')`
                         })
                         overallCount += linkChunk.length
                         fields.push({
@@ -551,6 +525,10 @@ export namespace Link {
         textChannel?: MessageChannel
     ): Promise<updateOneResponseHandlerResponse> {
         try {
+            if (names.length == link.names.length) {
+                // just delete the link
+                return await deleteLink(guildID, link, textChannel)
+            }
             const updateStrings: updateOneStrings = {
                 success: `Names ${names.join(', ')} have been removed.`,
                 failure: 'There was an issue, no names have been deleted',
@@ -835,7 +813,8 @@ export namespace Movie {
                 failure: 'There was an issue adding the movie to the catalog',
             }
 
-            return updateOneResponseHandler(movieUpdateResponse, updateStrings, textChannel)
+            const res = updateOneResponseHandler(movieUpdateResponse, updateStrings, textChannel)
+            return res
         } catch (error) {
             throw error
         }
@@ -873,6 +852,162 @@ export namespace Movie {
             return await updateOneResponseHandler(response, updateStrings, textChannel)
         } catch (error) {
             if (textChannel) sendToChannel(textChannel, 'Error deleting movies', true)
+            throw error
+        }
+    }
+}
+
+export namespace Config {
+    export function getGuildConfig(guildID: string): Promise<IConfigDoc> {
+        return new Promise(async (resolve, reject) => {
+            Guild.getGuild(guildID)
+                .then((guildDoc) => {
+                    guildDoc && guildDoc.config ? resolve(guildDoc.config) : reject(null)
+                })
+                .catch((error) => {
+                    reject(error)
+                })
+        })
+    }
+
+    export function getGuildPrefix(guildID: string): Promise<string> {
+        return new Promise(async (resolve, reject) => {
+            getGuildConfig(guildID)
+                .then((config) => {
+                    resolve(config.prefix)
+                })
+                .catch((err) => {
+                    reject(err)
+                })
+        })
+    }
+    export async function setPrefix(
+        guildID: string,
+        newPrefix: string,
+        textChannel?: MessageChannel
+    ): Promise<updateOneResponseHandlerResponse> {
+        try {
+            const updateStrings: updateOneStrings = {
+                success: `Prefix has been set to ${newPrefix}`,
+                failure: 'Error updating prefix',
+            }
+            const response = await Guilds.updateOne({ guild_id: guildID }, { $set: { 'config.prefix': newPrefix } })
+
+            return updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function setTimeZone(
+        guildID: string,
+        timeZone: moment.MomentZoneOffset,
+        textChannel?: MessageChannel
+    ): Promise<updateOneResponseHandlerResponse> {
+        try {
+            const updateStrings: updateOneStrings = {
+                success: `Time zone has been set to ${timeZone.name}`,
+                failure: 'Failed to update the time zone',
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $set: { 'config.tz.name': timeZone.name } }
+            )
+
+            return updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function addPrefixAutoDelete(
+        guildID: string,
+        prefix: string,
+        textChannel?: MessageChannel
+    ): Promise<updateOneResponseHandlerResponse> {
+        try {
+            // already known that this is a new prefix, no need to check
+            const prefixObj: IAutoDeletePrefix = {
+                prefix: prefix,
+                allowList: [],
+                specified: [],
+                allowMode: false,
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $push: { 'config.autodelete_prefixes': prefixObj } }
+            )
+
+            return await updateOneResponseHandler(
+                response,
+                { success: `${prefix} has been added`, failure: 'Prefix failed to add' },
+                textChannel
+            )
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function getAutoDeletePrefix(
+        guildID: string,
+        prefix: string
+    ): Promise<IAutoDeletePrefixDoc | undefined> {
+        try {
+            const configDoc = await getGuildConfig(guildID)
+
+            const foundPrefix = configDoc.autodelete_prefixes.find((x) => x.prefix === prefix)
+
+            return foundPrefix
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function addPrefixSpecificDelete(guildID: string) {}
+
+    export async function changePrefixAutoDeleteMode(guildID: string, prefix: string, textChannel?: MessageChannel) {
+        // getting the latest
+        const prefixDoc = await Config.getAutoDeletePrefix(guildID, prefix)
+
+        if (!prefixDoc) {
+            return undefined
+        }
+
+        const updateStrings: updateOneStrings = {
+            success: 'Updated the auto delete mode',
+            failure: 'Failed to update the mode.',
+        }
+
+        const response = await Guilds.updateOne(
+            { guild_id: guildID, 'config.autodelete_prefixes.prefix': prefix },
+            { $set: { 'config.autodelete_prefixes.$.allowMode': !prefixDoc.allowMode } }
+        )
+
+        return updateOneResponseHandler(response, updateStrings, textChannel)
+    }
+
+    export async function deletePrefixAutoDelete(guildID: string, prefix: string, textChannel?: MessageChannel) {
+        try {
+            const prefixDoc = await Config.getAutoDeletePrefix(guildID, prefix)
+
+            if (!prefixDoc) {
+                return undefined
+            }
+
+            const updateStrings: updateOneStrings = {
+                success: `${prefix} has been removed from autodeleting`,
+                failure: `There was an error. ${prefix} was not removed`,
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $pull: { 'config.autodelete_prefixes': { _id: { $in: [prefixDoc._id] } } } }
+            )
+
+            return updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
             throw error
         }
     }

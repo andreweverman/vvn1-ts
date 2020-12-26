@@ -41,44 +41,48 @@ export function updateOneResponseHandler(
     expectedResponseInput?: updateOneResponse
 ): Promise<updateOneResponseHandlerResponse> {
     return new Promise<updateOneResponseHandlerResponse>((resolve, reject) => {
-        const resolveResponse: updateOneResponseHandlerResponse = {
-            updated: false,
-            messageSent: false,
-        }
-        const expectedResponse: updateOneResponse = expectedResponseInput
-            ? expectedResponseInput
-            : { n: 1, nModified: 1, ok: 1 }
+        try {
+            const resolveResponse: updateOneResponseHandlerResponse = {
+                updated: false,
+                messageSent: false,
+            }
+            const expectedResponse: updateOneResponse = expectedResponseInput
+                ? expectedResponseInput
+                : { n: 1, nModified: 1, ok: 1 }
 
-        if (responsesEqual(response, expectedResponse)) {
-            resolveResponse.updated = true
-            // matches expectations, send success
-            if (textChannel) {
-                sendToChannel(textChannel, strings.success)
-                    .then((x) => {
-                        resolveResponse.messageSent = true
-                        resolve(resolveResponse)
-                    })
-                    .catch(() => {
-                        resolveResponse.messageSent = false
-                        resolve(resolveResponse)
-                    })
+            if (responsesEqual(response, expectedResponse)) {
+                resolveResponse.updated = true
+                // matches expectations, send success
+                if (textChannel) {
+                    sendToChannel(textChannel, strings.success)
+                        .then(() => {
+                            resolveResponse.messageSent = true
+                            resolve(resolveResponse)
+                        })
+                        .catch(() => {
+                            resolveResponse.messageSent = false
+                            resolve(resolveResponse)
+                        })
+                } else {
+                    resolve(resolveResponse)
+                }
             } else {
-                resolve(resolveResponse)
+                if (textChannel) {
+                    sendToChannel(textChannel, strings.failure)
+                        .then(() => {
+                            resolveResponse.messageSent = true
+                            resolve(resolveResponse)
+                        })
+                        .catch(() => {
+                            resolveResponse.messageSent = false
+                            resolve(resolveResponse)
+                        })
+                } else {
+                    resolve(resolveResponse)
+                }
             }
-        } else {
-            if (textChannel) {
-                sendToChannel(textChannel, strings.failure)
-                    .then(() => {
-                        resolveResponse.messageSent = true
-                        resolve(resolveResponse)
-                    })
-                    .catch(() => {
-                        resolveResponse.messageSent = false
-                        resolve(resolveResponse)
-                    })
-            } else {
-                resolve(resolveResponse)
-            }
+        } catch (error) {
+            reject(error)
         }
     })
 }

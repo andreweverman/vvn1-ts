@@ -25,7 +25,9 @@ const command: commandProperties = {
             if (!link) return undefined
 
             return await Link.deleteLink(guildID, link, textChannel)
-        } catch (error) {}
+        } catch (error) {
+            Prompt.handleGetSameUserInputError(error)
+        }
     },
 }
 
