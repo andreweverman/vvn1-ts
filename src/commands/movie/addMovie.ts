@@ -33,7 +33,7 @@ const command: commandProperties = {
 
             return await Movie.addMovie(guildID, userID, movieLink, movieName, moviePassword, textChannel)
         } catch (error) {
-            throw error
+            Prompt.handleGetSameUserInputError(error)
         }
     },
 }

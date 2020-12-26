@@ -28,7 +28,7 @@ const command: commandProperties = {
 
             return await Movie.deleteMovie(guildID, movie, textChannel)
         } catch (error) {
-            throw error
+            Prompt.handleGetSameUserInputError(error)
         }
     },
 }

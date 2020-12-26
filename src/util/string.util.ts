@@ -3,6 +3,8 @@ export interface matchOptions {
     trimInput?: boolean
     trimRegex?: boolean
     loose: boolean
+    minLength?: number
+    maxLength?: number
 }
 
 export function stringMatch(str: string, options: matchOptions): RegExp {
@@ -17,4 +19,8 @@ export function linkRegex(): RegExp {
 
 export function youtubeRegex(): RegExp {
     return /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/
+}
+
+export function spaceCommaRegex(): RegExp {
+    return /[ ,]+/
 }

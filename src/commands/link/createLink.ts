@@ -4,7 +4,7 @@ import { Link } from '../../db/controllers/guild.controller'
 import { ILink } from '../../db/models/guild.model'
 import { MessageEmbed } from 'discord.js'
 import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { AliasUtil } from '../../util//general.util'
+import { LinkUtil } from '../../util//general.util'
 const command: commandProperties = {
     name: 'createlink',
     aliases: ['addlink'],
@@ -41,12 +41,12 @@ const command: commandProperties = {
             },
         ]
 
-        let linkType: linkType
-        let type: Link.LinkTypes
-        let names: string[]
-        let link: string
-        let volume: number | undefined
         try {
+            let linkType: linkType
+            let type: Link.LinkTypes
+            let names: string[]
+            let link: string
+            let volume: number | undefined
             linkType = await promptType()
             type = linkType.name
             const args = {
@@ -54,11 +54,12 @@ const command: commandProperties = {
                 userID: userID,
                 textChannel: textChannel,
             }
-            link = await AliasUtil.Prompt.promptLink(args)
-            names = await AliasUtil.Prompt.promptNames(args)
+
+            link = await LinkUtil.Prompt.promptLink(args)
+            names = await LinkUtil.Prompt.promptAddNames(args)
 
             if (type === Link.LinkTypes.clip) {
-                volume = await AliasUtil.Prompt.promptVolume(args)
+                volume = await LinkUtil.Prompt.promptVolume(args)
             }
 
             const linkObj: ILink = {
@@ -71,29 +72,33 @@ const command: commandProperties = {
             await Link.createLink(guildID, linkObj, textChannel)
             return true
         } catch (error) {
-            throw error
+            Prompt.handleGetSameUserInputError(error)
         }
 
         async function promptType(): Promise<linkType> {
             return new Promise((resolve, reject) => {
-                const msg = new MessageEmbed()
+                try {
+                    const msg = new MessageEmbed()
 
-                msg.addField(
-                    'Select type',
-                    options.map((x, i) => `${i + 1}. ${x.name}, ${x.description}`)
-                )
+                    msg.addField(
+                        'Select type',
+                        options.map((x, i) => `${i + 1}. ${x.name}, ${x.description}`)
+                    )
 
-                Prompt.arraySelect(userID, textChannel, options, msg)
-                    .then((option) => {
-                        if (Array.isArray(option)) {
-                            reject(null)
-                            return
-                        }
-                        resolve(option)
-                    })
-                    .catch((error) => {
-                        reject(error)
-                    })
+                    Prompt.arraySelect(userID, textChannel, options, msg)
+                        .then((option) => {
+                            if (Array.isArray(option)) {
+                                reject(null)
+                                return
+                            }
+                            resolve(option)
+                        })
+                        .catch((error) => {
+                            reject(error)
+                        })
+                } catch (error) {
+                    throw error
+                }
             })
         }
     },

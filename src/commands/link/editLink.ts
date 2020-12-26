@@ -1,10 +1,10 @@
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt, Filter } from '../../util/message.util'
 import { Link, Guild } from '../../db/controllers/guild.controller'
-import { ILink } from '../../db/models/guild.model'
+import { ILink, ILinkDoc } from '../../db/models/guild.model'
 import { MessageEmbed } from 'discord.js'
 import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { AliasUtil } from '../../util/general.util'
+import { LinkUtil } from '../../util/general.util'
 
 const command: commandProperties = {
     name: 'editlink',
@@ -31,6 +31,7 @@ const command: commandProperties = {
                 type: link.type,
                 userID: userID,
                 textChannel: textChannel,
+                currentLink: link,
             }
 
             const options: Prompt.optionSelectElement[] = [
@@ -44,7 +45,7 @@ const command: commandProperties = {
 
             async function editLinkUrl() {
                 try {
-                    const newLink = await AliasUtil.Prompt.promptLink(args)
+                    const newLink = await LinkUtil.Prompt.promptLink(args)
 
                     await Link.updateLinkUrl(guildID, linkOnly, newLink, textChannel)
                 } catch (error) {
@@ -54,7 +55,7 @@ const command: commandProperties = {
 
             async function addNames() {
                 try {
-                    const names = await AliasUtil.Prompt.promptNames(args)
+                    const names = await LinkUtil.Prompt.promptAddNames(args)
 
                     await Link.addNames(guildID, linkOnly, names, textChannel)
                 } catch (error) {
@@ -64,7 +65,7 @@ const command: commandProperties = {
 
             async function removeNames() {
                 try {
-                    const names = await AliasUtil.Prompt.promptNames(args)
+                    const names = await LinkUtil.Prompt.promptDeleteNames(args)
 
                     await Link.removeNames(guildID, linkOnly, names, textChannel)
                 } catch (error) {
@@ -74,7 +75,7 @@ const command: commandProperties = {
 
             async function editVolume() {
                 try {
-                    const volume = await AliasUtil.Prompt.promptVolume(args)
+                    const volume = await LinkUtil.Prompt.promptVolume(args)
 
                     await Link.editVolume(guildID, linkOnly, volume, textChannel)
                 } catch (error) {
@@ -82,7 +83,7 @@ const command: commandProperties = {
                 }
             }
         } catch (error) {
-            throw error
+            Prompt.handleGetSameUserInputError(error)
         }
     },
 }

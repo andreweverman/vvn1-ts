@@ -1,6 +1,7 @@
 import { Message, MessageEmbed, TextChannel, CollectorFilter, DMChannel, NewsChannel, Channel, Guild } from 'discord.js'
+import { last } from 'lodash'
 import { NumberConstants, quit, valid, messageCollectorTimeout } from './constants'
-import { stringMatch, matchOptions } from './string.util'
+import { stringMatch, matchOptions, spaceCommaRegex } from './string.util'
 
 export type AsyncCollectorFilter = (...args: any[]) => Promise<boolean>
 export type AnyCollectorFilter = AsyncCollectorFilter | CollectorFilter
@@ -94,10 +95,35 @@ export namespace Filter {
 
     export function stringFilter(str: string, options: matchOptions): CollectorFilter {
         const regex = stringMatch(str, options)
+        const minLengthEnabled: boolean = options.minLength != undefined
+        const maxLengthEnabled: boolean = options.maxLength != undefined
+        let filterLength: any = () => true
+        if (minLengthEnabled || maxLengthEnabled) {
+            filterLength = (str: string): boolean => {
+                if (options.minLength != undefined) {
+                    if (str.length < options.minLength) {
+                        return false
+                    }
+                }
+                if (options.maxLength != undefined) {
+                    if (str.length > options.maxLength) {
+                        return false
+                    }
+                }
+                return true
+            }
+        }
 
         return (response: Message) => {
             const inputStr = options.trimInput == false ? response.content : response.content.trim()
-            return regex.test(inputStr)
+            return regex.test(inputStr) && filterLength(inputStr)
+        }
+    }
+
+    export function stringLengthFilter(maxLength = 0, minLength = 0): CollectorFilter {
+        return (response: Message) => {
+            const content = response.content.trim()
+            return content.length >= minLength && content.length <= maxLength
         }
     }
 
@@ -188,9 +214,15 @@ export function replyUtil(
 }
 
 export namespace Prompt {
+    export interface gsuiReject {
+        reason: string
+        throwError: boolean
+        lastMessage?: Message
+        error?: Error
+    }
     // want to return the message
     //todo make the userID an optional arry
-    export function getSameUserInput(
+    export async function getSameUserInput(
         userID: string,
         textChannel: MessageChannel,
         messagePrompt: string | MessageEmbed,
@@ -235,9 +267,15 @@ export namespace Prompt {
                     })
 
                     messageCollector.on('end', (collected, reason) => {
+                        let rej: gsuiReject
                         const lastMessage = collected.last()
                         if (lastMessage == undefined) {
-                            reject(undefined)
+                            rej = {
+                                reason: 'Timeout',
+                                throwError: false,
+                                lastMessage: lastMessage,
+                            }
+                            reject(rej)
                             return
                         }
 
@@ -246,25 +284,42 @@ export namespace Prompt {
                                 reason == messageCollectorTimeout ? 'No reponse. Quitting...' : 'Quitting...'
                             sendToChannel(textChannel, msg, true, 10 * NumberConstants.secs)
                                 .then(() => {
-                                    reject(undefined)
+                                    rej = {
+                                        reason: reason,
+                                        throwError: false,
+                                        lastMessage: lastMessage,
+                                    }
+                                    reject(rej)
                                 })
-                                .catch((error) => {
-                                    reject(error)
+                                .catch((err) => {
+                                    let rej: gsuiReject = {
+                                        reason: 'Error sending sending response message',
+                                        throwError: true,
+                                        error: err,
+                                    }
+                                    reject(rej)
                                 })
                         }
                     })
                 })
                 .catch((err) => {
-                    console.error(err)
-                    reject(new Error('Error sending prompt message'))
+                    let rej: gsuiReject = {
+                        reason: 'Error sending prompt message',
+                        throwError: true,
+                        error: err,
+                    }
+                    reject(rej)
                 })
         })
     }
 
-    export function handleGetSameUserInputError(error: any, reject: Function) {
-        if (error != undefined) {
-            console.error(error)
-            reject(error)
+    export function handleGetSameUserInputError(errorResponse: any, reject?: Function) {
+        if (errorResponse.throwError) {
+            if (!reject) {
+                throw errorResponse
+            } else {
+                reject(errorResponse)
+            }
         }
     }
 
@@ -385,7 +440,7 @@ export namespace Prompt {
                 if (options?.multiple) {
                     const elementNumbers: number[] = userSelectionMsg.content
                         .trim()
-                        .split(/[ ,]+/)
+                        .split(spaceCommaRegex())
                         .map((x) => parseInt(x) - offset)
                     const arrayElements = elementNumbers.map((el) => array[el])
                     resolve(arrayElements)

@@ -35,26 +35,76 @@ const AliasSchema = new mongoose.Schema({
     type: { type: String, required: true },
 })
 
+export interface IAutoDeleteSpecified {
+    startsWith: string
+    timeToDelete: number
+}
+export interface IAutoDeletePrefixSpecifiedDoc extends IAutoDeleteSpecified, Document {}
+
+// for the allowlist, if starts with that string then we don't autodelete it
+export interface IAutoDeletePrefix {
+    prefix: string
+    allowList: string[]
+    specified: IAutoDeleteSpecified[]
+    allowMode: boolean
+}
+
+export interface IAutoDeletePrefixDoc extends IAutoDeletePrefix, Document {}
+
+const AutoDeletePrefixSchema = new mongoose.Schema({
+    prefix: { type: String, required: true },
+    allowList: { type: Array, required: true },
+    specified: { type: Array, required: true },
+    allowMode: { type: Boolean, required: true },
+})
+
+export interface IAutoDeleteMember {
+    userID: string
+    allowList: string[]
+    specified: IAutoDeleteSpecified[]
+    allowMode: boolean
+}
+
+export interface IAutoDeleteMemberDoc extends IAutoDeleteMember, Document {}
+
+const AutoDeleteMemberSchema = new mongoose.Schema({
+    userID: { type: String, required: true },
+    allowList: { type: Array, required: true },
+    specified: { type: Array, required: true },
+    allowMode: { type: Boolean, required: true },
+})
+
+export interface IArchive {
+    enabled: boolean
+    channel: string
+    saveBotCommands: boolean
+}
+export interface IArchiveDoc extends IArchive, Document {}
+
 export interface IConfig {
     prefix: string
-    autodelete_members: string[]
-    audodelete_prefixes: string[]
-    archive: {
-        enabled: boolean
-        channel: string
-    }
+    autodelete_members: IAutoDeleteMember[]
+    autodelete_prefixes: IAutoDeletePrefix[]
+    archive: IArchive
     tz: { name: string }
 }
 
-export interface IConfigDoc extends IConfig, Document {}
+export interface IConfigDoc extends Document {
+    prefix: string
+    autodelete_members: IAutoDeleteMemberDoc[]
+    autodelete_prefixes: IAutoDeletePrefixDoc[]
+    archive: IArchiveDoc
+    tz: { name: string }
+}
 
 const ConfigSchema = new mongoose.Schema({
     prefix: { type: String, default: '?' },
-    autodelete_members: { type: Array, default: [] },
-    autodelete_prefixes: { type: Array, default: [] },
+    autodelete_members: [AutoDeleteMemberSchema],
+    autodelete_prefixes: [AutoDeletePrefixSchema],
     archive: {
         enabled: { type: Boolean, default: false },
         channel: { type: String, default: null },
+        saveBotCommands: { type: Boolean, default: false },
     },
     tz: {
         type: Object,
