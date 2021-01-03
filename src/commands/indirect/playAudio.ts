@@ -3,13 +3,14 @@ import { ILinkDoc } from '../../db/models/guild.model'
 import { sendToChannel, MessageChannel } from '../../util/message.util'
 import ytdl from 'ytdl-core'
 
-const execute = async function (vc: VoiceChannel, clip: ILinkDoc, textChannel: MessageChannel) {
+const execute = async function (voiceChannel: VoiceChannel, clip: ILinkDoc, textChannel: MessageChannel) {
     try {
         if (!clip) {
             sendToChannel(textChannel, "Coudn't find clip", true)
             return
         }
-        const connection = await vc.join()
+
+        const connection = await voiceChannel.join()
 
         const stream = ytdl(clip.link, { filter: 'audioonly' })
 

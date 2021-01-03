@@ -7,6 +7,15 @@ export enum NumberConstants {
 export const quit = 'quit'
 export const valid = 'valid'
 export const messageCollectorTimeout = 'time'
+export const extraStringOption = 'extraStringOption'
+export const vote = 'vote'
+export const ready = 'ready'
+
+export const movieCountdownName = 'movie_countdown'
+export const movieTimeName = 'movie_time'
+
+export const readyEmojiName = 'ready'
+export const willWatchEmojiName = 'will_watch'
 
 export const keywords = [
     'me',

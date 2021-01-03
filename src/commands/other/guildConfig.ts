@@ -29,6 +29,8 @@ const command: commandProperties = {
 
             const args: ConfigUtil.ConfigUtilFunctionArgs = {
                 guildID: guildID,
+                client:e.client,
+                guild: e.message.guild!,
                 currentConfig: configDoc,
                 textChannel: textChannel,
                 userID: userID,

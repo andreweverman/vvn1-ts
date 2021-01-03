@@ -1,151 +1,143 @@
 import {
-	GuildMember,
-	VoiceChannel,
-	TextChannel,
-	Guild as GuildD,
-	GuildChannel,
-} from "discord.js";
+    Client,
+    GuildMember,
+    VoiceChannel,
+    TextChannel,
+    Guild as GuildD,
+    GuildChannel,
+    Collection,
+    GuildEmoji,
+    Emoji,
+} from 'discord.js'
+import { selfPronouns, groupPronouns, NumberConstants, vote } from '../util/constants'
+import { Guild, Link, Movie, Config } from '../db/controllers/guild.controller'
+import { IReactionEmojiDoc } from '../db/models/guild.model'
+import { extractActiveUsers, extractVCMembers } from '../util/discord.util'
+import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from '../util/string.util'
+import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from '../util/message.util'
 import {
-	selfPronouns,
-	groupPronouns,
-	NumberConstants,
-} from "../util/constants";
-import { Guild, Link, Movie, Config } from "../db/controllers/guild.controller";
-import { extractVCMembers } from "../util/discord.util";
-import { linkRegex, spaceCommaRegex, youtubeRegex } from "../util/string.util";
-import {
-	Filter,
-	Prompt as MPrompt,
-	MessageChannel,
-	Prompt,
-	sendToChannel,
-} from "../util/message.util";
-import {
-	IConfigDoc,
-	ILinkDoc,
-	IAutoDeletePrefix,
-	IAutoDeletePrefixDoc,
-} from "../db/models/guild.model";
-import moment from "moment-timezone";
-import { updateOneResponseHandler } from "../db/db.util";
+    IConfigDoc,
+    ILinkDoc,
+    IAutoDeleteElement,
+    IAutoDeleteElementDoc,
+    IAutoDeleteSpecified,
+    IMovieDoc,
+} from '../db/models/guild.model'
+import moment from 'moment-timezone'
+import axios from 'axios'
+import cheerio from 'cheerio'
+import emoji from 'node-emoji'
 
 export namespace AliasUtil {
-	export interface parseChannelAndMembersResponse {
-		members: GuildMember[];
-		voiceChannels: GuildChannel[];
-		textChannels: GuildChannel[];
-		moveChannel?: GuildChannel;
-	}
-	export interface parseChannelsAndMembersOptions {
-		member?: GuildMember;
-		moveMode?: boolean;
-	}
-	export async function parseChannelsAndMembers(
-		guild: GuildD,
-		args: string[],
-		options: parseChannelsAndMembersOptions
-	): Promise<parseChannelAndMembersResponse> {
-		const member = options.member;
+    export interface parseChannelAndMembersResponse {
+        members: GuildMember[]
+        voiceChannels: VoiceChannel[]
+        textChannels: GuildChannel[]
+        moveChannel?: VoiceChannel
+    }
+    export interface parseChannelsAndMembersOptions {
+        member?: GuildMember
+        moveMode?: boolean
+    }
+    export async function parseChannelsAndMembers(
+        guild: GuildD,
+        args: string[],
+        options: parseChannelsAndMembersOptions
+    ): Promise<parseChannelAndMembersResponse> {
+        const member = options.member
 
-		let members: GuildMember[] = [];
-		const voiceChannels: GuildChannel[] = [];
-		const textChannels: GuildChannel[] = [];
-		let moveChannel;
+        let members: GuildMember[] = []
+        const voiceChannels: VoiceChannel[] = []
+        const textChannels: GuildChannel[] = []
+        let moveChannel
 
-		// first lets make everything either a string or the id
-		let query: string[] = [];
-		args.forEach((x) => {
-			// seeing if gave a resolvable for user
-			const user = guild.member(x);
-			if (user) {
-				members.push(user);
-				return;
-			}
-			// seeing if gave a resolvable for channel
-			const channel = guild.channels.resolve(x);
-			if (channel) {
-				channel.type == "voice"
-					? voiceChannels.push(channel)
-					: textChannels.push(channel);
-				return;
-			}
+        // first lets make everything either a string or the id
+        let query: string[] = []
+        args.forEach((x) => {
+            // seeing if gave a resolvable for user
+            const user = guild.member(x)
+            if (user) {
+                members.push(user)
+                return
+            }
+            // seeing if gave a resolvable for channel
+            const channel = guild.channels.resolve(x)
+            if (channel) {
+                channel.type == 'voice' ? voiceChannels.push(channel as VoiceChannel) : textChannels.push(channel)
+                return
+            }
 
-			let found: boolean = true;
-			// either pronoun or need to lookup
-			if (member && member.voice.channel) {
-				if (groupPronouns.includes(x)) {
-					Array.from(member.voice.channel.members.entries())
-						.map((el) => el[1])
-						.forEach((y) => members.push(y));
-				} else if (selfPronouns.includes(x)) {
-					members.push(member);
-				} else if ("here".includes(x)) {
-					if (member.voice.channel) voiceChannels.push(member.voice.channel);
-				} else {
-					found = false;
-				}
-			}
-			if (!found) query.push(x);
-		});
+            let found: boolean = true
+            // either pronoun or need to lookup
+            if (member && member.voice.channel) {
+                if (groupPronouns.includes(x)) {
+                    Array.from(member.voice.channel.members.entries())
+                        .map((el) => el[1])
+                        .forEach((y) => members.push(y))
+                } else if (selfPronouns.includes(x)) {
+                    members.push(member)
+                } else if ('here'.includes(x)) {
+                    if (member.voice.channel) voiceChannels.push(member.voice.channel)
+                } else {
+                    found = false
+                }
+            } else {
+                found = false
+            }
+            if (!found) query.push(x)
+        })
 
-		// then we will look them up in the database
-		if (query.length > 0) {
-			const alias_doc = await Guild.getGuild(guild.id);
-			// once we have the models down, we will separate the voice channels and users
-			query.forEach(async (q) => {
-				const name_regex = new RegExp(`^${q}$`, "i");
-				const alias = alias_doc.aliases.find((x) => name_regex.test(x.name));
-				let bad_alias = false;
-				if (alias) {
-					if (alias.type == "user") {
-						// const obj = guild.member(alias.id);
-						const obj = await guild.members.fetch(alias.id);
-						obj ? members.push(obj) : (bad_alias = true);
-					} else if (alias.type == "voice") {
-						const obj = guild.channels.resolve(alias.id);
-						obj && obj.type == alias.type
-							? voiceChannels.push(obj)
-							: (bad_alias = true);
-					} else if (alias.type == "text") {
-						const obj = guild.channels.resolve(alias.id);
-						obj && obj.type == alias.type
-							? textChannels.push(obj)
-							: (bad_alias = true);
-					} else {
-						bad_alias = true;
-					}
+        // then we will look them up in the database
+        if (query.length > 0) {
+            const alias_doc = await Guild.getGuild(guild.id)
+            // once we have the models down, we will separate the voice channels and users
+            query.forEach(async (q) => {
+                const name_regex = new RegExp(`^${q}$`, 'i')
+                const alias = alias_doc.aliases.find((x) => name_regex.test(x.name))
+                let bad_alias = false
+                if (alias) {
+                    if (alias.type == 'user') {
+                        // const obj = guild.member(alias.id);
+                        const obj = await guild.members.fetch(alias.id)
+                        obj ? members.push(obj) : (bad_alias = true)
+                    } else if (alias.type == 'voice') {
+                        const obj = guild.channels.resolve(alias.id)
+                        obj && obj.type == alias.type ? voiceChannels.push(obj as VoiceChannel) : (bad_alias = true)
+                    } else if (alias.type == 'text') {
+                        const obj = guild.channels.resolve(alias.id)
+                        obj && obj.type == alias.type ? textChannels.push(obj) : (bad_alias = true)
+                    } else {
+                        bad_alias = true
+                    }
 
-					if (bad_alias) {
-						// alias that is unresolvable gets BOOTED
-						// TODO: put the Alias.deleteAlias call here
-					}
-				}
-			});
-		}
+                    if (bad_alias) {
+                        // alias that is unresolvable gets BOOTED
+                        // TODO: put the Alias.deleteAlias call here
+                    }
+                }
+            })
+        }
 
-		if (options.moveMode) {
-			if (voiceChannels.length > 0)
-				moveChannel = voiceChannels[voiceChannels.length - 1];
-			//if they give multiple voice channels, the last is always the destination
-			if (voiceChannels.length > 1) {
-				const voice_channel_members = extractVCMembers(
-					voiceChannels.slice(0, voiceChannels.length - 1)
-				);
-				if (Array.isArray(voice_channel_members))
-					voice_channel_members.forEach((ch) => (members = members.concat(ch)));
-				else members = members.concat(voice_channel_members);
-			}
-		}
+        if (options.moveMode) {
+            if (voiceChannels.length > 0) moveChannel = voiceChannels[voiceChannels.length - 1]
+            //if they give multiple voice channels, the last is always the destination
+            if (voiceChannels.length > 1) {
+                const voice_channel_members = extractVCMembers(voiceChannels.slice(0, voiceChannels.length - 1))
+                if (Array.isArray(voice_channel_members))
+                    voice_channel_members.forEach((ch) => (members = members.concat(ch)))
+                else members = members.concat(voice_channel_members)
+            }
+        }
 
-		return {
-			members: members,
-			voiceChannels: voiceChannels,
-			textChannels: textChannels,
-			moveChannel: moveChannel,
-		};
-	}
+        return {
+            members: members,
+            voiceChannels: voiceChannels,
+            textChannels: textChannels,
+            moveChannel: moveChannel,
+        }
+    }
 
-	/* the prompting for things like the name and the other shit should be defined here and then the args in should be
+    /* the prompting for things like the name and the other shit should be defined here and then the args in should be
         defined as just the single that is just called args. 
         each method header then can define an interface that the args should follow and that can then be used for 
         type safety!
@@ -153,556 +145,847 @@ export namespace AliasUtil {
 }
 
 export namespace LinkUtil {
-	export namespace Prompt {
-		export interface promptLinkArgs {
-			type: Link.LinkTypes;
-			userID: string;
-			textChannel: MessageChannel;
-			currentLink?: ILinkDoc;
-		}
+    export namespace Prompt {
+        export interface promptLinkArgs {
+            type: Link.LinkTypes
+            userID: string
+            textChannel: MessageChannel
+            currentLink?: ILinkDoc
+        }
 
-		export async function promptLink(args: promptLinkArgs): Promise<string> {
-			try {
-				const regex =
-					args.type === Link.LinkTypes.link ? linkRegex() : youtubeRegex();
+        export async function promptLink(args: promptLinkArgs): Promise<string> {
+            try {
+                const regex = args.type === Link.LinkTypes.link ? linkRegex : youtubeRegex
 
-				const m = await MPrompt.getSameUserInput(
-					args.userID,
-					args.textChannel,
-					"Enter the link:",
-					Filter.regexFilter(regex)
-				);
+                const m = await MPrompt.getSameUserInput(
+                    args.userID,
+                    args.textChannel,
+                    'Enter the link:',
+                    Filter.regexFilter(regex)
+                )
 
-				return m.content.trim();
-			} catch (error) {
-				throw error;
-			}
-		}
+                return m.content.trim()
+            } catch (error) {
+                throw error
+            }
+        }
 
-		export async function promptAddNames(
-			args: promptLinkArgs
-		): Promise<string[]> {
-			try {
-				const m = await MPrompt.getSameUserInput(
-					args.userID,
-					args.textChannel,
-					"Enter the names for the link:",
-					Filter.anyFilter()
-				);
+        export async function promptAddNames(args: promptLinkArgs): Promise<string[]> {
+            try {
+                const m = await MPrompt.getSameUserInput(
+                    args.userID,
+                    args.textChannel,
+                    'Enter the names for the link:',
+                    Filter.anyFilter()
+                )
 
-				return m.content.trim().split(" ");
-			} catch (error) {
-				throw error;
-			}
-		}
+                return m.content.trim().split(' ')
+            } catch (error) {
+                throw error
+            }
+        }
 
-		export async function promptDeleteNames(
-			args: promptLinkArgs
-		): Promise<string[]> {
-			try {
-				if (!args.currentLink) {
-					throw new Error("No link found");
-				}
+        export async function promptDeleteNames(args: promptLinkArgs): Promise<string[]> {
+            try {
+                if (!args.currentLink) {
+                    throw new Error('No link found')
+                }
 
-				const offset = 1;
-				const currentNames = args.currentLink.names;
-				const prompt = `Current names are: ${currentNames.map(
-					(x, i) => `\n${offset + i}: ${x}`
-				)}`;
-				const names = await MPrompt.arraySelect(
-					args.userID,
-					args.textChannel,
-					args.currentLink.names,
-					prompt,
-					{
-						multiple: true,
-						customOffset: offset,
-					}
-				);
-				if (!Array.isArray(names)) {
-					throw new Error("Expected an array");
-				} else {
-					return names;
-				}
-			} catch (error) {
-				throw error;
-			}
-		}
+                const offset = 1
+                const currentNames = args.currentLink.names
+                const prompt = `Current names are: ${currentNames.map((x, i) => `\n${offset + i}: ${x}`)}`
+                const names = await MPrompt.arraySelect(args.userID, args.textChannel, args.currentLink.names, prompt, {
+                    multiple: true,
+                    customOffset: offset,
+                })
+                if (!Array.isArray(names)) {
+                    throw new Error('Expected an array')
+                } else {
+                    return names
+                }
+            } catch (error) {
+                throw error
+            }
+        }
 
-		export async function promptVolume(args: promptLinkArgs): Promise<number> {
-			try {
-				const m = await MPrompt.getSameUserInput(
-					args.userID,
-					args.textChannel,
-					`Enter the volume (0 to 1, ${
-						args.currentLink
-							? `currently: ${args.currentLink.volume}`
-							: `default is .5)`
-					})`,
-					Filter.numberRangeFilter(0, 1, { integerOnly: false })
-				);
+        export async function promptVolume(args: promptLinkArgs): Promise<number> {
+            try {
+                const m = await MPrompt.getSameUserInput(
+                    args.userID,
+                    args.textChannel,
+                    `Enter the volume (0 to 1, ${
+                        args.currentLink ? `currently: ${args.currentLink.volume}` : `default is .5)`
+                    })`,
+                    Filter.numberRangeFilter(0, 1, { integerOnly: false })
+                )
 
-				return Number.parseFloat(m.content.trim());
-			} catch (error) {
-				throw error;
-			}
-		}
-	}
+                return Number.parseFloat(m.content.trim())
+            } catch (error) {
+                throw error
+            }
+        }
+    }
 }
 
 export namespace MovieUtil {
-	export namespace Prompt {
-		export interface promptMovieArgs {
-			userID: string;
-			textChannel: MessageChannel;
-			guildID: string;
-		}
+    export async function selectMovie(
+        guildID: string,
+        userID: string,
+        textChannel: MessageChannel,
+        multiple = false,
+        voteAllowed = false
+    ) {
+        try {
+            let extraStringOptions = []
+            if (voteAllowed) extraStringOptions.push(vote)
+            const { movies, message } = await Movie.getMovies(guildID, [], true)
+            const movie = await MPrompt.arraySelect(userID, textChannel, movies, message, {
+                multiple: multiple,
+                customOffset: 1,
+                extraStringOptions: extraStringOptions,
+            })
 
-		export async function promptMovieLink(
-			args: promptMovieArgs
-		): Promise<string> {
-			try {
-				const m = await MPrompt.getSameUserInput(
-					args.userID,
-					args.textChannel,
-					"Enter the movie link:",
-					Filter.regexFilter(linkRegex())
-				);
+            return movie
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-				return m.content.trim();
-			} catch (error) {
-				throw error;
-			}
-		}
+    export function getInfoPage(movieName: string): Promise<string | null> {
+        const urlBase = 'https://letterboxd.com'
+        const searchBase = '/search/'
 
-		export async function promptMovieName(
-			args: promptMovieArgs
-		): Promise<string> {
-			try {
-				const m = await MPrompt.getSameUserInput(
-					args.userID,
-					args.textChannel,
-					"Enter the movie name:",
-					Filter.anyFilter()
-				);
+        const searchURL = encodeURI(urlBase + searchBase + movieName)
 
-				return m.content.trim();
-			} catch (error) {
-				throw error;
-			}
-		}
+        return new Promise((resolve, reject) => {
+            axios
+                .get(searchURL)
+                .then((response) => {
+                    const html = response.data
+                    const $ = cheerio.load(html)
 
-		export async function promptMoviePassword(
-			args: promptMovieArgs
-		): Promise<string> {
-			try {
-				const options: MPrompt.optionSelectElement[] = [
-					{ name: "Default password", function: defaultPassword },
-					{ name: "Enter custom password", function: customPassword },
-					{ name: "No password", function: noPassword },
-				];
-				const m = await MPrompt.optionSelect(
-					args.userID,
-					args.textChannel,
-					options
-				);
+                    const liResults = $('ul.results li div[data-film-link]')
+                    liResults.length < 1
+                        ? resolve(null)
+                        : // @ts-ignore
+                          resolve(urlBase + liResults.first().attr('data-film-link'))
+                })
+                .catch((err) => {
+                    resolve(null)
+                })
+        })
+    }
 
-				return m;
+    export namespace Prompt {
+        export interface promptMovieArgs {
+            userID: string
+            textChannel: MessageChannel
+            guildID: string
+        }
 
-				async function defaultPassword(): Promise<string> {
-					try {
-						return await Movie.getMovieDefaultPassword(args.guildID);
-					} catch (error) {
-						throw error;
-					}
-				}
+        export async function promptMovieLink(args: promptMovieArgs): Promise<string> {
+            try {
+                const m = await MPrompt.getSameUserInput(
+                    args.userID,
+                    args.textChannel,
+                    'Enter the movie link:',
+                    Filter.regexFilter(linkRegex)
+                )
 
-				async function customPassword(): Promise<string> {
-					try {
-						const m = await MPrompt.getSameUserInput(
-							args.userID,
-							args.textChannel,
-							"Enter the zip file password: ",
-							Filter.anyFilter()
-						);
+                return m.content.trim()
+            } catch (error) {
+                throw error
+            }
+        }
 
-						return m.content.trim();
-					} catch (error) {
-						throw error;
-					}
-				}
+        export async function promptMovieName(args: promptMovieArgs): Promise<string> {
+            try {
+                const m = await MPrompt.getSameUserInput(
+                    args.userID,
+                    args.textChannel,
+                    'Enter the movie name:',
+                    Filter.anyFilter()
+                )
 
-				async function noPassword(): Promise<string> {
-					return "";
-				}
-			} catch (error) {
-				throw error;
-			}
-		}
-	}
+                return m.content.trim()
+            } catch (error) {
+                throw error
+            }
+        }
+
+        export async function promptMoviePassword(args: promptMovieArgs): Promise<string> {
+            try {
+                const options: MPrompt.optionSelectElement[] = [
+                    { name: 'Default password', function: defaultPassword },
+                    { name: 'Enter custom password', function: customPassword },
+                    { name: 'No password', function: noPassword },
+                ]
+                const m = await MPrompt.optionSelect(args.userID, args.textChannel, options)
+
+                return m
+
+                async function defaultPassword(): Promise<string> {
+                    try {
+                        return await Movie.getMovieDefaultPassword(args.guildID)
+                    } catch (error) {
+                        throw error
+                    }
+                }
+
+                async function customPassword(): Promise<string> {
+                    try {
+                        const m = await MPrompt.getSameUserInput(
+                            args.userID,
+                            args.textChannel,
+                            'Enter the zip file password: ',
+                            Filter.anyFilter()
+                        )
+
+                        return m.content.trim()
+                    } catch (error) {
+                        throw error
+                    }
+                }
+
+                async function noPassword(): Promise<string> {
+                    return ''
+                }
+            } catch (error) {
+                throw error
+            }
+        }
+    }
 }
 
 export namespace ConfigUtil {
-	export interface ConfigUtilFunctionArgs {
-		guildID: string;
-		currentConfig: IConfigDoc;
-		textChannel: MessageChannel;
-		userID: string;
-		prefix?: string;
-	}
+    export interface ConfigUtilFunctionArgs {
+        guildID: string
+        guild: GuildD
+        client: Client
+        currentConfig: IConfigDoc
+        textChannel: MessageChannel
+        userID: string
+        autoDeleteType?: Config.AutoDeleteType
+        matchOn?: string
+        lastFunction?: Function
+    }
 
-	export async function setNewPrefix(args: ConfigUtilFunctionArgs) {
-		try {
-			const m = await MPrompt.getSameUserInput(
-				args.userID,
-				args.textChannel,
-				`Please enter the new prefix (currently ${args.currentConfig.prefix}): `,
-				Filter.stringLengthFilter(1, 0)
-			);
-			await Config.setPrefix(args.guildID, m.content.trim(), args.textChannel);
-		} catch (error) {
-			Prompt.handleGetSameUserInputError(error);
-		}
-	}
+    export async function setNewPrefix(args: ConfigUtilFunctionArgs) {
+        try {
+            const m = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                `Please enter the new prefix (currently ${args.currentConfig.prefix}): `,
+                Filter.stringLengthFilter(1, 0)
+            )
+            await Config.setPrefix(args.guildID, m.content.trim(), args.textChannel)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-	export async function setNewTimeZone(args: ConfigUtilFunctionArgs) {
-		try {
-			const offset = 1;
-			const countries = moment.tz.countries();
+    export async function setNewTimeZone(args: ConfigUtilFunctionArgs) {
+        try {
+            const offset = 1
+            const countries = moment.tz.countries()
 
-			const countryPrompt = `Select a country code:\n${countries
-				.map((x, i) => `${i + offset}. ${x}`)
-				.join("\n")}`;
+            const countryPrompt = `Select a country code:\n${countries.map((x, i) => `${i + offset}. ${x}`).join('\n')}`
 
-			const countryMessage = await MPrompt.arraySelect(
-				args.userID,
-				args.textChannel,
-				countries,
-				countryPrompt,
-				{
-					multiple: false,
-					customOffset: offset,
-				}
-			);
+            const countryMessage = await MPrompt.arraySelect(args.userID, args.textChannel, countries, countryPrompt, {
+                multiple: false,
+                customOffset: offset,
+            })
 
-			if (Array.isArray(countryMessage)) {
-				throw new Error("Got an array when I should not have from arraySelect");
-			}
+            if (!countryMessage.arrayElement) {
+                throw new Error('Got an array when I should not have from arraySelect')
+            }
 
-			const country = countryMessage;
+            const country = countryMessage.arrayElement
 
-			const arr = moment.tz.zonesForCountry(country, true);
-			const message = `Select a timezone:\n${arr
-				.map((x, i) => `${i + offset}: ${x.name}, ${x.offset}`)
-				.join("\n")}`;
+            const arr = moment.tz.zonesForCountry(country, true)
+            const message = `Select a timezone:\n${arr
+                .map((x, i) => `${i + offset}: ${x.name}, ${x.offset}`)
+                .join('\n')}`
 
-			const m = await MPrompt.arraySelect(
-				args.userID,
-				args.textChannel,
-				arr,
-				message,
-				{
-					multiple: false,
-					customOffset: offset,
-				}
-			);
+            const m = await MPrompt.arraySelect(args.userID, args.textChannel, arr, message, {
+                multiple: false,
+                customOffset: offset,
+            })
 
-			if (Array.isArray(m)) {
-				throw new Error("Got an array when I should not have from arraySelect");
-			}
+            if (!m.arrayElement) {
+                throw new Error('Got an array when I should not have from arraySelect')
+            }
 
-			await Config.setTimeZone(args.guildID, m, args.textChannel);
-		} catch (error) {
-			Prompt.handleGetSameUserInputError(error);
-		}
-	}
+            await Config.setTimeZone(args.guildID, m.arrayElement, args.textChannel)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-	// want to change the schema for this sort of stuff so you have control over like the
-	// delte this prefix if the message starts with <blank>, has whitelist and blacklist,
-	// control time to delete based on what it matches
-	// or delete message from user after timer if also starts with prefix?
-	// idk more configurable would be cool
-	// also having an all bots autodelete after 1 min or something could be hype
+    // want to change the schema for this sort of stuff so you have control over like the
+    // delte this prefix if the message starts with <blank>, has whitelist and blacklist,
+    // control time to delete based on what it matches
+    // or delete message from user after timer if also starts with prefix?
+    // idk more configurable would be cool
+    // also having an all bots autodelete after 1 min or something could be hype
 
-	export async function setPrefixAutoDelete(args: ConfigUtilFunctionArgs) {
-		try {
-			const options: Prompt.optionSelectElement[] = [
-				{ name: "Add new prefix", function: addPrefixAutoDelete, args: args },
-				{
-					name: "Edit exiting prefix settings",
-					function: editPrefixAutoDelete,
-					args: args,
-				},
-				{ name: "Remove prefix", function: removePrefixAutoDelete, args: args },
-			];
+    export async function setPrefixAutoDelete(args: ConfigUtilFunctionArgs) {
+        args.autoDeleteType = Config.AutoDeleteType.prefix
+        setAutoDelete(args)
+    }
 
-			return Prompt.optionSelect(args.userID, args.textChannel, options);
-		} catch (error) {
-			Prompt.handleGetSameUserInputError(error);
-		}
-	}
-	export async function addPrefixAutoDelete(args: ConfigUtilFunctionArgs) {
-		try {
-			const m = await Prompt.getSameUserInput(
-				args.userID,
-				args.textChannel,
-				"Enter the prefix to autodelete messages for:",
-				Filter.stringLengthFilter(10, 0)
-			);
+    export async function setUserAutoDelete(args: ConfigUtilFunctionArgs) {
+        args.autoDeleteType = Config.AutoDeleteType.user
+        setAutoDelete(args)
+    }
+    export async function setAutoDelete(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            args.matchOn = undefined
+            args.lastFunction = setAutoDelete
 
-			const prefix = m.content.trim();
+            const options: MPrompt.optionSelectElement[] = [
+                { name: `Add new ${args.autoDeleteType}`, function: addTypeAutoDelete, args: args },
+                {
+                    name: `Edit exiting ${args.autoDeleteType} settings`,
+                    function: editTypeAutoDelete,
+                    args: args,
+                },
+                { name: `Remove ${args.autoDeleteType}`, function: removeTypeAutoDelete, args: args },
+            ]
 
-			// checking if new prefix or need to just go to edit mode
-			const config = await Config.getGuildConfig(args.guildID);
+            return MPrompt.optionSelect(args.userID, args.textChannel, options)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+    export async function addTypeAutoDelete(args: ConfigUtilFunctionArgs) {
+        try {
+            const prefixMode = args.autoDeleteType == Config.AutoDeleteType.prefix
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
 
-			const foundPrefix = config.autodelete_prefixes.find(
-				(x) => x.prefix === prefix
-			);
-			if (!foundPrefix) {
-				// new prefix, add and then go to the edit move
-				await Config.addPrefixAutoDelete(
-					args.guildID,
-					prefix,
-					args.textChannel
-				);
-			}
-			args.prefix = prefix;
+            const filter = prefixMode ? Filter.anyFilter() : Filter.validUserFilter(args.guild)
+            const m = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                `Enter the ${args.autoDeleteType} to autodelete messages for:`,
+                filter
+            )
 
-			return editPrefixAutoDelete(args);
-		} catch (error) {
-			Prompt.handleGetSameUserInputError(error);
-		}
-	}
+            const config = await Config.getGuildConfig(args.guildID)
+            if (prefixMode) {
+                args.matchOn = m.content.trim()
+                const foundPrefix = config.autodelete.find(
+                    (x) => x.matchOn === args.matchOn && x.type == Config.AutoDeleteType.prefix
+                )
+                if (!foundPrefix) {
+                    // new prefix, add and then go to the edit move
+                    await Config.addAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType, args.textChannel)
+                }
+            } else {
+                const users = extractActiveUsers(m.content.trim(), args.guild)
+                if (users.length < 1) throw new Error('No user found')
+                args.matchOn = users[0].id
+                const foundUser = config.autodelete.find(
+                    (x) => x.matchOn === args.matchOn && x.type == Config.AutoDeleteType.user
+                )
+                if (!foundUser) {
+                    await Config.addAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType, args.textChannel)
+                }
+            }
 
-	export async function selectPrefix(args: ConfigUtilFunctionArgs) {
-		try {
-			const configDoc = await Config.getGuildConfig(args.guildID);
-			const autodeletePrefixes = configDoc.autodelete_prefixes;
-			const offset = 1;
-			const prompt = `Select a prefix to edit:\n ${autodeletePrefixes
-				.map((x, i) => `${i + offset}. ${x.prefix}`)
-				.join("\n")}`;
-			const prefix = await Prompt.arraySelect(
-				args.userID,
-				args.textChannel,
-				autodeletePrefixes,
-				prompt,
-				{
-					multiple: false,
-					customOffset: offset,
-				}
-			);
+            return editTypeAutoDelete(args)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-			if (Array.isArray(prefix)) {
-				const msg = "Error selecting prefix. Quitting...";
-				await sendToChannel(args.textChannel, msg);
-				throw new Error(msg);
-			}
+    export async function selectAutoDeleteTypeMember(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            const configDoc = await Config.getGuildConfig(args.guildID)
+            const typedAutoDeleteArr = configDoc.autodelete.filter((x) => x.type == args.autoDeleteType)
+            const offset = 1
 
-			return prefix;
-		} catch (error) {
-			Prompt.handleGetSameUserInputError(error);
-		}
-	}
+            if (typedAutoDeleteArr.length < 1) {
+                sendToChannel(args.textChannel, `No ${args.autoDeleteType} elements found. Quitting...`)
+                if (args.lastFunction) {
+                    return args.lastFunction(args)
+                }
+            }
+            const prompt = `Select a ${args.autoDeleteType} to edit:\n ${typedAutoDeleteArr
+                .map((x, i) => `${i + offset}. ${x.matchOn}`)
+                .join('\n')}`
+            const prefix = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
+                multiple: false,
+                customOffset: offset,
+            })
 
-	export async function editPrefixAutoDelete(args: ConfigUtilFunctionArgs) {
-		let prefixDoc: IAutoDeletePrefix | undefined;
-		if (!args.prefix) {
-			prefixDoc = await selectPrefix(args);
-			if (prefixDoc) {
-				args.prefix = prefixDoc.prefix;
-			}
-		}
-		if (prefixDoc == undefined) {
-			if (!args.prefix) {
-				throw new Error("Coundnt set prefix");
-			}
-			prefixDoc = await Config.getAutoDeletePrefix(args.guildID, args.prefix);
-		}
+            if (Array.isArray(prefix)) {
+                const msg = 'Error selecting element. Quitting...'
+                await sendToChannel(args.textChannel, msg)
+                throw new Error(msg)
+            }
 
-		if (!prefixDoc) {
-			sendToChannel(
-				args.textChannel,
-				"Prefix not loaded in for whatever reason. Quitting..."
-			);
-			return undefined;
-		}
+            return prefix
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-		const deleteModeString =
-			"Currently in delete mode, meaning the default is to delete messages and will not delete messages that start with the whitelist";
-		const allowModeString =
-			"Currently in allow mode, meaning that the default is to allow messages and will delete messages that are mentioned on the whitelist";
-		const options: Prompt.optionSelectElement[] = [
-			{
-				name: `Edit whitelisted commands. If in allow mode, deletes the command. If in delete mode, allows the command`,
-				function: editAllowList,
-				args: args,
-			},
-			{
-				name: `Edit specified command delete times (ex. if you want ${prefixDoc.prefix}play to delete slower than others)`,
-				function: editPrefixSpecifiedDelete,
-				args: args,
-			},
-			{
-				name: `Change mode. ${
-					prefixDoc.allowMode ? allowModeString : deleteModeString
-				}`,
-				function: changeAutoDeleteMode,
-				args: args,
-			},
-			{ name: "Back", function: setPrefixAutoDelete, args: args },
-		];
+    export async function editTypeAutoDelete(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            let elementDoc: IAutoDeleteElement | undefined
+            if (!args.matchOn) {
+                elementDoc = await selectAutoDeleteTypeMember(args)
+                if (elementDoc) {
+                    args.matchOn = elementDoc.matchOn
+                }
+            }
+            if (elementDoc == undefined) {
+                if (!args.matchOn) {
+                    throw new Error('Coulndnt set autodelete element')
+                }
+                elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            }
 
-		return Prompt.optionSelect(args.userID, args.textChannel, options);
-	}
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, `${args.autoDeleteType} not loaded in for whatever reason. Quitting...`)
+                return undefined
+            }
 
-	export async function changeAutoDeleteMode(args: ConfigUtilFunctionArgs) {
-		try {
-			if (!args.prefix) throw new Error("No prefix");
-			const prefixDoc = await Config.getAutoDeletePrefix(
-				args.guildID,
-				args.prefix
-			);
-			if (!prefixDoc) return undefined;
-			await Config.changePrefixAutoDeleteMode(
-				args.guildID,
-				prefixDoc,
-				args.textChannel
-			);
+            const backFn = args.lastFunction ? args.lastFunction : () => true
 
-			editPrefixAutoDelete(args);
-		} catch (error) {
-			throw error;
-		}
-	}
-	export async function removePrefixAutoDelete(args: ConfigUtilFunctionArgs) {
-		try {
-			const prefixDoc = await selectPrefix(args);
-			if (!prefixDoc) {
-				return undefined;
-			}
-			args.prefix = prefixDoc.prefix;
+            args.lastFunction = setAutoDelete
 
-			if (!args.prefix) {
-				return undefined;
-			} else {
-				await Config.deletePrefixAutoDelete(
-					args.guildID,
-					args.prefix,
-					args.textChannel
-				);
-				args.prefix = undefined;
-				setPrefixAutoDelete(args);
-			}
-		} catch (error) {
-			throw error;
-		}
-	}
+            const deleteModeString =
+                'Currently in delete mode, meaning the default is to delete messages and will not delete messages that start with the whitelist'
+            const allowModeString =
+                'Currently in allow mode, meaning that the default is to allow messages and will delete messages that are mentioned on the whitelist'
+            const options: MPrompt.optionSelectElement[] = [
+                {
+                    name: `Edit whitelisted commands. If in allow mode, deletes the command. If in delete mode, allows the command`,
+                    function: editAllowList,
+                    args: args,
+                },
+                {
+                    name: `Edit specified command delete times (ex. ${
+                        Config.AutoDeleteType.prefix == args.autoDeleteType
+                            ? '!play deletes after 300 seconds'
+                            : 'when user Gerald says play delete it'
+                    })`,
+                    function: editSpecifiedDelete,
+                    args: args,
+                },
+                {
+                    name: `Change mode. ${elementDoc.allowMode ? allowModeString : deleteModeString}`,
+                    function: changeAutoDeleteMode,
+                    args: args,
+                },
+                {
+                    name: `Edit default delete time (currently ${
+                        elementDoc.defaultDeleteTime / NumberConstants.secs
+                    } seconds)`,
+                    function: editDefaultDeleteTime,
+                    args: args,
+                },
+                { name: 'Back', function: backFn, args: args },
+            ]
 
-	export async function editPrefixSpecifiedDelete() {}
+            return MPrompt.optionSelect(args.userID, args.textChannel, options)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-	export async function removePrefixSpecifiedDelete() {}
+    export async function editDefaultDeleteTime(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) throw new Error('No matchOn')
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) return undefined
 
-	export async function removeAutodeletePrefix() {}
+            const m = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                'Enter the new default delete time in seconds',
+                Filter.numberRangeFilter(0, Number.MAX_SAFE_INTEGER)
+            )
 
-	export async function editAllowList(args: ConfigUtilFunctionArgs) {
-		try {
-			if (!args.prefix) {
-				sendToChannel(
-					args.textChannel,
-					"Error on my end. Prefix not passsed in for whatever reason. Quitting..."
-				);
-				return undefined;
-			}
+            const time = Number.parseInt(m.content.trim()) * NumberConstants.secs
 
-			const prefixDoc = await Config.getAutoDeletePrefix(
-				args.guildID,
-				args.prefix
-			);
-			if (!prefixDoc) {
-				sendToChannel(
-					args.textChannel,
-					"Prefix not loaded in for whatever reason. Quitting..."
-				);
-				return undefined;
-			}
+            await Config.changeAutoDeleteElementDefaultTime(args.guildID, elementDoc, time, args.textChannel)
 
-			//  display current allow list
-			const extraPrompt = `Current list includes: ${prefixDoc.allowList.join(
-				", "
-			)}`;
+            editTypeAutoDelete(args)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
 
-			const options: Prompt.optionSelectElement[] = [
-				{
-					name: "Add to allow list",
-					function: addToPrefixAllowList,
-					args: args,
-				},
-				{
-					name: "Remove from allow list",
-					function: removeFromPrefixAllowList,
-					args: args,
-				},
-				{ name: "Back", function: editPrefixAutoDelete, args: args },
-			];
+    export async function changeAutoDeleteMode(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) throw new Error('No matchOn')
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) return undefined
+            await Config.changeAutoDeleteElementMode(args.guildID, elementDoc, args.textChannel)
 
-			return Prompt.optionSelect(args.userID, args.textChannel, options, {
-				extraPrompt: extraPrompt,
-			});
-		} catch (error) {
-			throw error;
-		}
-	}
+            editTypeAutoDelete(args)
+        } catch (error) {
+            throw error
+        }
+    }
+    export async function removeTypeAutoDelete(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            const elementDoc = await selectAutoDeleteTypeMember(args)
+            if (!elementDoc) {
+                return undefined
+            }
+            args.matchOn = elementDoc.matchOn
 
-	export async function addToPrefixAllowList(args: ConfigUtilFunctionArgs) {
-		try {
-			if (!args.prefix) {
-				sendToChannel(
-					args.textChannel,
-					"Error on my end. Prefix not passsed in for whatever reason. Quitting..."
-				);
-				return undefined;
-			}
+            if (!args.matchOn) {
+                return undefined
+            } else {
+                await Config.deleteAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType, args.textChannel)
+                args.matchOn = undefined
+                setAutoDelete(args)
+            }
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+    export async function addAutoDeleteSpecified(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) {
+                sendToChannel(args.textChannel, 'Error on my end. Quitting...')
+                return undefined
+            }
 
-			const prefixDoc = await Config.getAutoDeletePrefix(
-				args.guildID,
-				args.prefix
-			);
-			if (!prefixDoc) {
-				sendToChannel(
-					args.textChannel,
-					"Prefix not loaded in for whatever reason. Quitting..."
-				);
-				return undefined;
-			}
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, args.autoDeleteType + ' not loaded in for whatever reason. Quitting...')
+                return undefined
+            }
 
-			const m = await Prompt.getSameUserInput(
-				args.userID,
-				args.textChannel,
-				"Enter the names you would like to whitelist (can add multiple with spaces for commas between):",
-				Filter.anyFilter()
-			);
+            // 2 prompt. one for the name of the command and then how many seconds to wait before deletion
 
-			const names = m.content.trim().split(spaceCommaRegex());
+            const commandMessage = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                'Enter the name of the command:',
+                Filter.anyFilter()
+            )
 
-			await Config.addPrefixAutoDeleteAllowed(
-				args.guildID,
-				prefixDoc,
-				names,
-				args.textChannel
-			);
+            const commandStr = commandMessage.content.trim()
 
-			editPrefixAutoDelete(args);
-		} catch (error) {
-			throw error;
-		}
-	}
+            const timeMessage = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                'Enter the amount of seconds before deleting:',
+                Filter.numberRangeFilter(0, Number.MAX_SAFE_INTEGER)
+            )
 
-	export async function removeFromPrefixAllowList(
-		args: ConfigUtilFunctionArgs
-	) {}
+            const timeToDelete = parseInt(timeMessage.content.trim())
 
-	export async function setUserAutoDelete(args: ConfigUtilFunctionArgs) {}
+            const autodeleteSpecified: IAutoDeleteSpecified = { startsWith: commandStr, timeToDelete: timeToDelete }
+            await Config.addAutoDeleteElementSpecified(
+                args.guildID,
+                args.matchOn,
+                args.autoDeleteType,
+                autodeleteSpecified,
+                args.textChannel
+            )
 
-	export async function newMessageArchiveSetup(args: ConfigUtilFunctionArgs) {}
+            editSpecifiedDelete(args)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    export async function removeSpecifiedDelete(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) {
+                sendToChannel(args.textChannel, 'Error on my end. Quitting...')
+                return undefined
+            }
+
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, 'Error on my end. Quitting...')
+                return undefined
+            }
+
+            const arr = elementDoc.specified
+
+            const offset = 1
+            const prompt = arr
+                .map((x, i) => `${i + offset}. ${x.startsWith} after ${x.timeToDelete} seconds`)
+                .join('\n')
+
+            const specifiedObj = await MPrompt.arraySelect(args.userID, args.textChannel, arr, prompt, {
+                customOffset: 1,
+                multiple: false,
+            })
+
+            if (!specifiedObj.arrayElement) {
+                return undefined
+            }
+
+            Config.removeAutoDeleteElementSpecified(
+                args.guildID,
+                elementDoc,
+                specifiedObj.arrayElement,
+                args.textChannel
+            )
+        } catch (error) {
+            throw error
+        }
+    }
+    export async function editSpecifiedDelete(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) {
+                sendToChannel(
+                    args.textChannel,
+                    'Error on my end. Prefix not passsed in for whatever reason. Quitting...'
+                )
+                return undefined
+            }
+
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, 'Prefix not loaded in for whatever reason. Quitting...')
+                return undefined
+            }
+
+            const extraPrompt =
+                'Current configuration:\n' +
+                elementDoc.specified
+                    .map((x) => `${elementDoc.matchOn + x.startsWith} after ${x.timeToDelete} seconds`)
+                    .join('\n')
+
+            const backFn = args.lastFunction ? args.lastFunction : () => true
+
+            args.lastFunction = editSpecifiedDelete
+            const options: MPrompt.optionSelectElement[] = [
+                {
+                    name: 'Add/Edit command name to specify a delete time for',
+                    function: addAutoDeleteSpecified,
+                    args: args,
+                },
+                {
+                    name: `Delete an existing command's specific delete time`,
+                    function: removeSpecifiedDelete,
+                    args: args,
+                },
+                { name: 'Back', function: backFn, args: args },
+            ]
+
+            MPrompt.optionSelect(args.userID, args.textChannel, options, { extraPrompt: extraPrompt })
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    // allow list
+    export async function editAllowList(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) {
+                sendToChannel(
+                    args.textChannel,
+                    'Error on my end. Prefix not passsed in for whatever reason. Quitting...'
+                )
+                return undefined
+            }
+
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, 'Prefix not loaded in for whatever reason. Quitting...')
+                return undefined
+            }
+
+            //  display current allow list
+            const backFn = args.lastFunction ? args.lastFunction : () => true
+            args.lastFunction = editTypeAutoDelete
+            const extraPrompt = `Current list includes: ${elementDoc.allowList.join(', ')}`
+
+            const options: Prompt.optionSelectElement[] = [
+                {
+                    name: 'Add to allow list',
+                    function: addToAllowList,
+                    args: args,
+                },
+                {
+                    name: 'Remove from allow list',
+                    function: removeFromAllowList,
+                    args: args,
+                },
+                { name: 'Back', function: backFn, args: args },
+            ]
+
+            return MPrompt.optionSelect(args.userID, args.textChannel, options, {
+                extraPrompt: extraPrompt,
+            })
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    export async function addToAllowList(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) {
+                sendToChannel(
+                    args.textChannel,
+                    'Error on my end. Prefix not passsed in for whatever reason. Quitting...'
+                )
+                return undefined
+            }
+
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, 'Prefix not loaded in for whatever reason. Quitting...')
+                return undefined
+            }
+
+            const m = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                'Enter the names you would like to whitelist (can add multiple with spaces for commas between):',
+                Filter.anyFilter()
+            )
+
+            const names = m.content.trim().split(spaceCommaRegex)
+
+            await Config.addAutoDeleteElementAllowed(args.guildID, elementDoc, names, args.textChannel)
+
+            editAllowList(args)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    export async function removeFromAllowList(args: ConfigUtilFunctionArgs) {
+        try {
+            if (args.autoDeleteType == undefined) {
+                throw new Error('No type of autodelete')
+            }
+            if (!args.matchOn) {
+                sendToChannel(
+                    args.textChannel,
+                    'Error on my end. Prefix not passsed in for whatever reason. Quitting...'
+                )
+                return undefined
+            }
+
+            const elementDoc = await Config.getAutoDeleteElement(args.guildID, args.matchOn, args.autoDeleteType)
+            if (!elementDoc) {
+                sendToChannel(args.textChannel, 'Prefix not loaded in for whatever reason. Quitting...')
+                return undefined
+            }
+
+            const allowList = elementDoc.allowList
+            const offset = 1
+            const prompt =
+                'Enter the ones you want to remove from the list (can enter multiple):\n' +
+                allowList.map((x, i) => `${i + offset}. ${x}\n`)
+
+            const deleteNames = await MPrompt.arraySelect(args.userID, args.textChannel, allowList, prompt, {
+                multiple: true,
+                customOffset: 1,
+            })
+
+            if (!Array.isArray(deleteNames)) {
+                return undefined
+            }
+
+            await Config.removeAutoDeleteElementAllowed(args.guildID, elementDoc, deleteNames, args.textChannel)
+
+            editTypeAutoDelete(args)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    // user auto delete
+
+    export async function newMessageArchiveSetup(args: ConfigUtilFunctionArgs) {}
+}
+
+export namespace EmojiUtil {
+    export async function validateEmoji(cache: Collection<string, GuildEmoji>, emojiDoc: IReactionEmojiDoc) {
+        const guildResults = guildEmojiRegex.exec(emojiDoc.emoji)
+        if (guildResults) {
+            const guildEmoji = cache.find((x) => x.name == guildResults[1])
+
+            if (guildEmoji) return guildEmoji
+            else return emojiDoc.backup
+        } else {
+            return emojiDoc.emoji
+        }
+    }
+
+    /**
+     * Checks if the input string is a valid emoji.
+     *
+     * Looks for a valid formatted emoji.
+     * Also is for seeing if it is a valid one for what we are looking for.
+     *
+     * @param {String}  name        The name of the emoji that was input.
+     * @param {Emoji}   validArr   The array of valid emojis.
+     * @returns {Boolean}   If it is a valid emoji for the situation.
+     */
+    export function isEmoji(name: string, validArr: any[]) {
+        const moji = emoji.find(name)
+        if (moji) {
+            const mojiColon = `:${moji.key}:`
+            return validArr.includes(mojiColon)
+        }
+        return false
+    }
+
+    /**
+     * Filter function for getting  emojis of a specified type from a collection.
+     *
+     * This is best used when having an emoji collector and filtering those results.
+     *
+     * @param {[Emoji]} goodEmojis Valid emojis that will be filtered true.
+     */
+    export function filterEmoji(goodEmojis: (GuildEmoji | string)[]) {
+        return (x: any) => {
+            const moji = x.emoji
+            if (isEmoji(moji.name, goodEmojis)) return true
+            if (goodEmojis.includes(moji)) return true
+            return false
+        }
+    }
 }
