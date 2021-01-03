@@ -254,7 +254,7 @@ describe('Filter', () => {
 
         describe('trimInput', () => {
             //wtf tho
-            it.only.each([
+            it.each([
                 ['vote', 'vote', true, true],
                 ['vote', 'vote ', false, true],
                 ['vote', ' vote ', false, true],
@@ -266,7 +266,7 @@ describe('Filter', () => {
                     const message = Mocks.mockMessage(input, '12345', 'text')
                     const res = Filter.stringFilter(regexString, {
                         trimInput: enabled,
-                        loose: true,
+                        loose: false,
                     })(message)
                     expect(expected).toBe(res)
                 })

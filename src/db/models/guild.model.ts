@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose'
-import { Link } from '../controllers/guild.controller'
-
+import { Config, Link } from '../controllers/guild.controller'
+import { NumberConstants, movieCountdownName, movieTimeName, readyEmojiName, willWatchEmojiName } from '../../util/constants'
 export interface ILink {
     names: string[]
     link: string
@@ -39,39 +39,27 @@ export interface IAutoDeleteSpecified {
     startsWith: string
     timeToDelete: number
 }
-export interface IAutoDeletePrefixSpecifiedDoc extends IAutoDeleteSpecified, Document {}
+export interface IAutoDeleteSpecifiedDoc extends IAutoDeleteSpecified, Document {}
 
 // for the allowlist, if starts with that string then we don't autodelete it
-export interface IAutoDeletePrefix {
-    prefix: string
+export interface IAutoDeleteElement {
+    matchOn: string
     allowList: string[]
     specified: IAutoDeleteSpecified[]
     allowMode: boolean
+    type: Config.AutoDeleteType
+    defaultDeleteTime: number
 }
 
-export interface IAutoDeletePrefixDoc extends IAutoDeletePrefix, Document {}
+export interface IAutoDeleteElementDoc extends IAutoDeleteElement, Document {}
 
-const AutoDeletePrefixSchema = new mongoose.Schema({
-    prefix: { type: String, required: true },
+const AutoDeleteSchema = new mongoose.Schema({
+    matchOn: { type: String, required: true },
     allowList: { type: Array, required: true },
     specified: { type: Array, required: true },
     allowMode: { type: Boolean, required: true },
-})
-
-export interface IAutoDeleteMember {
-    userID: string
-    allowList: string[]
-    specified: IAutoDeleteSpecified[]
-    allowMode: boolean
-}
-
-export interface IAutoDeleteMemberDoc extends IAutoDeleteMember, Document {}
-
-const AutoDeleteMemberSchema = new mongoose.Schema({
-    userID: { type: String, required: true },
-    allowList: { type: Array, required: true },
-    specified: { type: Array, required: true },
-    allowMode: { type: Boolean, required: true },
+    type: { type: String, required: true },
+    defaultDeleteTime: { type: Number, required: true, default: 60 },
 })
 
 export interface IArchive {
@@ -83,24 +71,21 @@ export interface IArchiveDoc extends IArchive, Document {}
 
 export interface IConfig {
     prefix: string
-    autodelete_members: IAutoDeleteMember[]
-    autodelete_prefixes: IAutoDeletePrefix[]
+    autodelete: IAutoDeleteElement[]
     archive: IArchive
     tz: { name: string }
 }
 
 export interface IConfigDoc extends Document {
     prefix: string
-    autodelete_members: IAutoDeleteMemberDoc[]
-    autodelete_prefixes: IAutoDeletePrefixDoc[]
+    autodelete: IAutoDeleteElementDoc[]
     archive: IArchiveDoc
     tz: { name: string }
 }
 
 const ConfigSchema = new mongoose.Schema({
     prefix: { type: String, default: '?' },
-    autodelete_members: [AutoDeleteMemberSchema],
-    autodelete_prefixes: [AutoDeletePrefixSchema],
+    autodelete: [AutoDeleteSchema],
     archive: {
         enabled: { type: Boolean, default: false },
         channel: { type: String, default: null },
@@ -159,11 +144,11 @@ const MovieSchema = new mongoose.Schema({
         type: Array,
         default: [
             {
-                name: 'movie_countdown',
+                name: movieCountdownName,
                 enabled: true,
             },
             {
-                name: 'movie_time',
+                name: movieTimeName,
                 enabled: true,
             },
         ],
@@ -173,12 +158,12 @@ const MovieSchema = new mongoose.Schema({
         type: Array,
         default: [
             {
-                name: 'ready',
+                name: readyEmojiName,
                 emoji: ':thumbsup:',
                 backup: ':thumbsup:',
             },
             {
-                name: 'will_watch',
+                name: willWatchEmojiName,
                 emoji: ':eyes:',
                 backup: ':eyes:',
             },

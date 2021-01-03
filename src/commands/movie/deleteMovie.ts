@@ -5,7 +5,7 @@ import { ILink } from '../../db/models/guild.model'
 import { MessageEmbed } from 'discord.js'
 import { linkRegex, youtubeRegex } from '../../util/string.util'
 import { AliasUtil, MovieUtil } from '../../util/general.util'
-
+import { IMovieDoc } from '../../db/models/guild.model'
 const command: commandProperties = {
     name: 'deletemovie',
     aliases: ['delete_movie', 'removemovie'],
@@ -20,13 +20,13 @@ const command: commandProperties = {
         const textChannel = e.message.channel
 
         try {
-            const { movies, message } = await Movie.getMovies(guildID, e.args, true)
-            const movie = await Prompt.arraySelect(userID, textChannel, movies, message, {
-                multiple: true,
-                customOffset: 1,
-            })
+            const movie = await MovieUtil.selectMovie(guildID, userID, textChannel, true)
 
-            return await Movie.deleteMovie(guildID, movie, textChannel)
+            let movieToDelete: IMovieDoc | IMovieDoc[] | undefined
+            if (movie?.arrayElement) movieToDelete = movie.arrayElement
+            if (movie?.arrayElements) movieToDelete = movie.arrayElements
+            if (!movieToDelete) return undefined
+            return await Movie.deleteMovie(guildID, movieToDelete, textChannel)
         } catch (error) {
             Prompt.handleGetSameUserInputError(error)
         }

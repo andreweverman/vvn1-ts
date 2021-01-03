@@ -30,13 +30,13 @@ const command: commandProperties = {
             {
                 name: Link.LinkTypes.link,
                 description: 'Static link that gets returned when invoked by name',
-                regex: linkRegex(),
+                regex: linkRegex,
                 volumePrompt: false,
             },
             {
                 name: Link.LinkTypes.clip,
                 description: 'A youtube link that gets played in a voice channel',
-                regex: youtubeRegex(),
+                regex: youtubeRegex,
                 volumePrompt: true,
             },
         ]
@@ -87,11 +87,11 @@ const command: commandProperties = {
 
                     Prompt.arraySelect(userID, textChannel, options, msg)
                         .then((option) => {
-                            if (Array.isArray(option)) {
+                            if (!option.arrayElement) {
                                 reject(null)
                                 return
                             }
-                            resolve(option)
+                            resolve(option.arrayElement)
                         })
                         .catch((error) => {
                             reject(error)

@@ -5,7 +5,7 @@ import { Alias } from '../../db/controllers/guild.controller'
 import { Filter, Prompt, sendToChannel } from '../../util/message.util'
 import { extractActiveUsers, extractChannels } from '../../util/discord.util'
 import { NumberConstants } from '../../util/constants'
-
+import {IAliasDoc} from '../../db/models/guild.model'
 const command: commandProperties = {
     name: 'deletealias',
     aliases: ['da', 'removealias', 'ra'],
@@ -81,7 +81,13 @@ const command: commandProperties = {
                             multiple: true,
                         })
                             .then((aliases) => {
-                                Alias.deleteAliases(guildID, aliases, textChannel)
+                                let userAliases : IAliasDoc|IAliasDoc[]|undefined
+                                if(aliases.arrayElement) userAliases = aliases.arrayElement
+                                if(aliases.arrayElements) userAliases = aliases.arrayElements
+                            
+                                if(userAliases==undefined) return undefined
+                                
+                                Alias.deleteAliases(guildID, userAliases, textChannel)
                                     .then(() => {
                                         resolve(true)
                                     })
