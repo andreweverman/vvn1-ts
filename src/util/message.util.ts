@@ -3,9 +3,9 @@ import { Message, MessageEmbed, TextChannel, CollectorFilter, DMChannel, NewsCha
 import { last } from 'lodash'
 import { Moment } from 'moment-timezone'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
-import { stringMatch, matchOptions, spaceCommaRegex, validUserID } from './string.util'
-import { timeInPast, TimeInPastOptions, dateInPast,beforeMinMoment } from './time.util'
-
+import { stringMatch, matchOptions, spaceCommaRegex, validUserID, guildEmojiRegex } from './string.util'
+import { timeInPast, TimeInPastOptions, dateInPast, beforeMinMoment } from './time.util'
+import emoji from 'node-emoji'
 export type AsyncCollectorFilter = (...args: any[]) => Promise<boolean>
 export type AnyCollectorFilter = AsyncCollectorFilter | CollectorFilter
 export type MessageChannel = TextChannel | DMChannel | NewsChannel
@@ -94,12 +94,16 @@ export namespace Filter {
         }
     }
 
-    export function validChannelFilter(guild: Guild): CollectorFilter {
+    export function validChannelFilter(guild: Guild, specificType?: string): CollectorFilter {
         return (response: Message) =>
             response.content
                 .trim()
                 .split(' ')
-                .some((x) => guild.channels.resolve(x))
+                .some((x) => {
+                    const channel = guild.channels.resolve(x)
+                    let specificOk = specificType != undefined ? specificType == channel?.type : true
+                    return channel && specificOk
+                })
     }
 
     export function stringFilter(str: string, options: matchOptions): CollectorFilter {
@@ -156,7 +160,18 @@ export namespace Filter {
         }
     }
 
-
+    export function validEmojiFilter(): CollectorFilter {
+        return (response: Message) => {
+            const name = response.content.trim()
+            const guild_emoji = guildEmojiRegex.test(name)
+            let validGuildEmoji = false
+            if (guild_emoji) {
+                validGuildEmoji = response.guild!.emojis.cache.find((x) => x.name == name) != undefined
+            }
+            const emojiFound = emoji.find(name)
+            return emojiFound != undefined || validGuildEmoji
+        }
+    }
 }
 
 export type DeleteResponse = Message | boolean

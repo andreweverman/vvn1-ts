@@ -11,7 +11,7 @@ import {
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from '../util/constants'
 import { Guild, Link, Movie, Config } from '../db/controllers/guild.controller'
-import { IReactionEmojiDoc } from '../db/models/guild.model'
+import { IMovieContainerDoc, IReactionEmojiDoc } from '../db/models/guild.model'
 import { extractActiveUsers, extractVCMembers } from '../util/discord.util'
 import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from '../util/string.util'
 import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from '../util/message.util'
@@ -274,6 +274,16 @@ export namespace MovieUtil {
                     resolve(null)
                 })
         })
+    }
+
+    export namespace Config {
+        export interface MovieConfigArgs {
+            guildID: string
+            userID: string
+            textChannel: MessageChannel
+            currentMovie: IMovieContainerDoc
+            emojiDBName?: string
+        }
     }
 
     export namespace Prompt {
@@ -987,5 +997,20 @@ export namespace EmojiUtil {
             if (goodEmojis.includes(moji)) return true
             return false
         }
+    }
+
+    export function emojiIDToString(emojiID: string, guild: GuildD) {
+        let input_emoji = undefined
+guild.client.emojis.cache.find(x=>x.name)
+        if (emoji.find(emojiID)) {
+            input_emoji = `:${emoji.find(emojiID).key.replace('-','_')}`
+        } else if (guildEmojiRegex.test(emojiID)) {
+            input_emoji = emojiID
+        } else {
+            const guild_emoji = guild.emojis.cache.find((x) => x.name == emojiID)
+            if (guild_emoji) input_emoji = `<:${guild_emoji.identifier}>`
+        }
+
+        return input_emoji
     }
 }

@@ -13,6 +13,7 @@ import Guilds, {
     IAutoDeleteElement,
     IAutoDeleteElementDoc,
     IAutoDeleteSpecified,
+    ISoundDoc,
 } from '../models/guild.model'
 import { CreateQuery, MongooseDocument, MongooseUpdateQuery, QueryUpdateOptions, UpdateQuery } from 'mongoose'
 import {
@@ -25,11 +26,11 @@ import {
 } from '../db.util'
 import _, { over, reject } from 'lodash'
 import { keywords, NumberConstants } from '../../util/constants'
-import { MessageEmbed } from 'discord.js'
+import { MessageEmbed, Guild as GuildD } from 'discord.js'
 import { sendToChannel, MessageChannel, Prompt } from '../../util/message.util'
 import { stringMatch } from '../../util/string.util'
 import moment from 'moment-timezone'
-
+import { EmojiUtil } from '../../util/general.util'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -285,6 +286,26 @@ export namespace Alias {
                     reject(error)
                 })
         })
+    }
+
+    export async function editAliasByName(
+        guildID: string,
+        aliasName: string,
+        newAliasID: string,
+        newAliasType: Alias.Types,
+        textChannel?: MessageChannel
+    ) {
+        const updateStrings: updateOneStrings = {
+            success: 'Movie channel updated successfully',
+            failure: 'Failed to update movie channel',
+        }
+
+        const response = await Guilds.updateOne(
+            { guild_id: guildID, 'aliases.name': aliasName },
+            { $set: { 'aliases.$.id': newAliasID, 'alias.$.type': newAliasType } }
+        )
+
+        return await updateOneResponseHandler(response, updateStrings, textChannel)
     }
 }
 
@@ -865,6 +886,59 @@ export namespace Movie {
             return await updateOneResponseHandler(response, updateStrings, textChannel)
         } catch (error) {
             if (textChannel) sendToChannel(textChannel, 'Error deleting movies', true)
+            throw error
+        }
+    }
+
+    export async function getSoundDoc(guildID: string, soundName: string): Promise<ISoundDoc | undefined> {
+        try {
+            const movieDoc = await getMovie(guildID)
+
+            if (!movieDoc) return undefined
+
+            return movieDoc.sounds.find((x) => x.name == soundName)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function toggleSoundDoc(guildID: string, soundName: string, textChannel?: MessageChannel) {
+        try {
+            const soundDoc = await getSoundDoc(guildID, soundName)
+
+            if (soundDoc) {
+                const updateStrings: updateOneStrings = {
+                    success: `${soundName} is now ${soundDoc.enabled ? 'disabled' : 'enabled'}`,
+                    failure: 'Error. No change has been made.',
+                }
+                const response = await Guilds.updateOne(
+                    { guild_id: guildID, 'movie.sounds._id': soundDoc._id },
+                    { $set: { 'movie.sounds.$.enabled': !soundDoc.enabled } }
+                )
+                return updateOneResponseHandler(response, updateStrings, textChannel)
+            } else {
+                if (textChannel) sendToChannel(textChannel, 'Error on my end.')
+            }
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function editReactionEmoji(guildID: string, guild: GuildD, emojiName: string, newEmoji: string,textChannel?: MessageChannel) {
+        try {
+            const updateStrings: updateOneStrings = {
+                success:`${emojiName} emoji has been updated`,
+                failure:'Failed to update emoji'
+            }
+            const emojiString = EmojiUtil.emojiIDToString(newEmoji, guild)
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID, 'movie.emojis.name': emojiName },
+                { $set: { 'movie.emojis.$.emoji': emojiString } }
+            )
+
+            updateOneResponseHandler(response,updateStrings, textChannel)
+        } catch (error) {
             throw error
         }
     }
