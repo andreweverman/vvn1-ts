@@ -39,12 +39,12 @@ export function timeInPast(timeZoneName: string, timeString: string, options?: T
     dateObj.minute(time.minute)
     dateObj.second(0)
 
-    const compareDate = options?.compareDate ? options.compareDate : moment().tz(timeZoneName)
+    const compareDate = options?.compareDate ? options.compareDate : moment()
 
     return dateObj.isBefore(compareDate)
 }
 
-export function beforeMinMoment(timeZoneName: string, minMoment: Moment, dateString: string, ): boolean {
+export function beforeMinMoment(timeZoneName: string, minMoment: Moment, dateString: string ): boolean {
     const date = parseDate(dateString)
     if (!date) return false
 
