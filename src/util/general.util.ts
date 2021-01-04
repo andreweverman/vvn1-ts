@@ -1001,7 +1001,7 @@ export namespace EmojiUtil {
 
     export function emojiIDToString(emojiID: string, guild: GuildD) {
         let input_emoji = undefined
-guild.client.emojis.cache.find(x=>x.name)
+
         if (emoji.find(emojiID)) {
             input_emoji = `:${emoji.find(emojiID).key.replace('-','_')}`
         } else if (guildEmojiRegex.test(emojiID)) {
