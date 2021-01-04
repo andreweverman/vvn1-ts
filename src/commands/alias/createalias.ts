@@ -50,7 +50,7 @@ const command: commandProperties = {
                             type = Alias.Types.user
                         } else {
                             id = extractedChannels[0].id
-                            type = extractedChannels[0].type == 'text' ? Alias.Types.text : Alias.Types.voice
+                            type = extractedChannels[0].type == Alias.Types.text ? Alias.Types.text : Alias.Types.voice
                         }
                         promptNames(id, type)
                     })

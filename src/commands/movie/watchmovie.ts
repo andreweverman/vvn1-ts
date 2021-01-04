@@ -5,7 +5,7 @@ import { Link, Movie, Config, Guild } from '../../db/controllers/guild.controlle
 import { ILink } from '../../db/models/guild.model'
 import { linkRegex, stringMatch, youtubeRegex } from '../../util/string.util'
 import { AliasUtil, MovieUtil, EmojiUtil } from '../../util/general.util'
-import { movieCountdownName, movieTimeName, NumberConstants, vote } from '../../util/constants'
+import { movieChannelAlias, movieCountdownName, movieTimeName, NumberConstants, vote } from '../../util/constants'
 import { IMovieDoc } from '../../db/models/guild.model'
 import schedule from 'node-schedule'
 import moment, { Moment } from 'moment'
@@ -390,7 +390,11 @@ const command: commandProperties = {
             }
 
             async function movieTimeExecute() {
-                const voiceChannelResolveable = await getVoiceChannelFromAliases(e.message.guild!, ['movie'], true)
+                const voiceChannelResolveable = await getVoiceChannelFromAliases(
+                    e.message.guild!,
+                    [movieChannelAlias],
+                    true
+                )
                 if (!voiceChannelResolveable?.moveChannel) {
                     sendToChannel(
                         textChannel,
@@ -424,7 +428,7 @@ const command: commandProperties = {
                     if (movie_time && movie_time.type == 'clip') playAudio(voiceChannel, movie_time, textChannel)
                 }
 
-                await readyCheck(e.message.guild!,textChannel, voiceChannel, 15).catch((err) => console.error(err))
+                await readyCheck(e.message.guild!, textChannel, voiceChannel, 15).catch((err) => console.error(err))
 
                 if (voiceChannel && startCountDownEnabled) {
                     const start_countdown = await Link.lookupLink(guildID, movieCountdownName)

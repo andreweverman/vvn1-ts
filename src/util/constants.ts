@@ -11,11 +11,13 @@ export const extraStringOption = 'extraStringOption'
 export const vote = 'vote'
 export const ready = 'ready'
 
+export const movieChannelAlias = 'movie'
 export const movieCountdownName = 'movie_countdown'
 export const movieTimeName = 'movie_time'
 
 export const readyEmojiName = 'ready'
 export const willWatchEmojiName = 'will_watch'
+
 
 export const keywords = [
     'me',
