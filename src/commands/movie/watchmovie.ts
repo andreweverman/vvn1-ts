@@ -145,7 +145,7 @@ const command: commandProperties = {
 
                     movieStartSchedule != undefined
                         ? movieStartSchedule.reschedule(movieTimeMoment.format())
-                        : (movieStartSchedule = schedule.scheduleJob(movieTimeMoment.format(), movieTimeExecute))
+                        : (movieStartSchedule = schedule.scheduleJob(movieTimeMoment.toDate(), movieTimeExecute))
                 } catch (error) {
                     throw error
                 }
