@@ -5,9 +5,10 @@ import { Filter, AnyCollectorFilter, Prompt as MPrompt, MessageChannel } from '.
 import { timeRegex, dateRegex } from './string.util'
 
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
-    const parsedDate = parseDate(dateString)
+    const parsedDate = parseDate(dateString)?.setHours(23)
     if (parsedDate == undefined) return undefined
-    const date = moment(parseDate(dateString)).tz(timeZoneName)
+
+    const date = moment(parsedDate, timeZoneName).tz(timeZoneName)
     // need to set the time to the absolute latest in that day so that all times in that day are before it
     date.hour(23)
     date.minute(59)
