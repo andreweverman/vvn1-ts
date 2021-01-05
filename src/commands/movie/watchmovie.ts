@@ -136,7 +136,8 @@ const command: commandProperties = {
                     if (!time && movieTimeMoment == undefined) throw new Error('Time not set')
                     if (!time) return
 
-                    movieTimeMoment = moment(movieDate, timeZoneName)
+                    movieTimeMoment = moment(new Date(), timeZoneName).tz(timeZoneName)
+                    movieTimeMoment.date(movieDate.getDate())
                     movieTimeMoment.hour(time.hour)
                     movieTimeMoment.minute(time.minute)
 
