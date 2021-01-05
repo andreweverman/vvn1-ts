@@ -140,6 +140,7 @@ const command: commandProperties = {
                     movieTimeMoment.date(movieDate.getDate())
                     movieTimeMoment.hour(time.hour)
                     movieTimeMoment.minute(time.minute)
+                    movieTimeMoment.second(0)
 
                     movieTimeString = `${movieTimeMoment.toString()}\n${movieTimeMoment.local().format('hh:mm A')}`
 
