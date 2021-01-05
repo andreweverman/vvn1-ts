@@ -24,7 +24,7 @@ export function dateInPast(timeZoneName: string, dateString: string, compareDate
 }
 
 export interface TimeInPastOptions {
-    date?: string | Date
+    date?: Date
     interpolate?: boolean
     compareDate?: Moment
 }
@@ -37,7 +37,9 @@ export function timeInPast(timeZoneName: string, timeString: string, options?: T
     if (!time) return undefined
     if (options?.date) {
         // looking for the date only here.
-        dateObj = moment.tz(options.date, timeZoneName).tz(timeZoneName)
+        const parsedDate = options.date
+        parsedDate.setHours(23)
+        dateObj = moment.tz(parsedDate, timeZoneName).tz(timeZoneName)
         if (!dateObj.isValid()) return undefined
     }
     dateObj.hour(time.hour)
