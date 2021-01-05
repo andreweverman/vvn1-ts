@@ -349,7 +349,7 @@ const command: commandProperties = {
                             } else if (quitCommandString == content && sameUserFilter(m)) {
                                 await sendToChannel(textChannel, 'Quitting...', true, 5 * NumberConstants.secs)
                                 await deleteMessage(instructionMessage, 0)
-                                movieStartSchedule.cancel()
+                                if (movieStartSchedule != null) movieStartSchedule.cancel()
                                 reactionCollector.stop('Quit')
                                 postInstructionMessageCollector.stop('Quit')
                             } else {
@@ -390,6 +390,7 @@ const command: commandProperties = {
             }
 
             async function movieTimeExecute() {
+                console.time('Movie time')
                 const voiceChannelResolveable = await getVoiceChannelFromAliases(
                     e.message.guild!,
                     [movieChannelAlias],
