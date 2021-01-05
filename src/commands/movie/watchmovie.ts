@@ -9,7 +9,7 @@ import { movieChannelAlias, movieCountdownName, movieTimeName, NumberConstants, 
 import { IMovieDoc } from '../../db/models/guild.model'
 import schedule from 'node-schedule'
 import moment, { Moment } from 'moment'
-import { Prompt as TPrompt } from '../../util/time.util'
+import { getMomentForTZ, Prompt as TPrompt } from '../../util/time.util'
 import playAudio from '../../commands/indirect/playAudio'
 import { getVoiceChannelFromAliases, moveMembers, readyCheck } from '../../util/discord.util'
 import _ from 'lodash'
@@ -136,13 +136,9 @@ const command: commandProperties = {
                     if (!time && movieTimeMoment == undefined) throw new Error('Time not set')
                     if (!time) return
 
-                    movieTimeMoment = moment(new Date(), timeZoneName).tz(timeZoneName)
-                    movieTimeMoment.date(movieDate.getDate())
-                    movieTimeMoment.hour(time.hour)
-                    movieTimeMoment.minute(time.minute)
-                    movieTimeMoment.second(0)
+                    movieTimeMoment = getMomentForTZ(timeZoneName,{date:movieDate,hour:time.hour,minute:time.minute,second:0})
 
-                    movieTimeString = `${movieTimeMoment.toString()}\n${movieTimeMoment.local().format('hh:mm A')}`
+                    movieTimeString = `${movieTimeMoment.local().toString()}\n${movieTimeMoment.local().format('hh:mm A')}`
 
                     movieStartSchedule != undefined
                         ? movieStartSchedule.reschedule(movieTimeMoment.format())
@@ -175,11 +171,9 @@ const command: commandProperties = {
                     })
                     if (!time) throw new Error('Time not set')
 
-                    voteTimeMoment = moment(voteDate, timeZoneName)
-                    voteTimeMoment.hour(time.hour)
-                    voteTimeMoment.minute(time.minute)
+                    voteTimeMoment = getMomentForTZ(timeZoneName, { date:voteDate,hour:time.hour,minute:time.minute})
 
-                    voteTimeString = `${voteTimeMoment.toString()}\n${voteTimeMoment.local().format('hh:mm A')}`
+                    voteTimeString = `${voteTimeMoment.local().toString()}\n${voteTimeMoment.local().format('hh:mm A')}`
 
                     voteStartSchedule != undefined
                         ? voteStartSchedule.reschedule(voteTimeMoment.format())
