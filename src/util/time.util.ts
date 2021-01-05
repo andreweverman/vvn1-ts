@@ -13,7 +13,8 @@ export function dateInPast(timeZoneName: string, dateString: string, compareDate
     date.minute(59)
     date.second(59)
 
-    let dateToCompare = compareDate ? compareDate : moment(new Date(),timeZoneName)
+    let dateToCompare = compareDate ? compareDate : moment(new Date()).tz(timeZoneName)
+    dateToCompare.utc()
 
     console.log(date.toString())
     console.log(dateToCompare.toString())
