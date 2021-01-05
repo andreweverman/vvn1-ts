@@ -14,7 +14,7 @@ export function dateInPast(timeZoneName: string, dateString: string, compareDate
     date.second(59)
     let dateToCompare = compareDate ? compareDate : moment(new Date()).tz(timeZoneName)
 
-    console.log(date.toString)
+    console.log(date.toString())
     console.log(dateToCompare.toString())
 
     return date.isBefore(dateToCompare)
