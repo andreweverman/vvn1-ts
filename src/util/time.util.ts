@@ -32,19 +32,20 @@ export interface TimeInPastOptions {
 export function timeInPast(timeZoneName: string, timeString: string, options?: TimeInPastOptions): boolean | undefined {
     const interpolate = options?.interpolate != false ? true : false
     let dateObj: Moment = moment()
-    dateObj.tz(timeZoneName)
-
+    
     const time = parseTime(timeZoneName, timeString, interpolate)
     if (!time) return undefined
     if (options?.date) {
+        
         // looking for the date only here.
-        dateObj = moment.tz(options.date, timeZoneName).tz(timeZoneName)
+        dateObj = moment.tz(options.date, timeZoneName)
         if (!dateObj.isValid()) return undefined
     }
     dateObj.hour(time.hour)
     dateObj.minute(time.minute)
     dateObj.second(0)
-
+    
+    dateObj.tz(timeZoneName)
     const compareDate = options?.compareDate ? options.compareDate : moment(new Date(),timeZoneName).tz(timeZoneName)
 
     console.log(dateObj.toString())
@@ -126,7 +127,7 @@ export namespace Prompt {
         const everyFilters: AnyCollectorFilter[] = []
         everyFilters.push(Filter.regexFilter(dateRegex))
 
-        if (!options?.pastAllowed) everyFilters.push(Filter.dateNotInPastFilter(timeZoneName))
+        if (!pastAllowed) everyFilters.push(Filter.dateNotInPastFilter(timeZoneName))
 
         const filter = Filter.multipleFilters({
             every: everyFilters,
