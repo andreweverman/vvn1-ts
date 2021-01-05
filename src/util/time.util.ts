@@ -9,9 +9,9 @@ export function dateInPast(timeZoneName: string, dateString: string, compareDate
     if (parsedDate == undefined) return undefined
     const date = moment(parseDate(dateString), timeZoneName)
     // need to set the time to the absolute latest in that day so that all times in that day are before it
-    date.hour(23)
-    date.minute(59)
-    date.second(59)
+    date.hour(0)
+    date.minute(0)
+    date.second(0)
     let dateToCompare = compareDate ? compareDate : moment(new Date()).tz(timeZoneName)
 
     console.log(date.toString())
