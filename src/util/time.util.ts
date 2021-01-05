@@ -12,7 +12,10 @@ export function dateInPast(timeZoneName: string, dateString: string, compareDate
     date.hour(23)
     date.minute(59)
     date.second(59)
-    let dateToCompare = compareDate ? compareDate : moment().tz(timeZoneName)
+    let dateToCompare = compareDate ? compareDate : moment(new Date()).tz(timeZoneName)
+
+    console.log(date.toString)
+    console.log(dateToCompare.toString())
 
     return date.isBefore(dateToCompare)
 }
@@ -41,10 +44,12 @@ export function timeInPast(timeZoneName: string, timeString: string, options?: T
 
     const compareDate = options?.compareDate ? options.compareDate : moment()
 
+    console.log(dateObj.toString())
+    console.log(compareDate.toString())
     return dateObj.isBefore(compareDate)
 }
 
-export function beforeMinMoment(timeZoneName: string, minMoment: Moment, dateString: string ): boolean {
+export function beforeMinMoment(timeZoneName: string, minMoment: Moment, dateString: string): boolean {
     const date = parseDate(dateString)
     if (!date) return false
 
