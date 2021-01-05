@@ -138,7 +138,7 @@ const command: commandProperties = {
 
                     movieTimeMoment = getMomentForTZ(timeZoneName,{date:movieDate,hour:time.hour,minute:time.minute,second:0})
 
-                    movieTimeString = `${movieTimeMoment.local().toString()}\n${movieTimeMoment.local().format('hh:mm A')}`
+                    movieTimeString = `${movieTimeMoment.toString()}\n${movieTimeMoment.format('hh:mm A')}`
 
                     movieStartSchedule != undefined
                         ? movieStartSchedule.reschedule(movieTimeMoment.format())
@@ -173,7 +173,7 @@ const command: commandProperties = {
 
                     voteTimeMoment = getMomentForTZ(timeZoneName, { date:voteDate,hour:time.hour,minute:time.minute})
 
-                    voteTimeString = `${voteTimeMoment.local().toString()}\n${voteTimeMoment.local().format('hh:mm A')}`
+                    voteTimeString = `${voteTimeMoment.toString()}\n${voteTimeMoment.format('hh:mm A')}`
 
                     voteStartSchedule != undefined
                         ? voteStartSchedule.reschedule(voteTimeMoment.format())
