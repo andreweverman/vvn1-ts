@@ -7,9 +7,10 @@ import { timeRegex, dateRegex } from './string.util'
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)
     if (parsedDate == undefined) return undefined
-    parsedDate.setHours(23)
+    
 
-    const date = moment(parsedDate, timeZoneName).tz(timeZoneName)
+    const date = moment(new Date(), timeZoneName).tz(timeZoneName)
+    date.date(parsedDate.getDate())
     // need to set the time to the absolute latest in that day so that all times in that day are before it
     date.hour(23)
     date.minute(59)
@@ -38,8 +39,8 @@ export function timeInPast(timeZoneName: string, timeString: string, options?: T
     if (options?.date) {
         // looking for the date only here.
         const parsedDate = options.date
-        parsedDate.setHours(23)
-        dateObj = moment.tz(parsedDate, timeZoneName).tz(timeZoneName)
+        dateObj = moment.tz(new Date(), timeZoneName).tz(timeZoneName)
+        dateObj.date(parsedDate.getDate())
         if (!dateObj.isValid()) return undefined
     }
     dateObj.hour(time.hour)
