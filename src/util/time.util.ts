@@ -31,22 +31,21 @@ export interface TimeInPastOptions {
 
 export function timeInPast(timeZoneName: string, timeString: string, options?: TimeInPastOptions): boolean | undefined {
     const interpolate = options?.interpolate != false ? true : false
-    let dateObj: Moment = moment()
-    
+    let dateObj: Moment = moment(new Date(), timeZoneName).tz(timeZoneName)
+
     const time = parseTime(timeZoneName, timeString, interpolate)
     if (!time) return undefined
     if (options?.date) {
-        
         // looking for the date only here.
-        dateObj = moment.tz(options.date, timeZoneName)
+        dateObj = moment.tz(options.date, timeZoneName).tz(timeZoneName)
         if (!dateObj.isValid()) return undefined
     }
     dateObj.hour(time.hour)
     dateObj.minute(time.minute)
     dateObj.second(0)
-    
+
     dateObj.tz(timeZoneName)
-    const compareDate = options?.compareDate ? options.compareDate : moment(new Date(),timeZoneName).tz(timeZoneName)
+    const compareDate = options?.compareDate ? options.compareDate : moment(new Date(), timeZoneName).tz(timeZoneName)
 
     console.log(dateObj.toString())
     console.log(compareDate.toString())
