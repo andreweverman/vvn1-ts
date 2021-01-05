@@ -7,16 +7,10 @@ import { timeRegex, dateRegex } from './string.util'
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)
     if (parsedDate == undefined) return undefined
-    
 
-    const date = moment(new Date(), timeZoneName).tz(timeZoneName)
-    date.date(parsedDate.getDate())
-    // need to set the time to the absolute latest in that day so that all times in that day are before it
-    date.hour(23)
-    date.minute(59)
-    date.second(59)
+    const date = getMomentForTZ(timeZoneName, { date: parsedDate, hour: 23, minute: 59, second: 59 })
 
-    let dateToCompare = compareDate ? compareDate : moment(new Date(), timeZoneName).tz(timeZoneName)
+    let dateToCompare = compareDate ? compareDate : getCurrentTimeForTZ(timeZoneName)
 
     console.log(date.toString())
     console.log(dateToCompare.toString())
@@ -39,16 +33,16 @@ export function timeInPast(timeZoneName: string, timeString: string, options?: T
     if (options?.date) {
         // looking for the date only here.
         const parsedDate = options.date
-        dateObj = moment.tz(new Date(), timeZoneName).tz(timeZoneName)
-        dateObj.date(parsedDate.getDate())
+        dateObj = getMomentForTZ(timeZoneName, { date: parsedDate })
+
         if (!dateObj.isValid()) return undefined
     }
     dateObj.hour(time.hour)
     dateObj.minute(time.minute)
     dateObj.second(0)
 
-    dateObj.tz(timeZoneName)
-    const compareDate = options?.compareDate ? options.compareDate : moment(new Date(), timeZoneName).tz(timeZoneName)
+    // dateObj.tz(timeZoneName)
+    const compareDate = options?.compareDate ? options.compareDate : getCurrentTimeForTZ(timeZoneName)
 
     console.log(dateObj.toString())
     console.log(compareDate.toString())
@@ -105,6 +99,25 @@ export function parseTime(timeZoneName: string, timeString: string, interpolate 
 export function parseDate(dateString: string): Date | undefined {
     if (!dateRegex.test(dateString)) return undefined
     return new Date(dateString)
+}
+
+export interface GetMomentForTZOptions {
+    date: Date
+    hour?: number
+    minute?: number
+    second?: number
+}
+export function getMomentForTZ(timeZoneName: string, options: GetMomentForTZOptions): Moment {
+    const momentObj = getCurrentTimeForTZ(timeZoneName)
+    momentObj.date(options.date.getDate())
+    if (options.hour) momentObj.hour(options.hour)
+    if (options.minute) momentObj.minute(options.minute)
+    options.second ? momentObj.second(options.second) : momentObj.second(0)
+    return momentObj
+}
+
+export function getCurrentTimeForTZ(timeZoneName: string): Moment {
+    return moment(new Date(), timeZoneName).tz(timeZoneName)
 }
 
 export namespace Prompt {
