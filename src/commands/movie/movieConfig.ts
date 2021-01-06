@@ -87,7 +87,7 @@ const command: commandProperties = {
                     args: { name: 'Ready', db: readyEmojiName },
                 },
                 {
-                    name: `Edit default zip file password (currently: ${movieDoc.default_password})`,
+                    name: `Edit default zip file password (currently${movieDoc.default_password!=''?`: ${movieDoc.default_password}`:' is not set'})`,
                     function: editDefaultPassword,
                 },
             ]
@@ -170,7 +170,7 @@ const command: commandProperties = {
                     const m = await Prompt.getSameUserInput(
                         userID,
                         textChannel,
-                        `Enter the new emoji to be used for ${args.name}`,
+                        `Enter the new guild emoji to be used for ${args.name}`,
                         Filter.validEmojiFilter()
                     )
 
@@ -182,7 +182,18 @@ const command: commandProperties = {
                 }
             }
 
-            async function editDefaultPassword() {}
+            async function editDefaultPassword() {
+                const m = await Prompt.getSameUserInput(
+                    userID,
+                    textChannel,
+                    'Enter new default movie password:',
+                    Filter.anyFilter()
+                )
+
+                const newPassword = m.content.trim()
+
+                return Movie.editDefaultPassword(guildID, newPassword, textChannel)
+            }
             Prompt.optionSelect(userID, textChannel, options)
         } catch (error) {
             Prompt.handleGetSameUserInputError(error)
