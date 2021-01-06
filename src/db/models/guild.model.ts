@@ -1,6 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose'
 import { Config, Link } from '../controllers/guild.controller'
-import { NumberConstants, movieCountdownName, movieTimeName, readyEmojiName, willWatchEmojiName } from '../../util/constants'
+import {
+    NumberConstants,
+    movieCountdownName,
+    movieTimeName,
+    readyEmojiName,
+    willWatchEmojiName,
+} from '../../util/constants'
 export interface ILink {
     names: string[]
     link: string
@@ -108,10 +114,15 @@ export interface IMovieDoc extends IMovie, Document {}
 
 export interface IMovieRequest {
     name: string
-    user: string
+    users: string[]
 }
 
 export interface IMovieRequestDoc extends IMovieRequest, Document {}
+
+const MovieRequestSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    users: { type: Array },
+})
 
 export interface ISound {
     name: string
@@ -178,12 +189,7 @@ const MovieSchema = new mongoose.Schema({
             password: { type: String },
         },
     ],
-    requests: [
-        {
-            name: { type: String, unique: false, index: true, required: true },
-            user: { type: String },
-        },
-    ],
+    requests: [MovieRequestSchema],
 })
 
 // ? all over the shits because guild_id is the only key

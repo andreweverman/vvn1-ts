@@ -10,7 +10,7 @@ import { IMovieDoc } from '../../db/models/guild.model'
 import schedule from 'node-schedule'
 import moment, { Moment } from 'moment'
 import { getMomentForTZ, Prompt as TPrompt } from '../../util/time.util'
-import playAudio from '../../commands/indirect/playAudio'
+import playAudio from '../indirect/playAudio'
 import { getVoiceChannelFromAliases, moveMembers, readyCheck } from '../../util/discord.util'
 import _ from 'lodash'
 const command: commandProperties = {
@@ -67,7 +67,7 @@ const command: commandProperties = {
             await getMovieDate()
             await getMovieTime()
 
-            let voteTimeValid = false
+            let voteTimeValid: boolean | undefined = false
             if (voteMode) {
                 while (!voteTimeValid) {
                     await getVoteDate()
@@ -107,7 +107,7 @@ const command: commandProperties = {
                     if (selectedMovie.arrayElement) movie = selectedMovie.arrayElement
                     if (selectedMovie.stringCommand) voteMode = true
                 } catch (error) {
-                    throw error
+                    Prompt.handleGetSameUserInputError(error)
                 }
             }
 
@@ -121,7 +121,7 @@ const command: commandProperties = {
 
                     movieDate = date.date
                 } catch (error) {
-                    throw error
+                    Prompt.handleGetSameUserInputError(error)
                 }
             }
 
@@ -136,7 +136,12 @@ const command: commandProperties = {
                     if (!time && movieTimeMoment == undefined) throw new Error('Time not set')
                     if (!time) return
 
-                    movieTimeMoment = getMomentForTZ(timeZoneName,{date:movieDate,hour:time.hour,minute:time.minute,second:0})
+                    movieTimeMoment = getMomentForTZ(timeZoneName, {
+                        date: movieDate,
+                        hour: time.hour,
+                        minute: time.minute,
+                        second: 0,
+                    })
 
                     movieTimeString = `${movieTimeMoment.toString()}\n${movieTimeMoment.format('hh:mm A')}`
 
@@ -161,7 +166,7 @@ const command: commandProperties = {
                 }
             }
 
-            async function getVoteTime(): Promise<boolean> {
+            async function getVoteTime(): Promise<boolean | undefined> {
                 try {
                     const time = await TPrompt.promptTime(userID, textChannel, timeZoneName, {
                         date: movieDate,
@@ -171,7 +176,11 @@ const command: commandProperties = {
                     })
                     if (!time) throw new Error('Time not set')
 
-                    voteTimeMoment = getMomentForTZ(timeZoneName, { date:voteDate,hour:time.hour,minute:time.minute})
+                    voteTimeMoment = getMomentForTZ(timeZoneName, {
+                        date: voteDate,
+                        hour: time.hour,
+                        minute: time.minute,
+                    })
 
                     voteTimeString = `${voteTimeMoment.toString()}\n${voteTimeMoment.format('hh:mm A')}`
 
@@ -181,7 +190,7 @@ const command: commandProperties = {
 
                     return voteTimeMoment.isBefore(movieTimeMoment)
                 } catch (error) {
-                    throw error
+                    Prompt.handleGetSameUserInputError(error)
                 }
             }
 
@@ -298,7 +307,7 @@ const command: commandProperties = {
                     })
                     votedMovies.sort((a, b) => b.count - a.count)
                 } catch (error) {
-                    throw error
+                    Prompt.handleGetSameUserInputError(error)
                 }
             }
 
@@ -386,103 +395,109 @@ const command: commandProperties = {
             }
 
             async function movieTimeExecute() {
-                console.time('Movie time')
-                const voiceChannelResolveable = await getVoiceChannelFromAliases(
-                    e.message.guild!,
-                    [movieChannelAlias],
-                    true
-                )
-                if (!voiceChannelResolveable?.moveChannel) {
-                    sendToChannel(
-                        textChannel,
-                        'Alias a voice channel to movie to reach the full potential of me!',
+                try {
+                    console.time('Movie time')
+                    const voiceChannelResolveable = await getVoiceChannelFromAliases(
+                        e.message.guild!,
+                        [movieChannelAlias],
                         true
                     )
-                    return
+                    if (!voiceChannelResolveable?.moveChannel) {
+                        sendToChannel(
+                            textChannel,
+                            'Alias a voice channel to movie to reach the full potential of me!',
+                            true
+                        )
+                        return
+                    }
+
+                    voiceChannel = voiceChannelResolveable.moveChannel
+
+                    // pings will watch people and moves ready people
+
+                    reactionCollector.stop('Movie Time')
+                    postInstructionMessageCollector.stop('Movie Time')
+
+                    await move_and_ping
+
+                    // playing movie time audio if enabled
+                    const movieDoc = await Movie.getMovie(guildID)
+                    if (movieDoc == undefined) return
+
+                    const movieTimeObj = movieDoc.sounds.find((x) => x.name == movieTimeName)
+                    const movieTimeEnabled = movieTimeObj && movieTimeObj.enabled
+
+                    const startCountdownObj = movieDoc.sounds.find((x) => x.name == movieCountdownName)
+                    const startCountDownEnabled = startCountdownObj && startCountdownObj.enabled
+
+                    if (voiceChannel && movieTimeEnabled) {
+                        const movie_time = await Link.lookupLink(guildID, movieTimeName)
+                        if (movie_time && movie_time.type == 'clip') playAudio(voiceChannel, movie_time, textChannel)
+                    }
+
+                    await readyCheck(e.message.guild!, textChannel, voiceChannel, 15).catch((err) => console.error(err))
+
+                    if (voiceChannel && startCountDownEnabled) {
+                        const start_countdown = await Link.lookupLink(guildID, movieCountdownName)
+                        if (start_countdown && start_countdown.type == 'clip')
+                            playAudio(voiceChannel, start_countdown, textChannel)
+                    }
+
+                    return deleteMessage(instructionMessage, 0)
+                } catch (error) {
+                    throw error
                 }
-
-                voiceChannel = voiceChannelResolveable.moveChannel
-
-                // pings will watch people and moves ready people
-
-                reactionCollector.stop('Movie Time')
-                postInstructionMessageCollector.stop('Movie Time')
-
-                await move_and_ping
-
-                // playing movie time audio if enabled
-                const movieDoc = await Movie.getMovie(guildID)
-                if (movieDoc == undefined) return
-
-                const movieTimeObj = movieDoc.sounds.find((x) => x.name == movieTimeName)
-                const movieTimeEnabled = movieTimeObj && movieTimeObj.enabled
-
-                const startCountdownObj = movieDoc.sounds.find((x) => x.name == movieCountdownName)
-                const startCountDownEnabled = startCountdownObj && startCountdownObj.enabled
-
-                if (voiceChannel && movieTimeEnabled) {
-                    const movie_time = await Link.lookupLink(guildID, movieTimeName)
-                    if (movie_time && movie_time.type == 'clip') playAudio(voiceChannel, movie_time, textChannel)
-                }
-
-                await readyCheck(e.message.guild!, textChannel, voiceChannel, 15).catch((err) => console.error(err))
-
-                if (voiceChannel && startCountDownEnabled) {
-                    const start_countdown = await Link.lookupLink(guildID, movieCountdownName)
-                    if (start_countdown && start_countdown.type == 'clip')
-                        playAudio(voiceChannel, start_countdown, textChannel)
-                }
-
-                deleteMessage(instructionMessage, 0)
-
-                return
             }
 
             async function reactionEndMovieAndPing() {
                 new Promise((resolve, reject) => {
-                    if (!reactionCollector) {
-                        reject('never initialized')
+                    try {
+                        if (!reactionCollector) {
+                            reject('never initialized')
+                        }
+                        reactionCollector.on('end', async (collected) => {
+                            // defining various filters that will be used.
+                            // based on what the reaction collector gives us, will give us a member object or undefined which we will filter out
+                            // could use foreach instead for better performance
+
+                            const voice_defined_filter = (x: any) => x.voice.channel
+                            let membersToPing: any = []
+
+                            // filtering out the people that said they are ready
+                            const ready_reactions = collected.filter(EmojiUtil.filterEmoji([readyToWatchEmoji]))
+                            const ready_members = reactionToMembers(ready_reactions, e.message.guild)
+                            // members to move are in vc. they get moved. the rest get a message like the will watch people.
+                            const [members_to_move, ready_ping] = _.partition(ready_members, voice_defined_filter)
+
+                            // filtering out the people that said they would watch
+                            const will_watch_reactions = collected.filter(EmojiUtil.filterEmoji([willWatchEmoji]))
+
+                            const will_watch_members = reactionToMembers(will_watch_reactions, e.message.guild)
+
+                            // going to @ the people who said they would watch
+                            membersToPing = membersToPing.concat(ready_ping)
+                            membersToPing = membersToPing.concat(will_watch_members)
+
+                            if (ready_members.length > 0) {
+                                // move the that are ready to a channel that has the name movie
+                                // move the people who are ready and in a voice channel
+                                if (voiceChannel != null) moveMembers(voiceChannel, members_to_move)
+                            }
+
+                            if (will_watch_members.length > 0) {
+                                const members_at = membersToPing.map((x: any) => `<@!${x.id}>`).join(', ')
+                                sendToChannel(
+                                    textChannel,
+                                    `${members_at}, please move to the movie channel when you are ready to watch the movie.`,
+                                    true,
+                                    5 * NumberConstants.mins
+                                )
+                            }
+                            resolve(true)
+                        })
+                    } catch (error) {
+                        reject(error)
                     }
-                    reactionCollector.on('end', async (collected) => {
-                        // defining various filters that will be used.
-                        // based on what the reaction collector gives us, will give us a member object or undefined which we will filter out
-                        // could use foreach instead for better performance
-
-                        const voice_defined_filter = (x: any) => x.voice.channel
-                        let membersToPing: any = []
-
-                        // filtering out the people that said they are ready
-                        const ready_reactions = collected.filter(EmojiUtil.filterEmoji([readyToWatchEmoji]))
-                        const ready_members = reactionToMembers(ready_reactions, e.message.guild)
-                        // members to move are in vc. they get moved. the rest get a message like the will watch people.
-                        const [members_to_move, ready_ping] = _.partition(ready_members, voice_defined_filter)
-
-                        // filtering out the people that said they would watch
-                        const will_watch_reactions = collected.filter(EmojiUtil.filterEmoji([willWatchEmoji]))
-
-                        const will_watch_members = reactionToMembers(will_watch_reactions, e.message.guild)
-
-                        // going to @ the people who said they would watch
-                        membersToPing = membersToPing.concat(ready_ping)
-                        membersToPing = membersToPing.concat(will_watch_members)
-
-                        if (ready_members.length > 0) {
-                            // move the that are ready to a channel that has the name movie
-                            // move the people who are ready and in a voice channel
-                            if (voiceChannel != null) moveMembers(voiceChannel, members_to_move)
-                        }
-
-                        if (will_watch_members.length > 0) {
-                            const members_at = membersToPing.map((x: any) => `<@!${x.id}>`).join(', ')
-                            sendToChannel(
-                                textChannel,
-                                `${members_at}, please move to the movie channel when you are ready to watch the movie.`,
-                                true,
-                                5 * NumberConstants.mins
-                            )
-                        }
-                        resolve(true)
-                    })
                 })
             }
 

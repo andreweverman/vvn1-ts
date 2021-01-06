@@ -1,5 +1,5 @@
 import { time } from 'console'
-import { Message, MessageEmbed, TextChannel, CollectorFilter, DMChannel, NewsChannel, Channel, Guild } from 'discord.js'
+import { Message, MessageEmbed, TextChannel, CollectorFilter, DMChannel, NewsChannel, Channel, Guild,GuildEmoji } from 'discord.js'
 import { last } from 'lodash'
 import { Moment } from 'moment-timezone'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
@@ -164,12 +164,14 @@ export namespace Filter {
         return (response: Message) => {
             const name = response.content.trim()
             const guild_emoji = guildEmojiRegex.test(name)
-            let validGuildEmoji = false
+            let validGuildEmoji: GuildEmoji | undefined = undefined
             if (guild_emoji) {
-                validGuildEmoji = response.guild!.emojis.cache.find((x) => x.name == name) != undefined
+                validGuildEmoji = response.guild!.emojis.cache.find((x) => {
+                    let val =  `<:${x.identifier}>` == name 
+                    return val
+                })
             }
-            const emojiFound = emoji.find(name)
-            return emojiFound != undefined || validGuildEmoji
+            return validGuildEmoji!=undefined
         }
     }
 }

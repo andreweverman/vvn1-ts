@@ -1003,7 +1003,7 @@ export namespace EmojiUtil {
         let input_emoji = undefined
 
         if (emoji.find(emojiID)) {
-            input_emoji = `:${emoji.find(emojiID).key.replace('-','_')}`
+            input_emoji = `:${emoji.find(emojiID).key.replace('-','_')}:`
         } else if (guildEmojiRegex.test(emojiID)) {
             input_emoji = emojiID
         } else {

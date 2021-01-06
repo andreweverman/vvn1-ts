@@ -14,6 +14,8 @@ import Guilds, {
     IAutoDeleteElementDoc,
     IAutoDeleteSpecified,
     ISoundDoc,
+    IMovieRequest,
+    IMovieRequestDoc,
 } from '../models/guild.model'
 import { CreateQuery, MongooseDocument, MongooseUpdateQuery, QueryUpdateOptions, UpdateQuery } from 'mongoose'
 import {
@@ -712,8 +714,6 @@ export namespace Movie {
                 const defaultPassword = movieDoc.default_password
                 movies = movieDoc.movies
 
-                // movies.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
-
                 if (regexDefined) {
                     movies = movies.filter((x) => movieRegex.test(x.name))
                 }
@@ -924,11 +924,17 @@ export namespace Movie {
         }
     }
 
-    export async function editReactionEmoji(guildID: string, guild: GuildD, emojiName: string, newEmoji: string,textChannel?: MessageChannel) {
+    export async function editReactionEmoji(
+        guildID: string,
+        guild: GuildD,
+        emojiName: string,
+        newEmoji: string,
+        textChannel?: MessageChannel
+    ) {
         try {
             const updateStrings: updateOneStrings = {
-                success:`${emojiName} emoji has been updated`,
-                failure:'Failed to update emoji'
+                success: `${emojiName} emoji has been updated`,
+                failure: 'Failed to update emoji',
             }
             const emojiString = EmojiUtil.emojiIDToString(newEmoji, guild)
 
@@ -937,7 +943,211 @@ export namespace Movie {
                 { $set: { 'movie.emojis.$.emoji': emojiString } }
             )
 
-            updateOneResponseHandler(response,updateStrings, textChannel)
+            updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function editDefaultPassword(guildID: string, newPassword: string, textChannel?: MessageChannel) {
+        try {
+            const updateStrings: updateOneStrings = {
+                success: `Default movie password is now ${newPassword}`,
+                failure: 'Error. Default movie password has not been updated',
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                {
+                    $set: { 'movie.default_password': newPassword },
+                }
+            )
+
+            return updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function addRequest(guildID: string, userID: string, movieName: string, textChannel?: MessageChannel) {
+        try {
+            const updateStrings: updateOneStrings = {
+                success: `${movieName} has been requested.`,
+                failure: 'Either movie was not requested or you have requested already',
+            }
+            let response: updateOneResponse
+
+            const movieObj: IMovieRequest = {
+                name: movieName,
+                users: [userID],
+            }
+            const alreadyRequested = await movieAlreadyRequested(guildID, movieName)
+            if (alreadyRequested) {
+                if (textChannel) sendToChannel(textChannel, 'Movie is already requested')
+                response = await Guilds.updateOne(
+                    {
+                        guild_id: guildID,
+                        'movie.requests.name': movieName,
+                    },
+                    {
+                        $addToSet: {
+                            'movie.requests.$.users': userID,
+                        },
+                    }
+                )
+            } else {
+                response = await Guilds.updateOne(
+                    {
+                        guild_id: guildID,
+                        'movie.requests.name': { $ne: movieName },
+                    },
+                    {
+                        $push: {
+                            'movie.requests': {
+                                $each: [movieObj],
+                                $sort: { name: 1 },
+                            },
+                        },
+                    }
+                )
+            }
+            updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function movieAlreadyRequested(guildID: string, movieName: string) {
+        try {
+            const guildDoc = await Guild.getGuild(guildID)
+            const regex = stringMatch(movieName, { loose: false })
+            const foundRequest = guildDoc.movie.requests.find((x) => regex.test(x.name))
+            return foundRequest != undefined
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export interface GetRequestedMoviesResponse {
+        requestedMovies: IMovieRequestDoc[]
+        message: MessageEmbed | string
+    }
+    export async function getRequestedMovies(guildID: string, number = true) {
+        try {
+            const offset = 1
+            const guildDoc = await Guild.getGuild(guildID)
+            const requestedMovieArr = guildDoc.movie.requests
+
+            let message: MessageEmbed | string
+
+            if (requestedMovieArr.length > 0) {
+                const fields = []
+                let i: number,
+                    j: number,
+                    chunk = 5
+                for (i = 0, j = requestedMovieArr.length; i < j; i += chunk) {
+                    const movie_chunk = requestedMovieArr.slice(i, i + chunk)
+                    let requestedMessage = movie_chunk
+                        .map((x, k) => {
+                            return `${number ? '**' + (i + k + offset) + '**. ' : ''}${x.name}`
+                        })
+                        .join('\n')
+                    fields.push({
+                        name: `${i + 1} to ${i + chunk}`,
+                        value: requestedMessage,
+                        inline: true,
+                    })
+                }
+
+                message = new MessageEmbed().setTitle(`Requested Movies`).addFields(fields)
+            } else {
+                message = 'No movies requested currently. Use command requestmovie to add some'
+            }
+
+            return { requestedMovies: requestedMovieArr, message: message }
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export interface GetUserReqestedMoviesResponse {
+        requestedMovies: IMovieRequestDoc[]
+        message: MessageEmbed | string
+    }
+    export async function getUserRequestedMovies(guildID: string, userID: string, number = true) {
+        try {
+            const offset = 1
+
+            let message: MessageEmbed | string
+            const { requestedMovies } = await getRequestedMovies(guildID, false)
+
+            const requestedMovieArr = requestedMovies.filter((x) => x.users.includes(userID))
+
+            if (requestedMovieArr.length > 0) {
+                const fields = []
+                let i: number,
+                    j: number,
+                    chunk = 5
+                for (i = 0, j = requestedMovieArr.length; i < j; i += chunk) {
+                    const movie_chunk = requestedMovieArr.slice(i, i + chunk)
+                    let requestedMessage = movie_chunk
+                        .map((x, k) => {
+                            return `${number ? '**' + (i + k + offset) + '**. ' : ''}${x.name}`
+                        })
+                        .join('\n')
+                    fields.push({
+                        name: `${i + 1} to ${i + chunk}`,
+                        value: requestedMessage,
+                        inline: true,
+                    })
+                }
+
+                message = new MessageEmbed().setTitle(`Requested Movies`).addFields(fields)
+            } else {
+                message = 'No movies requested currently. Use command requestmovie to add some'
+            }
+
+            return { requestedMovies: requestedMovieArr, message: message }
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function deleteRequestedMovie(
+        guildID: string,
+        userID: string,
+        requestDoc: IMovieRequestDoc,
+        textChannel?: MessageChannel
+    ) {
+        try {
+            let successString: string
+            let response: updateOneResponse
+            let updateStrings: updateOneStrings
+            if (requestDoc.users.length == 1) {
+                updateStrings = {
+                    success: 'Movie request has been fully deleted',
+                    failure: 'Failed to delete movie request',
+                }
+                response = await Guilds.updateOne(
+                    { guild_id: guildID },
+                    { $pull: { 'movie.requests': { _id: requestDoc._id } } }
+                )
+            } else {
+                updateStrings = {
+                    success: 'You have been removed from requesting the movie',
+                    failure: 'Failed to delete movie request',
+                }
+                response = await Guilds.updateOne(
+                    { guild_id: guildID, 'movie.requests._id': requestDoc._id },
+                    {
+                        $pull: {
+                            'movie.requests.$.users': userID,
+                        },
+                    }
+                )
+            }
+
+            return updateOneResponseHandler(response, updateStrings, textChannel)
         } catch (error) {
             throw error
         }
