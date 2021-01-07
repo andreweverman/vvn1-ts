@@ -12,7 +12,7 @@ const command: commandProperties = {
     description: 'Deletes a movie request',
     aliases: ['deleterequest', 'rmrequest'],
     guildOnly: true,
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 0,
     args: false,
 

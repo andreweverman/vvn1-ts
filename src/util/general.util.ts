@@ -8,10 +8,11 @@ import {
     Collection,
     GuildEmoji,
     Emoji,
+    User,
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from '../util/constants'
-import { Guild, Link, Movie, Config } from '../db/controllers/guild.controller'
-import { IMovieContainerDoc, IReactionEmojiDoc } from '../db/models/guild.model'
+import { Guild, Link, Movie, Config, Alias } from '../db/controllers/guild.controller'
+import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/models/guild.model'
 import { extractActiveUsers, extractVCMembers } from '../util/discord.util'
 import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from '../util/string.util'
 import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from '../util/message.util'
@@ -249,6 +250,18 @@ export namespace MovieUtil {
         } catch (error) {
             MPrompt.handleGetSameUserInputError(error)
         }
+    }
+
+    export async function notifyUsersRequestFulfilled(movieRequested: IMovieRequestDoc, client: Client, guild: GuildD) {
+        const userIDs = movieRequested.users
+
+        const users = userIDs.map((x) => client.users.resolve(x))
+
+        users.forEach((user) => {
+            if (user != null) {
+                user.send(`${movieRequested.name} has been added in ${guild.name}`)
+            }
+        })
     }
 
     export function getInfoPage(movieName: string): Promise<string | null> {
@@ -529,8 +542,12 @@ export namespace ConfigUtil {
                     return args.lastFunction(args)
                 }
             }
+            
+
+
+
             const prompt = `Select a ${args.autoDeleteType} to edit:\n ${typedAutoDeleteArr
-                .map((x, i) => `${i + offset}. ${x.matchOn}`)
+                .map((x, i) => `${i + offset}. ${args.autoDeleteType==Config.AutoDeleteType.user?args.guild.members.resolve(x.matchOn)?.displayName:x.matchOn}`)
                 .join('\n')}`
             const prefix = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
                 multiple: false,
@@ -1003,7 +1020,7 @@ export namespace EmojiUtil {
         let input_emoji = undefined
 
         if (emoji.find(emojiID)) {
-            input_emoji = `:${emoji.find(emojiID).key.replace('-','_')}:`
+            input_emoji = `:${emoji.find(emojiID).key.replace('-', '_')}:`
         } else if (guildEmojiRegex.test(emojiID)) {
             input_emoji = emojiID
         } else {

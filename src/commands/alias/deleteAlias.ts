@@ -11,7 +11,7 @@ const command: commandProperties = {
     aliases: ['da', 'removealias', 'ra'],
     args: false,
     description: 'Delete an existing alias',
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 1,
     guildOnly: true,
 

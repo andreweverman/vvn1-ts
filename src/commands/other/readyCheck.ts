@@ -12,7 +12,7 @@ const command: commandProperties = {
     description: 'Ready checks a channel a command',
     aliases: ['ready'],
     guildOnly: true,
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 0,
     args: false,
 

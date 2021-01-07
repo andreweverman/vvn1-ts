@@ -11,7 +11,7 @@ const command: commandProperties = {
     aliases: ['editclip'],
     args: false,
     description: 'Edit a link that exists in this server',
-    usage: `Follow the prompts!`,
+    usage: `, then follow the prompts`,
     cooldown: 1,
     guildOnly: true,
 

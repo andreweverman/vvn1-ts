@@ -10,7 +10,7 @@ const command: commandProperties = {
     aliases: ['addlink'],
     args: false,
     description: 'Creates dynamic commands for linking websites or playing youtube clips',
-    usage: `Use createlink for the bot to save a youtube video to broadcast or an alias to a specific link.\nFollow the prompts!`,
+    usage: `Use createlink for the bot to save a youtube video to broadcast or an alias to a specific link.\n, then follow the prompts`,
     cooldown: 1,
     guildOnly: true,
 

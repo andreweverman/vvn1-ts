@@ -16,7 +16,7 @@ import _ from 'lodash'
 const command: commandProperties = {
     name: 'watchmovie',
     aliases: ['movie'],
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     description: '',
     cooldown: 0,
     args: false,

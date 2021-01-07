@@ -31,7 +31,15 @@ const command: commandProperties = {
             const movieName = await MovieUtil.Prompt.promptMovieName(args)
             const moviePassword = await MovieUtil.Prompt.promptMoviePassword(args)
 
-            return await Movie.addMovie(guildID, userID, movieLink, movieName, moviePassword, textChannel)
+            return await Movie.addMovie(
+                guildID,
+                userID,
+                movieLink,
+                movieName,
+                moviePassword,
+                e.message.guild!,
+                textChannel
+            )
         } catch (error) {
             Prompt.handleGetSameUserInputError(error)
         }

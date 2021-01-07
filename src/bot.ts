@@ -15,6 +15,7 @@ export interface CommandParams {
     prefix: string
     prod: boolean
     guildID?: string
+    commands:Collection<string,commandProperties>
 }
 
 export interface commandProperties {
