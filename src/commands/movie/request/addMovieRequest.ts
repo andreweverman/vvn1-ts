@@ -12,7 +12,7 @@ const command: commandProperties = {
     description: 'Adds a request for a movie to be added to the list',
     aliases: ['addrequest', 'request', 'requestmovie'],
     guildOnly: true,
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 0,
     args: false,
 

@@ -184,6 +184,7 @@ export function messageEvent(
                             prod: prod,
                             guildID,
                             prefix,
+                            commands:commands
                         })
 
                         resolve('good')

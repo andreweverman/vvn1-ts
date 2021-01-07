@@ -11,7 +11,7 @@ const command: commandProperties = {
     args: false,
     description:
         'Creates aliases for voice channels and users for certain ids. This is helpful for when you want to move someone',
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 1,
     guildOnly: true,
 

@@ -32,7 +32,7 @@ import { MessageEmbed, Guild as GuildD } from 'discord.js'
 import { sendToChannel, MessageChannel, Prompt } from '../../util/message.util'
 import { stringMatch } from '../../util/string.util'
 import moment from 'moment-timezone'
-import { EmojiUtil } from '../../util/general.util'
+import { EmojiUtil, MovieUtil } from '../../util/general.util'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -775,6 +775,7 @@ export namespace Movie {
         movieLink: string,
         movieName: string,
         moviePassword: string,
+        guild: GuildD,
         textChannel?: MessageChannel
     ): Promise<updateOneResponseHandlerResponse> {
         try {
@@ -832,13 +833,18 @@ export namespace Movie {
                 const requested = movieDoc.requests.find((x) => nameMatch.test(x.name))
 
                 if (requested) {
+                    requested
                     const response2 = await Guilds.updateOne(
                         { guild_id: guildID },
                         { $pull: { 'movie.requests': { name: nameMatch } } },
                         { multi: true }
                     )
 
-                    successString += '\nIt has also been removed from requests.'
+                    const requestResponse = await updateOneResponseHandler(response2, { success: '', failure: '' })
+                    if (requestResponse.updated) {
+                        if (textChannel) MovieUtil.notifyUsersRequestFulfilled(requested, textChannel.client, guild)
+                        successString += '\nIt has also been removed from requests.'
+                    }
                 }
             }
 
@@ -1299,7 +1305,7 @@ export namespace Config {
             }
 
             const updateStrings: updateOneStrings = {
-                success: `Default delete time is now ${time}`,
+                success: `Default delete time is now ${time/NumberConstants.secs}`,
                 failure: 'Failed to update time.',
             }
 

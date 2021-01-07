@@ -10,7 +10,7 @@ const command: commandProperties = {
     name: 'deletemovie',
     aliases: ['delete_movie', 'removemovie'],
     description: 'Delete a movie from the catalog. Type in its name',
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     args: false,
     cooldown: 1,
     guildOnly: true,

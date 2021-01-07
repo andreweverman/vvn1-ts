@@ -11,7 +11,7 @@ const command: commandProperties = {
     aliases: ['va', 'lookupalias'],
     args: false,
     description: 'View existing aliases for users and channels',
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 1,
     guildOnly: true,
 

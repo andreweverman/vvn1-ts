@@ -17,7 +17,7 @@ const command: commandProperties = {
     name: 'movieconfig',
     description: 'Edit the movie configuration for this server',
     aliases: ['moviecfg'],
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 0,
     args: false,
     guildOnly: true,

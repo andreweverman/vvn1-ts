@@ -1,5 +1,15 @@
 import { time } from 'console'
-import { Message, MessageEmbed, TextChannel, CollectorFilter, DMChannel, NewsChannel, Channel, Guild,GuildEmoji } from 'discord.js'
+import {
+    Message,
+    MessageEmbed,
+    TextChannel,
+    CollectorFilter,
+    DMChannel,
+    NewsChannel,
+    Channel,
+    Guild,
+    GuildEmoji,
+} from 'discord.js'
 import { last } from 'lodash'
 import { Moment } from 'moment-timezone'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
@@ -82,15 +92,7 @@ export namespace Filter {
 
     export function validUserFilter(guild: Guild): CollectorFilter {
         return (response: Message) => {
-            return response.content
-                .trim()
-                .split(' ')
-                .some((x) => {
-                    const userID = validUserID(x)
-                    if (!userID) return false
-                    const mem = guild.member(userID)
-                    return mem
-                })
+            return response.mentions.users.first() != undefined
         }
     }
 
@@ -167,11 +169,11 @@ export namespace Filter {
             let validGuildEmoji: GuildEmoji | undefined = undefined
             if (guild_emoji) {
                 validGuildEmoji = response.guild!.emojis.cache.find((x) => {
-                    let val =  `<:${x.identifier}>` == name 
+                    let val = `<:${x.identifier}>` == name
                     return val
                 })
             }
-            return validGuildEmoji!=undefined
+            return validGuildEmoji != undefined
         }
     }
 }
@@ -202,7 +204,7 @@ export interface sendUtilResponse {
 }
 
 export function sendUtil(
-    message: Promise<Message>,
+    message: Promise<Message | Message[]>,
     autoDelete: boolean,
     autoDeleteTime = 15 * NumberConstants.secs
 ): Promise<sendUtilResponse> {
@@ -239,7 +241,7 @@ export function sendUtil(
 
 export function sendToChannel(
     channel: MessageChannel,
-    statement: string | MessageEmbed,
+    statement: string | MessageEmbed | any[],
     autoDelete = true,
     autoDeleteTime = 15 * NumberConstants.secs
 ): Promise<sendUtilResponse> {

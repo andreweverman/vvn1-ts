@@ -10,7 +10,7 @@ const command: commandProperties = {
     name: 'guildconfig',
     description: 'Sets up configurations for this server',
     aliases: ['cfg', 'config'],
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 0,
     args: false,
     guildOnly: true,

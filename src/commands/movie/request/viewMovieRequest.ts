@@ -13,7 +13,7 @@ const command: commandProperties = {
     description: 'View the existing movie reuqests',
     aliases: ['viewrequests', 'requests'],
     guildOnly: true,
-    usage: 'Follow the prompts!',
+    usage: ', then follow the prompts',
     cooldown: 0,
     args: false,
 
