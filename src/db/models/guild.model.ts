@@ -108,6 +108,7 @@ export interface IMovie {
     link: string
     user: string
     password: string
+    want_to_watch: string[]
 }
 
 export interface IMovieDoc extends IMovie, Document {}
@@ -117,6 +118,13 @@ export interface IMovieRequest {
     users: string[]
 }
 
+const IndividualMovieSchema = new mongoose.Schema({
+    name: { type: String, unique: false, index: true, required: true },
+    link: { type: String, required: true },
+    user: { type: String },
+    password: { type: String },
+    want_to_watch: { type: Array, default: [] },
+})
 export interface IMovieRequestDoc extends IMovieRequest, Document {}
 
 const MovieRequestSchema = new mongoose.Schema({
@@ -181,14 +189,7 @@ const MovieSchema = new mongoose.Schema({
         ],
         required: true,
     },
-    movies: [
-        {
-            name: { type: String, unique: false, index: true, required: true },
-            link: { type: String, required: true },
-            user: { type: String },
-            password: { type: String },
-        },
-    ],
+    movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
 })
 

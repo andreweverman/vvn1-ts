@@ -542,25 +542,24 @@ export namespace ConfigUtil {
                     return args.lastFunction(args)
                 }
             }
-            
-
-
 
             const prompt = `Select a ${args.autoDeleteType} to edit:\n ${typedAutoDeleteArr
                 .map((x, i) => `${i + offset}. ${args.autoDeleteType==Config.AutoDeleteType.user?args.guild.members.resolve(x.matchOn)?.displayName:x.matchOn}`)
                 .join('\n')}`
-            const prefix = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
+            const element = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
                 multiple: false,
                 customOffset: offset,
             })
 
-            if (Array.isArray(prefix)) {
+            if (element.arrayElement) {
+                return element.arrayElement
+            }else{
                 const msg = 'Error selecting element. Quitting...'
                 await sendToChannel(args.textChannel, msg)
                 throw new Error(msg)
+
             }
 
-            return prefix
         } catch (error) {
             MPrompt.handleGetSameUserInputError(error)
         }

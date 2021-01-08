@@ -789,6 +789,7 @@ export namespace Movie {
                 name: movieName,
                 password: moviePassword,
                 user: userID,
+                want_to_watch: [],
             }
 
             let update: boolean = false
@@ -1158,6 +1159,81 @@ export namespace Movie {
             throw error
         }
     }
+
+    export async function addToWatchList(
+        guildID: string,
+        userID: string,
+        movies: IMovieDoc[],
+        textChannel?: MessageChannel
+    ) {
+        try {
+            const updateStrings = {
+                success: `Added ${movies.map((x) => x.name).join(', ')} to your watch list`,
+                failure: 'Already in your watch list',
+            }
+            const movieIDs = movies.map((x) => x._id)
+            const response = await Guilds.updateOne(
+                {
+                    guild_id: guildID,
+                    'movie.movies._id': { $in: movieIDs },
+                },
+                { $addToSet: { 'movie.movies.$.want_to_watch': userID } }
+            )
+
+            updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export interface GetWatchListForMemberResponse {
+        watchListArray: IMovieDoc[]
+        message: MessageEmbed | string
+    }
+    export async function getWatchListForMember(
+        guildID: string,
+        userID: string,
+        guild: GuildD,
+        number = true
+    ): Promise<GetWatchListForMemberResponse> {
+        try {
+            let message: MessageEmbed | string
+            const movieContainerDoc = await getMovie(guildID)
+
+            if (!movieContainerDoc) throw new Error('No moviecontainer found')
+            const watchList = movieContainerDoc.movies.filter((x: IMovieDoc) =>
+                x.want_to_watch.find((user) => user == userID)
+            )
+
+            const offset = 1
+            if (watchList.length > 0) {
+                const fields = []
+                let i: number,
+                    j: number,
+                    chunk = 5
+                for (i = 0, j = watchList.length; i < j; i += chunk) {
+                    const movie_chunk = watchList.slice(i, i + chunk)
+                    let requestedMessage = movie_chunk
+                        .map((x, k) => {
+                            return `${number ? '**' + (i + k + offset) + '**. ' : ''}${x.name}`
+                        })
+                        .join('\n')
+                    fields.push({
+                        name: `${i + 1} to ${i + chunk}`,
+                        value: requestedMessage,
+                        inline: true,
+                    })
+                }
+
+                message = new MessageEmbed().setTitle(`Watchlist for ${guild.members.resolve(userID)?.displayName}`).addFields(fields)
+            } else {
+                message = 'No movies on this users watch list'
+            }
+            return { watchListArray: watchList, message: message }
+        } catch (error) {
+            throw error
+        }
+    }
 }
 
 export namespace Config {
@@ -1305,7 +1381,7 @@ export namespace Config {
             }
 
             const updateStrings: updateOneStrings = {
-                success: `Default delete time is now ${time/NumberConstants.secs}`,
+                success: `Default delete time is now ${time / NumberConstants.secs}`,
                 failure: 'Failed to update time.',
             }
 
