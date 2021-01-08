@@ -120,18 +120,19 @@ export function messageEvent(
                         sendToChannel(message.channel, link.link, true, 10 * NumberConstants.mins)
                     } else {
                         sendToChannel(message.channel, 'This is not a command I know of.')
+                        deleteMessage(message, 15 * NumberConstants.secs)
                     }
 
                     return
                 } else {
                     sendToChannel(message.channel, 'This is not a command I know of.')
+                    deleteMessage(message, 15 * NumberConstants.secs)
                 }
             } catch (error) {
                 console.error('Error in link messageEvent: ' + error)
             }
         } else {
             deleteMessage(message, 15 * NumberConstants.secs)
-
             if (command.args && !args.length) {
                 let reply = `You didn't provide any arguments for a command that requires them.`
 
@@ -184,7 +185,7 @@ export function messageEvent(
                             prod: prod,
                             guildID,
                             prefix,
-                            commands:commands
+                            commands: commands,
                         })
 
                         resolve('good')
