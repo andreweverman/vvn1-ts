@@ -2,8 +2,9 @@ import { Client, Collection, Message, TextChannel, User } from 'discord.js'
 import dotenv from 'dotenv'
 
 import { NumberConstants } from './util/constants'
-import * as other_util from './util/file.util'
-import { messageEvent } from './events/message.event'
+import { getCommandFiles } from './util/file.util'
+import messageEvent from './events/message.event'
+import messageDeleteEvent from './events/message.delete.event'
 import connect from './db/connect'
 
 dotenv.config()
@@ -15,7 +16,7 @@ export interface CommandParams {
     prefix: string
     prod: boolean
     guildID?: string
-    commands:Collection<string,commandProperties>
+    commands: Collection<string, commandProperties>
 }
 
 export interface commandProperties {
@@ -44,7 +45,7 @@ client.once('ready', () => {
 })
 
 // loading all of the commands
-const commandFiles: string[] | null = other_util.getCommandFiles()
+const commandFiles: string[] | null = getCommandFiles()
 if (!commandFiles) {
     !dev ? process.exit(1) : console.log('WARNING: There are no commands configured')
 } else {
@@ -62,6 +63,11 @@ client.on('message', async (message) => {
     })
 })
 
+client.on('messageDelete', async (message) => {
+    messageDeleteEvent(message).catch((error) => {
+        console.log(error)
+    })
+})
 // discord connect
 client.login(process.env.TOKEN)
 

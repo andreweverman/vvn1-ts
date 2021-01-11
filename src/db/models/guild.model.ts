@@ -71,7 +71,7 @@ const AutoDeleteSchema = new mongoose.Schema({
 export interface IArchive {
     enabled: boolean
     channel: string
-    saveBotCommands: boolean
+    save_bot_commands: boolean
 }
 export interface IArchiveDoc extends IArchive, Document {}
 
@@ -95,7 +95,7 @@ const ConfigSchema = new mongoose.Schema({
     archive: {
         enabled: { type: Boolean, default: false },
         channel: { type: String, default: null },
-        saveBotCommands: { type: Boolean, default: false },
+        save_bot_commands: { type: Boolean, default: false },
     },
     tz: {
         type: Object,

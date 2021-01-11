@@ -20,7 +20,6 @@ const command: commandProperties = {
                 replyUtil(e.message, 'Must be connected to voice to use this', true)
                 return
             }
-
             let vc_people = Array.from(member.voice.channel.members.entries()).map((x) => x[1])
 
             let { members, voiceChannels } = await AliasUtil.parseChannelsAndMembers(e.message.guild!, e.args, {
