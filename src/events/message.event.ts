@@ -5,7 +5,7 @@ import { deleteMessage, replyUtil, sendToChannel } from '../util/message.util'
 import { Config, Link } from '../db/controllers/guild.controller'
 import playAudio from '../commands/indirect/playAudio'
 import { IConfigDoc } from '../db/models/guild.model'
-export function messageEvent(
+async function messageEvent(
     message: Message,
     client: Client,
     commands: commandCollection,
@@ -91,6 +91,7 @@ export function messageEvent(
             reject('command no name')
             return
         }
+        
 
         const command =
             commands.get(commandName) ||
@@ -199,3 +200,5 @@ export function messageEvent(
         }
     })
 }
+
+export default messageEvent

@@ -544,7 +544,14 @@ export namespace ConfigUtil {
             }
 
             const prompt = `Select a ${args.autoDeleteType} to edit:\n ${typedAutoDeleteArr
-                .map((x, i) => `${i + offset}. ${args.autoDeleteType==Config.AutoDeleteType.user?args.guild.members.resolve(x.matchOn)?.displayName:x.matchOn}`)
+                .map(
+                    (x, i) =>
+                        `${i + offset}. ${
+                            args.autoDeleteType == Config.AutoDeleteType.user
+                                ? args.guild.members.resolve(x.matchOn)?.displayName
+                                : x.matchOn
+                        }`
+                )
                 .join('\n')}`
             const element = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
                 multiple: false,
@@ -553,13 +560,11 @@ export namespace ConfigUtil {
 
             if (element.arrayElement) {
                 return element.arrayElement
-            }else{
+            } else {
                 const msg = 'Error selecting element. Quitting...'
                 await sendToChannel(args.textChannel, msg)
                 throw new Error(msg)
-
             }
-
         } catch (error) {
             MPrompt.handleGetSameUserInputError(error)
         }
@@ -964,7 +969,90 @@ export namespace ConfigUtil {
 
     // user auto delete
 
-    export async function newMessageArchiveSetup(args: ConfigUtilFunctionArgs) {}
+    export async function messageArchiveConfig(args: ConfigUtilFunctionArgs) {
+        try {
+            const backFn = args.lastFunction ? args.lastFunction : () => true
+            args.lastFunction = messageArchiveConfig
+
+            const messageArchive = await Config.getArchiveConfig(args.guildID)
+            let options: Prompt.optionSelectElement[] = [
+                {
+                    name: 'Create new archive channel',
+                    function: createArchiveConfig,
+                    args: args,
+                },
+                {
+                    name: 'Select extisting channel as archive channel',
+                    function: editArchiveChannel,
+                    args: args,
+                },
+            ]
+            if (messageArchive.channel != '')
+                options = options.concat([
+                    {
+                        name: `${messageArchive.enabled ? 'Disable' : 'Enable'} the message archive`,
+                        function: toggleMessageArchive,
+                        args: args,
+                    },
+                    {
+                        name: `Save bot messages: Curently ${
+                            messageArchive.save_bot_commands ? 'enabled' : 'disabled'
+                        }`,
+                        function: toggleArchiveSaveBotMessages,
+                        args: args,
+                    },
+                ])
+
+            options.push({ name: 'Back', function: backFn, args: args })
+
+            return MPrompt.optionSelect(args.userID, args.textChannel, options)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    export async function createArchiveConfig(args: ConfigUtilFunctionArgs) {
+        try {
+            const channel = await args.guild.channels.create('Archive', { type: 'text' })
+            sendToChannel(args.textChannel, 'Please set the channel permissions')
+
+            return Config.setMessageArchiveChannel(args.guildID, channel.id, args.textChannel)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    export async function editArchiveChannel(args: ConfigUtilFunctionArgs) {
+        try {
+            const m = await MPrompt.getSameUserInput(
+                args.userID,
+                args.textChannel,
+                'Enter the id of the text channel that you want to be the archive channel',
+                Filter.validChannelFilter(args.guild, 'text')
+            )
+            const channelID = m.content.trim()
+
+            return Config.setMessageArchiveChannel(args.guildID, channelID, args.textChannel)
+        } catch (error) {
+            MPrompt.handleGetSameUserInputError(error)
+        }
+    }
+
+    export async function toggleMessageArchive(args: ConfigUtilFunctionArgs) {
+        try {
+            return Config.toggleMessageArchiveMode(args.guildID, args.textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function toggleArchiveSaveBotMessages(args: ConfigUtilFunctionArgs) {
+        try {
+            return Config.toggleArchiveSaveBotMessages(args.guildID, args.textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
 }
 
 export namespace EmojiUtil {

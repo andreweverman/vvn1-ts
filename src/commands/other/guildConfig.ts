@@ -59,7 +59,7 @@ const command: commandProperties = {
                 },
                 {
                     name: 'Configure message archive',
-                    function: ConfigUtil.newMessageArchiveSetup,
+                    function: ConfigUtil.messageArchiveConfig,
                     args: args,
                 },
             ]

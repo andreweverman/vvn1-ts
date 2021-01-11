@@ -1225,7 +1225,9 @@ export namespace Movie {
                     })
                 }
 
-                message = new MessageEmbed().setTitle(`Watchlist for ${guild.members.resolve(userID)?.displayName}`).addFields(fields)
+                message = new MessageEmbed()
+                    .setTitle(`Watchlist for ${guild.members.resolve(userID)?.displayName}`)
+                    .addFields(fields)
             } else {
                 message = 'No movies on this users watch list'
             }
@@ -1623,6 +1625,81 @@ export namespace Config {
             )
 
             return updateOneResponseHandler(response, updateStrings, textChannel)
-        } catch (error) {}
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function getArchiveConfig(guildID: string) {
+        try {
+            const configDoc = await getGuildConfig(guildID)
+            return configDoc.archive
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function setMessageArchiveChannel(
+        guildID: string,
+        newChannelID: string,
+        textChannel?: MessageChannel
+    ) {
+        try {
+            const updateStrings: updateOneStrings = {
+                success: 'Archive channel has been set',
+                failure: 'Failed to update archive channel settings',
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $set: { 'config.archive.channel': newChannelID, 'config.archive.enabled': true } }
+            )
+
+            return updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function toggleMessageArchiveMode(guildID: string, textChannel?: MessageChannel) {
+        try {
+            const config = await getGuildConfig(guildID)
+            const enabled = config.archive.enabled
+            const status = !enabled ? 'enabled' : 'disabled'
+            const updateStrings: updateOneStrings = {
+                success: `Archive channel is now ${status}.`,
+                failure: 'Error toggling archive channel mode. It will stay as ' + status,
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $set: { 'config.archive.enabled': !enabled } }
+            )
+
+            updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function toggleArchiveSaveBotMessages(guildID: string, textChannel?: MessageChannel) {
+        try {
+            const config = await getGuildConfig(guildID)
+            const enabled = config.archive.save_bot_commands
+            const status = !enabled ? 'enabled' : 'disabled'
+            const updateStrings: updateOneStrings = {
+                success: `Saving bot commands is now ${status}.`,
+                failure: 'Error toggling save bot commands mode. It will stay as ' + status,
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $set: { 'config.archive.save_bot_commands': !enabled } }
+            )
+
+            updateOneResponseHandler(response, updateStrings, textChannel)
+        } catch (error) {
+            throw error
+        }
     }
 }
