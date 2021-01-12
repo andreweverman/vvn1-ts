@@ -9,6 +9,7 @@ import {
     GuildEmoji,
     Emoji,
     User,
+    Role,
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from '../util/constants'
 import { Guild, Link, Movie, Config, Alias } from '../db/controllers/guild.controller'
@@ -264,7 +265,7 @@ export namespace MovieUtil {
         })
     }
 
-    export function getInfoPage(movieName: string): Promise<string | null> {
+    export async function getInfoPage(movieName: string): Promise<string | null> {
         const urlBase = 'https://letterboxd.com'
         const searchBase = '/search/'
 
@@ -287,6 +288,32 @@ export namespace MovieUtil {
                     resolve(null)
                 })
         })
+    }
+
+    export async function createMovieRole(movie: IMovieDoc, guild: GuildD): Promise<Role> {
+        try {
+            const reason = `vvn1: to watch ${movie.name}`
+            const movieWatchers = movie.want_to_watch
+                .map((x) => guild.member(x))
+                .filter((x) => x != null) as GuildMember[]
+
+            const newRole = await guild.roles.create({
+                data: {
+                    name: movie.name,
+                    color: 'BLUE',
+                    permissions: 0,
+                },
+                reason: reason,
+            })
+
+            movieWatchers.forEach(async (member) => {
+                await member.roles.add(newRole, reason)
+            })
+
+            return newRole
+        } catch (error) {
+            throw error
+        }
     }
 
     export namespace Config {

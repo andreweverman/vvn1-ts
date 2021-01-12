@@ -1,4 +1,13 @@
-import { MessageEmbed, MessageCollector, Message, ReactionCollector, Emoji, GuildEmoji, VoiceChannel } from 'discord.js'
+import {
+    MessageEmbed,
+    MessageCollector,
+    Message,
+    ReactionCollector,
+    Emoji,
+    GuildEmoji,
+    VoiceChannel,
+    Role,
+} from 'discord.js'
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt, Filter, sendToChannel, MessageChannel, replyUtil, deleteMessage } from '../../util/message.util'
 import { Link, Movie, Config, Guild } from '../../db/controllers/guild.controller'
@@ -12,7 +21,7 @@ import moment, { Moment } from 'moment'
 import { getMomentForTZ, Prompt as TPrompt } from '../../util/time.util'
 import playAudio from '../indirect/playAudio'
 import { getVoiceChannelFromAliases, moveMembers, readyCheck } from '../../util/discord.util'
-import _ from 'lodash'
+import _, { reject } from 'lodash'
 const command: commandProperties = {
     name: 'watchmovie',
     aliases: ['movie'],
@@ -43,7 +52,6 @@ const command: commandProperties = {
         let voteTimeMoment: Moment
         let voteTimeString: string
 
-        let readyToWatchEmoji: Emoji
         let reactionCollector: ReactionCollector
         interface MovieVote {
             name: string
@@ -58,19 +66,22 @@ const command: commandProperties = {
         const editCommandString = '--editmovie'
         const timeZoneName = await Config.getTimeZoneName(guildID)
 
+        let movieRole: Role | undefined
+        let movieRoleAt: Message
+
         try {
             const editOptions: Prompt.optionSelectElement[] = [
                 { name: 'Change movie', function: selectMovieOrVote },
                 { name: 'Change movie time', function: getMovieTime },
             ]
-            await selectMovieOrVote(true)
-            await getMovieDate()
-            await getMovieTime()
+            if (!(await selectMovieOrVote(true))) return
+            if (!(await getMovieDate())) return
+            if (!(await getMovieTime())) return
 
             let voteTimeValid: boolean | undefined = false
             if (voteMode) {
                 while (!voteTimeValid) {
-                    await getVoteDate()
+                    if (!(await getVoteDate())) return
                     voteTimeValid = await getVoteTime()
 
                     if (!voteTimeValid) {
@@ -106,11 +117,24 @@ const command: commandProperties = {
                     }
                     if (selectedMovie.arrayElement) movie = selectedMovie.arrayElement
                     if (selectedMovie.stringCommand) voteMode = true
+                    manageRole()
+                    return true
                 } catch (error) {
-                    Prompt.handleGetSameUserInputError(error)
+                    quitMovie(error)
+                    return false
                 }
             }
 
+            async function manageRole() {
+                if (movieRole == undefined && movie != undefined) {
+                    movieRole = await MovieUtil.createMovieRole(movie, e.message.guild!)
+                } else {
+                    if (movieRole?.name != movie.name) {
+                        await movieRole?.delete('Change of movie')
+                        movieRole = await MovieUtil.createMovieRole(movie, e.message.guild!)
+                    }
+                }
+            }
             async function getMovieDate() {
                 try {
                     // we do not want anything to be in the past when doing this
@@ -120,8 +144,10 @@ const command: commandProperties = {
                     })
 
                     movieDate = date.date
+                    return true
                 } catch (error) {
-                    Prompt.handleGetSameUserInputError(error)
+                    quitMovie(error)
+                    return false
                 }
             }
 
@@ -148,8 +174,10 @@ const command: commandProperties = {
                     movieStartSchedule != undefined
                         ? movieStartSchedule.reschedule(movieTimeMoment.format())
                         : (movieStartSchedule = schedule.scheduleJob(movieTimeMoment.toDate(), movieTimeExecute))
+                    return true
                 } catch (error) {
-                    throw error
+                    quitMovie(error)
+                    return false
                 }
             }
 
@@ -161,8 +189,10 @@ const command: commandProperties = {
                     })
 
                     voteDate = date.date
+                    return true
                 } catch (error) {
-                    throw error
+                    quitMovie(error)
+                    return false
                 }
             }
 
@@ -246,6 +276,11 @@ const command: commandProperties = {
                             `To edit the time or movie, use ${editCommandString} and follow the prompts.\nUse ${quitCommandString} if you wish to cancel the movie`
                         )
 
+                    if (movieRole)
+                        movieRoleAt = (
+                            await sendToChannel(textChannel, movieRole.toString(), true, 20 * NumberConstants.mins)
+                        ).messages[0]
+
                     return embed
                 } catch (error) {
                     throw new Error('Something ff in making the message embed')
@@ -307,7 +342,7 @@ const command: commandProperties = {
                     })
                     votedMovies.sort((a, b) => b.count - a.count)
                 } catch (error) {
-                    Prompt.handleGetSameUserInputError(error)
+                    quitMovie(error)
                 }
             }
 
@@ -354,6 +389,7 @@ const command: commandProperties = {
                             } else if (quitCommandString == content && sameUserFilter(m)) {
                                 await sendToChannel(textChannel, 'Quitting...', true, 5 * NumberConstants.secs)
                                 await deleteMessage(instructionMessage, 0)
+                                quitMovie('')
                                 if (movieStartSchedule != null) movieStartSchedule.cancel()
                                 reactionCollector.stop('Quit')
                                 postInstructionMessageCollector.stop('Quit')
@@ -376,6 +412,7 @@ const command: commandProperties = {
                 try {
                     // vote array is already sorted
                     movie = votedMovies[0].movie
+                    await manageRole()
 
                     // let the people who voted know that the movie was selected
 
@@ -443,6 +480,7 @@ const command: commandProperties = {
                             playAudio(voiceChannel, start_countdown, textChannel)
                     }
 
+                    if (movieRoleAt) deleteMessage(movieRoleAt, 0)
                     return deleteMessage(instructionMessage, 0)
                 } catch (error) {
                     throw error
@@ -548,7 +586,18 @@ const command: commandProperties = {
 
                 return arr
             }
+
+            function quitMovie(error: any) {
+                try {
+                    if (movieRole) movieRole.delete('Quitting movie')
+                    if (movieRoleAt) deleteMessage(movieRoleAt, 0)
+                } catch (err) {
+                    Prompt.handleGetSameUserInputError(error)
+                    Prompt.handleGetSameUserInputError(err)
+                }
+            }
         } catch (error) {
+            if (movieRole) movieRole.delete('Quitting movie')
             Prompt.handleGetSameUserInputError(error)
         }
     },
