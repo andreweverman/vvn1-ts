@@ -113,16 +113,15 @@ async function messageEvent(
                             } else {
                                 replyUtil(message, 'You must be connected to a voice channel to use this command')
                             }
-                            deleteMessage(message, 15 * NumberConstants.secs)
                         }
                     } else if (link && link.type == 'link') {
                         // static link
                         // just sending them the link
                         sendToChannel(message.channel, link.link, true, 10 * NumberConstants.mins)
-                        deleteMessage(message, 15 * NumberConstants.secs)
                     } else {
                         sendToChannel(message.channel, 'This is not a command I know of.')
                     }
+                    deleteMessage(message, 15 * NumberConstants.secs)
 
                     return
                 } else {
