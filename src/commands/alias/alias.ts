@@ -6,8 +6,8 @@ import { Prompt, Filter, sendToChannel } from '../../util/message.util'
 import { extractActiveUsers, extractChannels } from '../../util/discord.util'
 import { NumberConstants } from '../../util/constants'
 
-import createAlias from './createAlias'
-import deleteAlias from './deleteAlias'
+import createAlias from './create.alias'
+import deleteAlias from './view.alias'
 import viewAlias from './viewAlias'
 const command: commandProperties = {
     name: 'alias',
