@@ -91,7 +91,6 @@ async function messageEvent(
             reject('command no name')
             return
         }
-        
 
         const command =
             commands.get(commandName) ||
@@ -111,6 +110,7 @@ async function messageEvent(
 
                             if (vc) {
                                 playAudio(vc, link, message.channel).catch((err) => console.log(err))
+                                deleteMessage(message, 15 * NumberConstants.secs)
                             } else {
                                 replyUtil(message, 'You must be connected to a voice channel to use this command')
                             }
