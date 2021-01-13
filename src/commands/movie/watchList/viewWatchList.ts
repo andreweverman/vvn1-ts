@@ -20,9 +20,14 @@ const command: commandProperties = {
         const guildID = e.message.guild!.id
         const textChannel = e.message.channel
 
-       const {message} = await Movie.getWatchListForMember(guildID,userID,e.message.guild!,false)
+        const { message, stringMessage } = await Movie.getWatchListForMember(guildID, userID, e.message.guild!, false)
 
-       sendToChannel(textChannel,message,true,1* NumberConstants.mins)
+        const sendMsg = message ? message : stringMessage
+        if (sendMsg) {
+            sendToChannel(textChannel, sendMsg, true, 1 * NumberConstants.mins)
+        } else {
+            throw new Error('Invalid message getting')
+        }
     },
 }
 

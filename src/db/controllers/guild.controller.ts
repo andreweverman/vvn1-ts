@@ -1188,7 +1188,8 @@ export namespace Movie {
 
     export interface GetWatchListForMemberResponse {
         watchListArray: IMovieDoc[]
-        message: MessageEmbed | string
+        message?: MessageEmbed
+        stringMessage?: string
     }
     export async function getWatchListForMember(
         guildID: string,
@@ -1197,7 +1198,8 @@ export namespace Movie {
         number = true
     ): Promise<GetWatchListForMemberResponse> {
         try {
-            let message: MessageEmbed | string
+            let message: MessageEmbed | undefined
+            let stringMessage: string | undefined
             const movieContainerDoc = await getMovie(guildID)
 
             if (!movieContainerDoc) throw new Error('No moviecontainer found')
@@ -1229,9 +1231,32 @@ export namespace Movie {
                     .setTitle(`Watchlist for ${guild.members.resolve(userID)?.displayName}`)
                     .addFields(fields)
             } else {
-                message = 'No movies on this users watch list'
+                stringMessage = 'No movies on this users watch list'
             }
-            return { watchListArray: watchList, message: message }
+            return { watchListArray: watchList, message: message, stringMessage: stringMessage }
+        } catch (error) {
+            throw error
+        }
+    }
+
+    export async function deleteFromWatchList(
+        guildID: string,
+        userID: string,
+        deleteElements: IMovieDoc[],
+        textChannel?: MessageChannel
+    ) {
+        try {
+            const updateStrings: updateOneStrings = {
+                success: `${deleteElements.map((x) => x.name).join(', ')} have been removed form your watch list`,
+                failure: 'Failed to delete movies from your watchlist',
+            }
+
+            const response = await Guilds.updateOne(
+                { guild_id: guildID, 'movie.movies._id': deleteElements.map((x) => x._id) },
+                { $pull: { 'movie.movies.$.want_to_watch': userID } }
+            )
+
+            updateOneResponseHandler(response, updateStrings, textChannel)
         } catch (error) {
             throw error
         }

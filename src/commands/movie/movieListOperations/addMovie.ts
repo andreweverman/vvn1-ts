@@ -1,10 +1,10 @@
-import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/message.util'
-import { Link, Movie } from '../../db/controllers/guild.controller'
-import { ILink } from '../../db/models/guild.model'
+import { CommandParams, commandProperties } from '../../../bot'
+import { Prompt, Filter } from '../../../util/message.util'
+import { Link, Movie } from '../../../db/controllers/guild.controller'
+import { ILink } from '../../../db/models/guild.model'
 import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { AliasUtil, MovieUtil } from '../../util//general.util'
+import { linkRegex, youtubeRegex } from '../../../util/string.util'
+import { AliasUtil, MovieUtil } from '../../../util/general.util'
 
 const command: commandProperties = {
     name: 'addmovie',

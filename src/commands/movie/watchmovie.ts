@@ -1,30 +1,20 @@
-import {
-    MessageEmbed,
-    MessageCollector,
-    Message,
-    ReactionCollector,
-    Emoji,
-    GuildEmoji,
-    VoiceChannel,
-    Role,
-} from 'discord.js'
+import { MessageEmbed, MessageCollector, Message, ReactionCollector, GuildEmoji, VoiceChannel, Role } from 'discord.js'
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, sendToChannel, MessageChannel, replyUtil, deleteMessage } from '../../util/message.util'
+import { Prompt, Filter, sendToChannel, replyUtil, deleteMessage } from '../../util/message.util'
 import { Link, Movie, Config, Guild } from '../../db/controllers/guild.controller'
-import { ILink } from '../../db/models/guild.model'
-import { linkRegex, stringMatch, youtubeRegex } from '../../util/string.util'
-import { AliasUtil, MovieUtil, EmojiUtil } from '../../util/general.util'
+import { stringMatch } from '../../util/string.util'
+import { MovieUtil, EmojiUtil } from '../../util/general.util'
 import { movieChannelAlias, movieCountdownName, movieTimeName, NumberConstants, vote } from '../../util/constants'
 import { IMovieDoc } from '../../db/models/guild.model'
 import schedule from 'node-schedule'
-import moment, { Moment } from 'moment'
+import { Moment } from 'moment'
 import { getMomentForTZ, Prompt as TPrompt } from '../../util/time.util'
 import playAudio from '../indirect/playAudio'
 import { getVoiceChannelFromAliases, moveMembers, readyCheck } from '../../util/discord.util'
-import _, { reject } from 'lodash'
+import _ from 'lodash'
 const command: commandProperties = {
     name: 'watchmovie',
-    aliases: ['movie'],
+    aliases: ['movietime', 'watch'],
     usage: ', then follow the prompts',
     description: '',
     cooldown: 0,

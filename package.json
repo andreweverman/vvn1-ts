@@ -4,7 +4,7 @@
   "description": "A template for Discord.JS with Typescript and a command handler.",
   "main": "dist/bot.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build --clean",
     "dev": "set NODE_ENV=dev && ts-node src/bot.ts",
     "start": "set NODE_ENV=production && node  --unhandled-rejections=strict dist/bot.js",
     "test": "jest"
