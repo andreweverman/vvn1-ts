@@ -16,6 +16,7 @@ import Guilds, {
     ISoundDoc,
     IMovieRequest,
     IMovieRequestDoc,
+    IMovieDownload,
 } from '../models/guild.model'
 import { CreateQuery, MongooseDocument, MongooseUpdateQuery, QueryUpdateOptions, UpdateQuery } from 'mongoose'
 import {
@@ -1260,6 +1261,44 @@ export namespace Movie {
         } catch (error) {
             throw error
         }
+    }
+
+    export async function createMovieDownloadRequest(
+        guildID: string,
+        userID: string,
+        movieName: string,
+        torrentLink: string,
+        zipName: string,
+        zipPassword: string,
+        textChannel?: MessageChannel
+    ) {
+        const updateStrings: updateOneStrings = {
+            success: 'Download request has been created. ',
+            failure: 'Failed to start downloading this movie.',
+        }
+
+        const downloadObj: IMovieDownload = {
+            userID: userID,
+            movieName: movieName,
+            torrentLink: torrentLink,
+            zipName: zipName,
+            zipPassword: zipPassword,
+            inProgress: false,
+            downloaded: false,
+            error: false,
+            percentDone: 0,
+        }
+
+        const response = Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $push: {
+                    'movie.download': { downloadObj },
+                },
+            }
+        )
+
+        return updateOneResponseHandler(response, updateStrings, textChannel)
     }
 }
 

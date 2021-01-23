@@ -54,6 +54,7 @@ const command: commandProperties = {
 
         const quitCommandString = '--quitmovie'
         const editCommandString = '--editmovie'
+        const startCommandString='--startmovie'
         const timeZoneName = await Config.getTimeZoneName(guildID)
 
         let movieRole: Role | undefined
@@ -263,7 +264,7 @@ const command: commandProperties = {
                         )
                         .addField(
                             'Editing Options',
-                            `To edit the time or movie, use ${editCommandString} and follow the prompts.\nUse ${quitCommandString} if you wish to cancel the movie`
+                            `To edit the time or movie, use ${editCommandString} and follow the prompts.\nUse ${quitCommandString} if you wish to cancel the movie\nUse ${startCommandString} to start the movie whenever`
                         )
 
                     if (movieRole)
@@ -366,6 +367,8 @@ const command: commandProperties = {
                             if (stringMatch(editCommandString, { loose: true }).test(content) && sameUserFilter(m)) {
                                 await Prompt.optionSelect(userID, textChannel, editOptions)
                                 updateInstructions()
+                            } else if (stringMatch(startCommandString, { loose: true }).test(content)) {
+                                movieTimeExecute()
                             } else if (vote == content && voteMode) {
                                 if (votedUserIDs.includes(m.author.id)) {
                                     // this mf already voted
@@ -424,6 +427,7 @@ const command: commandProperties = {
             async function movieTimeExecute() {
                 try {
                     console.time('Movie time')
+                    movieStartSchedule.cancel()
                     const voiceChannelResolveable = await getVoiceChannelFromAliases(
                         e.message.guild!,
                         [movieChannelAlias],
