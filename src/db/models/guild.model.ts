@@ -147,15 +147,51 @@ export interface IReactionEmoji {
 
 export interface IReactionEmojiDoc extends IReactionEmoji, Document {}
 
+export interface IMovieDownload {
+    userID: string
+    movieName: string
+    torrentLink: string
+    zipName: string
+    zipPassword: string
+    inProgress: boolean
+    downloaded: boolean
+    error: boolean
+    errorReason?: string
+    percentDone: number
+}
+
+export interface IMovieDownloadDoc extends IMovieDownload, Document {}
+
+const MovieDownloadSchema = new mongoose.Schema({
+    userID: { type: String, required: true },
+    movieName: { type: String, required: true },
+    torrentLink: { type: String, required: true },
+    zipName: { type: String, required: true },
+    zipPassword: { type: String, required: true },
+    inProgress: { type: Boolean, required: true },
+    downloaded: { type: Boolean, required: true },
+    error: { type: Boolean, required: true },
+    errorReason: { type: String, required: false },
+    percentDone: { type: Number, required: true },
+})
+
 export interface IMovieContainer {
+    default_password: string
+    sounds: ISound[]
+    emojis: IReactionEmoji[]
+    movies: IMovie[]
+    requests: IMovieRequest[]
+    downloads: IMovieDownload[]
+}
+
+export interface IMovieContainerDoc extends Document {
     default_password: string
     sounds: ISoundDoc[]
     emojis: IReactionEmojiDoc[]
     movies: IMovieDoc[]
     requests: IMovieRequestDoc[]
+    downloads: IMovieDownloadDoc[]
 }
-
-export interface IMovieContainerDoc extends IMovieContainer, Document {}
 
 const MovieSchema = new mongoose.Schema({
     default_password: { type: String, default: '' },
@@ -191,6 +227,7 @@ const MovieSchema = new mongoose.Schema({
     },
     movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
+    downloads: [MovieDownloadSchema],
 })
 
 // ? all over the shits because guild_id is the only key

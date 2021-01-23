@@ -5,6 +5,7 @@ import { NumberConstants } from './util/constants'
 import { getCommandFiles } from './util/file.util'
 import messageEvent from './events/message.event'
 import messageDeleteEvent from './events/message.delete.event'
+import guildCreateEvent from './events/guild.create.event'
 import connect from './db/connect'
 
 dotenv.config()
@@ -65,6 +66,12 @@ client.on('message', async (message) => {
 
 client.on('messageDelete', async (message) => {
     messageDeleteEvent(message).catch((error) => {
+        console.log(error)
+    })
+})
+
+client.on('guildCreate',async(guild) =>{
+    guildCreateEvent(guild).catch((error) =>{
         console.log(error)
     })
 })

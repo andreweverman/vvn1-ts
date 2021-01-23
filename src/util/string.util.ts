@@ -15,6 +15,10 @@ export function stringMatch(str: string, options: matchOptions): RegExp {
 
 export const linkRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 
+export const magnetRegex = /magnet:\?xt=urn:[a-z0-9]{20,50}/i
+
+export const validFileRegex = /^[0-9a-zA-Z ... ]+$/
+
 export const youtubeRegex = /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/
 
 export const spaceCommaRegex = /[ ,]+/
