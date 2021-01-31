@@ -37,6 +37,9 @@ const command: commandProperties = {
                 movieLink,
                 movieName,
                 moviePassword,
+                undefined,
+                false,
+                undefined,
                 e.message.guild!,
                 textChannel
             )
