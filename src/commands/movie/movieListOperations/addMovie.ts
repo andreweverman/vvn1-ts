@@ -18,7 +18,7 @@ const command: commandProperties = {
     async execute(e: CommandParams) {
         const guildID = e.message.guild!.id
         const userID = e.message.author.id
-        const textChannel = e.message.channel
+        const textChannel = e.message.channel 
 
         const args = {
             userID: userID,

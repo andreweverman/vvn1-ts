@@ -15,7 +15,6 @@ const command: commandProperties = {
     usage: ', then follow the prompts',
     cooldown: 1,
     guildOnly: true,
-
     async execute(e: CommandParams) {
         try {
             const userID = e.message.author.id
