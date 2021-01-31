@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import mongoose, { Schema, Document, ObjectId } from 'mongoose'
 import { Config, Link } from '../controllers/guild.controller'
 import {
     NumberConstants,
@@ -22,7 +22,7 @@ const LinkSchema: Schema = new Schema({
     link: { type: String, required: true },
     uploader: { type: String },
     type: { type: String, required: true },
-    volume: { type: mongoose.Schema.Types.Number, required: false },
+    volume: { type: Number, required: false },
 })
 
 export interface IAlias {
@@ -109,14 +109,12 @@ export interface IMovie {
     user: string
     password: string
     want_to_watch: string[]
+    mega: boolean
+    megaID?: ObjectId
+    zipName?:string
 }
 
 export interface IMovieDoc extends IMovie, Document {}
-
-export interface IMovieRequest {
-    name: string
-    users: string[]
-}
 
 const IndividualMovieSchema = new mongoose.Schema({
     name: { type: String, unique: false, index: true, required: true },
@@ -124,7 +122,15 @@ const IndividualMovieSchema = new mongoose.Schema({
     user: { type: String },
     password: { type: String },
     want_to_watch: { type: Array, default: [] },
+    mega: { type: Boolean, required: true, default: false },
+    megaID: { type: mongoose.Schema.Types.ObjectId },
+    zipName: { type: String, },
 })
+
+export interface IMovieRequest {
+    name: string
+    users: string[]
+}
 export interface IMovieRequestDoc extends IMovieRequest, Document {}
 
 const MovieRequestSchema = new mongoose.Schema({
@@ -147,32 +153,64 @@ export interface IReactionEmoji {
 
 export interface IReactionEmojiDoc extends IReactionEmoji, Document {}
 
-export interface IMovieDownload {
+export interface IMovieDownloadElement {
     userID: string
     movieName: string
     torrentLink: string
     zipName: string
     zipPassword: string
-    inProgress: boolean
+    downloading: boolean
+    secondsDownloading: number
     downloaded: boolean
+    downloadPercent: number
+    uploading: boolean
+    uploaded: boolean
+    secondsUploading: number
+    uploadPercent: number
     error: boolean
     errorReason?: string
-    percentDone: number
+    uploadLink?: string
+    movieID?: mongoose.ObjectId
 }
 
-export interface IMovieDownloadDoc extends IMovieDownload, Document {}
+export interface IMovieDownloadElementDoc extends IMovieDownloadElement, Document {}
 
-const MovieDownloadSchema = new mongoose.Schema({
+const MovieDownloadElementSchema = new mongoose.Schema({
     userID: { type: String, required: true },
     movieName: { type: String, required: true },
     torrentLink: { type: String, required: true },
     zipName: { type: String, required: true },
     zipPassword: { type: String, required: true },
-    inProgress: { type: Boolean, required: true },
+    downloading: { type: Boolean, required: true },
+    secondsDownloading: { type: Number, required: true },
     downloaded: { type: Boolean, required: true },
+    downloadPercent: { type: Number, required: true },
+    uploading: { type: Boolean, required: true },
+    uploaded: { type: Boolean, required: true },
+    secondsUploading: { type: Number, required: true },
+    uploadPercent: { type: Number, required: true },
     error: { type: Boolean, required: true },
     errorReason: { type: String, required: false },
-    percentDone: { type: Number, required: true },
+    uploadLink: { type: String, required: false },
+    movieID: { type: mongoose.Schema.Types.ObjectId, required: false },
+})
+
+export interface IMovieDownloadContainer {
+    downloadQueue: IMovieDownloadElement[]
+    uploadedQueue: IMovieDownloadElement[]
+    deleteQueue: string[]
+}
+
+export interface IMovieDownloadContainerDoc extends IMovieDownloadContainer, Document {
+    downloadQueue: IMovieDownloadElementDoc[]
+    uploadedQueue: IMovieDownloadElementDoc[]
+    deleteQueue:string[]
+}
+
+const MovieDownloadContainerSchema = new mongoose.Schema({
+    downloadQueue: { type: [MovieDownloadElementSchema], required: true, default: [] },
+    uploadedQueue: { type: [MovieDownloadElementSchema], required: true, default: [] },
+    deleteQueue: { type: [String], required: true, default: [] },
 })
 
 export interface IMovieContainer {
@@ -181,7 +219,7 @@ export interface IMovieContainer {
     emojis: IReactionEmoji[]
     movies: IMovie[]
     requests: IMovieRequest[]
-    downloads: IMovieDownload[]
+    downloads: IMovieDownloadContainer[]
 }
 
 export interface IMovieContainerDoc extends Document {
@@ -190,7 +228,7 @@ export interface IMovieContainerDoc extends Document {
     emojis: IReactionEmojiDoc[]
     movies: IMovieDoc[]
     requests: IMovieRequestDoc[]
-    downloads: IMovieDownloadDoc[]
+    downloads: IMovieDownloadContainerDoc
 }
 
 const MovieSchema = new mongoose.Schema({
@@ -227,12 +265,12 @@ const MovieSchema = new mongoose.Schema({
     },
     movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
-    downloads: [MovieDownloadSchema],
+    downloads: MovieDownloadContainerSchema,
 })
 
-// ? all over the shits because guild_id is the only key
 export interface IGuild {
     guild_id: string
+    premium: boolean
     config: IConfigDoc
     aliases: IAliasDoc[]
     movie: IMovieContainerDoc
@@ -243,6 +281,7 @@ export interface IGuildDoc extends IGuild, Document {}
 
 const GuildSchema = new mongoose.Schema({
     guild_id: { type: String, unique: true, index: true },
+    premium: { type: Boolean, required: true, default: false },
     config: { type: ConfigSchema, default: {} },
     aliases: [AliasSchema],
     movie: { type: MovieSchema, default: {} },

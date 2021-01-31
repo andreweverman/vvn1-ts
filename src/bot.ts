@@ -7,6 +7,7 @@ import messageEvent from './events/message.event'
 import messageDeleteEvent from './events/message.delete.event'
 import guildCreateEvent from './events/guild.create.event'
 import connect from './db/connect'
+import {runJobs} from './jobs/runner'
 
 dotenv.config()
 
@@ -37,7 +38,7 @@ export interface commandCooldowns extends Collection<string, Collection<string, 
 
 const dev: boolean = process.env.NODE_ENV == 'dev' ? true : false
 const prod: boolean = process.env.prod == '1' ? true : false
-const client = new Client(),
+export const client = new Client(),
     commands: Collection<string, commandProperties> = new Collection(),
     cooldowns: Collection<string, Collection<string, number>> = new Collection()
 
@@ -85,3 +86,5 @@ if (!db) {
     process.exit(1)
 }
 connect({ db })
+
+runJobs()

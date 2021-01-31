@@ -16,7 +16,8 @@ import Guilds, {
     ISoundDoc,
     IMovieRequest,
     IMovieRequestDoc,
-    IMovieDownload,
+    IMovieDownloadElement,
+    IMovieDownloadElementDoc,
 } from '../models/guild.model'
 import { CreateQuery, MongooseDocument, MongooseUpdateQuery, QueryUpdateOptions, UpdateQuery } from 'mongoose'
 import {
@@ -34,6 +35,8 @@ import { sendToChannel, MessageChannel, Prompt } from '../../util/message.util'
 import { stringMatch } from '../../util/string.util'
 import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/general.util'
+import { Schema } from 'mongoose'
+import { getDiffieHellman } from 'crypto'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -776,7 +779,10 @@ export namespace Movie {
         movieLink: string,
         movieName: string,
         moviePassword: string,
-        guild: GuildD,
+        zipName?: string,
+        mega = false,
+        megaID?: Schema.Types.ObjectId,
+        guild?: GuildD,
         textChannel?: MessageChannel
     ): Promise<updateOneResponseHandlerResponse> {
         try {
@@ -791,6 +797,9 @@ export namespace Movie {
                 password: moviePassword,
                 user: userID,
                 want_to_watch: [],
+                mega: mega,
+                megaID: megaID,
+                zipName: zipName,
             }
 
             let update: boolean = false
@@ -844,7 +853,8 @@ export namespace Movie {
 
                     const requestResponse = await updateOneResponseHandler(response2, { success: '', failure: '' })
                     if (requestResponse.updated) {
-                        if (textChannel) MovieUtil.notifyUsersRequestFulfilled(requested, textChannel.client, guild)
+                        if (textChannel && guild)
+                            MovieUtil.notifyUsersRequestFulfilled(requested, textChannel.client, guild)
                         successString += '\nIt has also been removed from requests.'
                     }
                 }
@@ -870,10 +880,16 @@ export namespace Movie {
         try {
             let deleteIDs: any[] = []
             let deleteNames: string[] = []
+            let deleteMegaIDs: any[] = []
+            let deleteZipNames: string[] = []
             if (Array.isArray(movie)) {
                 movie.forEach((x) => {
                     deleteIDs.push(x._id)
                     deleteNames.push(x.name)
+                    if (x.mega) {
+                        deleteMegaIDs.push(x.megaID)
+                        if (x.zipName) deleteZipNames.push(x.zipName)
+                    }
                 })
             } else {
                 deleteIDs.push(movie._id)
@@ -887,7 +903,13 @@ export namespace Movie {
 
             const response = await Guilds.updateOne(
                 { guild_id: guildID },
-                { $pull: { 'movie.movies': { _id: { $in: deleteIDs } } } },
+                {
+                    $pull: {
+                        'movie.movies': { _id: { $in: deleteIDs } },
+                        'movie.downloads.uploadedQueue': { _id: { $in: deleteMegaIDs } },
+                    },
+                    $addToSet: { 'movie.downloads.deleteQueue': deleteZipNames },
+                },
                 { multi: true }
             )
 
@@ -1277,28 +1299,99 @@ export namespace Movie {
             failure: 'Failed to start downloading this movie.',
         }
 
-        const downloadObj: IMovieDownload = {
+        let validZipName = zipName
+        if (!zipName.endsWith('.zip')) validZipName += '.zip'
+
+        const downloadObj: IMovieDownloadElement = {
             userID: userID,
             movieName: movieName,
             torrentLink: torrentLink,
-            zipName: zipName,
+            zipName: validZipName,
             zipPassword: zipPassword,
-            inProgress: false,
             downloaded: false,
+            downloading: false,
+            secondsDownloading: 0,
+            downloadPercent: 0,
+            uploaded: false,
+            uploading: false,
+            secondsUploading: 0,
+            uploadPercent: 0,
             error: false,
-            percentDone: 0,
         }
 
-        const response = Guilds.updateOne(
+        const response = await Guilds.updateOne(
             { guild_id: guildID },
             {
                 $push: {
-                    'movie.download': { downloadObj },
+                    'movie.downloads.downloadQueue': downloadObj,
                 },
             }
         )
 
         return updateOneResponseHandler(response, updateStrings, textChannel)
+    }
+
+    export async function getDownloadMovieContainer(guildID: string) {
+        const guildDoc = await Guild.getGuild(guildID)
+        return guildDoc.movie.downloads
+    }
+
+    export async function getFirstDownloadRequest(guildID: string) {
+        const downloadsDoc = await getDownloadMovieContainer(guildID)
+        if (downloadsDoc.downloadQueue.length > 0) return downloadsDoc.downloadQueue[0]
+        return null
+    }
+
+    export async function getDownloadedMovies() {
+        const guildDocs = await Guilds.find({
+            $and: [{ premium: true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
+        })
+
+        if (guildDocs.length > 0) {
+            return guildDocs.map((guildDoc) => {
+                const downloadQueue = guildDoc.movie.downloads.downloadQueue
+                return {
+                    guildID: guildDoc.guild_id,
+                    downloads: downloadQueue.filter((x) => x.uploaded == true),
+                }
+            })
+        } else {
+            return []
+        }
+    }
+
+    export async function moveToUploaded(guildID: string, movie: IMovieDownloadElementDoc, movieDoc: IMovieDoc) {
+        movie.movieID = movieDoc._id
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $pull: { 'movie.downloads.downloadQueue': { _id: movie._id } },
+                $push: { 'movie.downloads.uploadedQueue': movie },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
+    }
+
+    export async function deleteMegaMovie(guildID: string, movie: IMovieDownloadElementDoc) {
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $pull: {
+                    'movie.download.uploadedQueue': { _id: movie._id },
+                    'movie.movies': { _id: movie.movieID },
+                },
+
+                $push: { 'movie.download.deleteQueue': movie.zipName },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
+    }
+
+    export async function getUploadedMovies(guildID: string) {
+        const downloadDoc = await getDownloadMovieContainer(guildID)
+        return downloadDoc.uploadedQueue
     }
 }
 
