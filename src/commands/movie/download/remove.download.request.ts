@@ -9,9 +9,9 @@ import { magnetRegex, validFileRegex } from '../../../util/string.util'
 import { off } from 'process'
 
 const command: commandProperties = {
-    name: 'deletemoviedownload',
+    name: 'deletedownloadrequest',
     args: false,
-    description: 'Delete a megashare movie',
+    description: 'Delete a torrent request',
     usage: ', then follow the prompts',
     cooldown: 1,
     guildOnly: true,
@@ -33,9 +33,8 @@ const command: commandProperties = {
                 })
 
                 if (response.arrayElements) {
-                    response.arrayElements.forEach(async (movie) => {
-                        const movieDoc = await Movie.lookupMovieByID(guildID, movie._id)
-                        if (movieDoc) Movie.deleteMovie(guildID, movieDoc)
+                    response.arrayElements.forEach((movie) => {
+                        // Movie.deleteMovie(guildID,movie)                        
                     })
                 } else {
                     sendToChannel(textChannel, 'Error on my end')
