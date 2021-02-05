@@ -761,6 +761,10 @@ export namespace Movie {
         }
     }
 
+    export async function lookupMovieByID(guildID: string,lookupID:Schema.Types.ObjectId){
+        return (await getMovies(guildID,[])).movies.find(x=>x._id==lookupID)
+    }
+
     export async function getMovieDefaultPassword(guildID: string): Promise<string> {
         try {
             const movieDoc = await getMovie(guildID)
@@ -1150,7 +1154,6 @@ export namespace Movie {
         textChannel?: MessageChannel
     ) {
         try {
-            let successString: string
             let response: updateOneResponse
             let updateStrings: updateOneStrings
             if (requestDoc.users.length == 1) {
@@ -1334,6 +1337,11 @@ export namespace Movie {
     export async function getDownloadMovieContainer(guildID: string) {
         const guildDoc = await Guild.getGuild(guildID)
         return guildDoc.movie.downloads
+    }
+
+
+    export async function lookupMovieDownloadByID(guildID: string,movieID:Schema.Types.ObjectId){
+        return (await getDownloadMovieContainer(guildID)).downloadQueue.find(x=> x._id==movieID)
     }
 
     export async function getFirstDownloadRequest(guildID: string) {
