@@ -12,7 +12,6 @@ export function dateInPast(timeZoneName: string, dateString: string, compareDate
 
     let dateToCompare = compareDate ? compareDate : getCurrentTimeForTZ(timeZoneName)
 
-
     return date.isBefore(dateToCompare)
 }
 
@@ -39,8 +38,7 @@ export function timeInPast(timeZoneName: string, timeString: string, options?: T
     dateObj.second(0)
 
     // dateObj.tz(timeZoneName)
-    const compareDate = options?.compareDate ? options.compareDate :getCurrentTimeForTZ(timeZoneName)
-
+    const compareDate = options?.compareDate ? options.compareDate : getCurrentTimeForTZ(timeZoneName)
 
     return dateObj.isBefore(compareDate)
 }
@@ -106,8 +104,8 @@ export interface GetMomentForTZOptions {
 export function getMomentForTZ(timeZoneName: string, options: GetMomentForTZOptions): Moment {
     const momentObj = getCurrentTimeForTZ(timeZoneName)
     momentObj.date(options.date.getDate())
-    if (options.hour) momentObj.hour(options.hour)
-    if (options.minute) momentObj.minute(options.minute)
+    if (options.hour != undefined) momentObj.hour(options.hour)
+    if (options.minute != undefined) momentObj.minute(options.minute)
     options.second ? momentObj.second(options.second) : momentObj.second(0)
     return momentObj
 }
