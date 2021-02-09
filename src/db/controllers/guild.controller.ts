@@ -1,5 +1,4 @@
 import Guilds, {
-    IGuild,
     IAlias,
     IGuildDoc,
     IConfigDoc,
@@ -8,7 +7,6 @@ import Guilds, {
     ILinkDoc,
     IMovie,
     IMovieDoc,
-    IMovieContainer,
     IMovieContainerDoc,
     IAutoDeleteElement,
     IAutoDeleteElementDoc,
@@ -19,7 +17,7 @@ import Guilds, {
     IMovieDownloadElement,
     IMovieDownloadElementDoc,
 } from '../models/guild.model'
-import { CreateQuery, MongooseDocument, MongooseUpdateQuery, QueryUpdateOptions, UpdateQuery } from 'mongoose'
+import {  MongooseUpdateQuery, UpdateQuery } from 'mongoose'
 import {
     findOrCreateResponse,
     uniqueArrayObject,
@@ -36,7 +34,6 @@ import { stringMatch } from '../../util/string.util'
 import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/general.util'
 import { Schema } from 'mongoose'
-import { getDiffieHellman } from 'crypto'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -1369,7 +1366,7 @@ export namespace Movie {
     }
 
     export async function moveToUploaded(guildID: string, movie: IMovieDownloadElementDoc, movieDoc: IMovieDoc) {
-        movie.movieID = movieDoc._id
+        // movie.movieID = movieDoc._id
         const response = await Guilds.updateOne(
             { guild_id: guildID },
             {
