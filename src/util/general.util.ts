@@ -290,6 +290,23 @@ export namespace MovieUtil {
         })
     }
 
+    export async function getMovieDuration(letterboxdLink: string): Promise<string | null> {
+        const listResponse = await axios.get(letterboxdLink)
+        const html = listResponse.data
+        const $ = cheerio.load(html)
+
+        const pTag = $('p.text-link')
+        //@ts-ignore
+        const pNode = pTag[0].children[0]
+        //@ts-ignore
+        const mins = parseInt(/(\d*)\s*mins/.exec(pNode.data.trim())[1])
+
+        const hours = Math.floor(mins / 60)
+        const minutes = mins % 60
+
+        return `${hours} hours ${minutes} minutes`
+    }
+
     export async function createMovieRole(movie: IMovieDoc, guild: GuildD): Promise<Role> {
         try {
             const reason = `vvn1: to watch ${movie.name}`

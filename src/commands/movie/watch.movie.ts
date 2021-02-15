@@ -54,7 +54,7 @@ const command: commandProperties = {
 
         const quitCommandString = '--quitmovie'
         const editCommandString = '--editmovie'
-        const startCommandString='--startmovie'
+        const startCommandString = '--startmovie'
         const timeZoneName = await Config.getTimeZoneName(guildID)
 
         let movieRole: Role | undefined
@@ -218,10 +218,12 @@ const command: commandProperties = {
             async function getInstructionEmbed() {
                 try {
                     let movieInformationLink: string | null | undefined
+                    let movieTime:string|null = null
                     const embed = new MessageEmbed().setTitle(`Movie Night`)
 
                     if (movie) {
-                        movieInformationLink = await MovieUtil.getInfoPage(movie.name)
+                        movieInformationLink = await MovieUtil.getInfoPage(movie.name)    
+                        if (movieInformationLink) movieTime = await MovieUtil.getMovieDuration(movieInformationLink)                    
 
                         embed.addField(
                             `Movie Name:`,
@@ -248,8 +250,11 @@ const command: commandProperties = {
                         )
                     }
 
+                    if (movie && movieTime){
+                        embed.addField('Movie Duration', movieTime)
+                    }
                     if (movie && movieInformationLink) {
-                        embed.addField('Movie Information', `[Letterboxd](${movieInformationLink} 'Download Link')`)
+                        embed.addField('More information', `[Letterboxd](${movieInformationLink} 'Download Link')`)
                     }
 
                     embed.addField('Time', movieTimeString, false)
@@ -475,6 +480,7 @@ const command: commandProperties = {
                     }
 
                     if (movieRoleAt) deleteMessage(movieRoleAt, 0)
+                    movieRoleAt.delete({ reason: 'Movie starting' })
                     return deleteMessage(instructionMessage, 0)
                 } catch (error) {
                     throw error

@@ -7,6 +7,7 @@ import { extractActiveUsers, extractChannels } from '../../../util/discord.util'
 import { NumberConstants } from '../../../util/constants'
 import { magnetRegex, validFileRegex } from '../../../util/string.util'
 import { IMovieDownloadElementDoc } from '../../../db/models/guild.model'
+import { MovieUtil } from '../../../util/general.util'
 import { Schema } from 'mongoose'
 
 const command: commandProperties = {
@@ -46,17 +47,15 @@ const command: commandProperties = {
                     Filter.regexFilter(validFileRegex, true)
                 )
 
-                const zipPasswordMessage = await Prompt.getSameUserInput(
-                    userID,
-                    textChannel,
-                    'Enter zip password (reply "none" for no password on it)',
-                    Filter.anyFilter()
-                )
-
+                const zipPassword = await MovieUtil.Prompt.promptMoviePassword({
+                    guildID: guildID,
+                    userID: userID,
+                    textChannel: textChannel,
+                })
                 const movieName = movieNameMessage.content.trim()
                 const torrentLink = torrentLinkMessage.content.trim()
                 const zipName = zipNameMessage.content.trim()
-                const zipPassword = zipPasswordMessage.content.trim()
+                // const zipPassword = zipPasswordMessage.content.trim()
 
                 const res = await Movie.createMovieDownloadRequest(
                     guildID,
