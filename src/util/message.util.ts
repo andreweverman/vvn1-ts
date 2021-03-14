@@ -214,8 +214,8 @@ export function sendUtil(
     }
 
     const postSend = (sentMessage: Message) => {
+        result.messages.push(sentMessage)
         if (autoDelete) {
-            result.messages.push(sentMessage)
             result.deleteResponses.push(deleteMessage(sentMessage, autoDeleteTime))
         }
     }

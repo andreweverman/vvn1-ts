@@ -11,6 +11,9 @@ import watchMovie from './watch.movie'
 import addToWatchList from './watchList/addToWatchList'
 import viewWatchlist from './watchList/viewWatchList'
 import removeWatchList from './watchList/removeWatchList'
+import downloadMovie from './download/download.movie'
+import deleteDownloadRequest from './download/remove.download.request'
+import deleteDownload from './download/delete.movie.download'
 
 const command: commandProperties = {
     name: 'movie',
@@ -31,6 +34,7 @@ const command: commandProperties = {
                 { name: 'View movies', function: viewMovie.execute, args: e },
                 { name: 'Watch list operations', function: watchListOperations, args: e },
                 { name: 'Movie request operations', function: movieRequestOperations, args: e },
+                { name: 'Movie download operations', function: downloadOperations, args: e },
                 { name: 'Movie link operations', function: movieLinkOperations, args: e },
                 { name: 'Edit movie configuration', function: movieConfig.execute, args: e },
             ]
@@ -59,6 +63,15 @@ const command: commandProperties = {
                     { name: 'View current movie links', function: viewMovie.execute, args: e },
                     { name: 'Add movie request', function: addMovie.execute, args: e },
                     { name: 'Delete movie request', function: deleteMovie.execute, args: e },
+                ]
+                Prompt.optionSelect(userID, textChannel, newOptions)
+            }
+
+            async function downloadOperations() {
+                const newOptions: Prompt.optionSelectElement[] = [
+                    { name: 'Create download request', function: downloadMovie.execute, args: e },
+                    { name: 'Delete download request', function: deleteDownloadRequest.execute, args: e },
+                    { name: 'Delete download', function: deleteDownload.execute, args: e },
                 ]
                 Prompt.optionSelect(userID, textChannel, newOptions)
             }
