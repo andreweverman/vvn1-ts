@@ -1338,7 +1338,9 @@ export namespace Movie {
 
 
     export async function lookupMovieDownloadByID(guildID: string,movieID:Schema.Types.ObjectId){
-        return (await getDownloadMovieContainer(guildID)).downloadQueue.find(x=> x._id==movieID)
+        const movieContainer = await getDownloadMovieContainer(guildID)
+        const movie = movieContainer.downloadQueue.find(x=> x._id.equals(movieID))
+        return movie
     }
 
     export async function getFirstDownloadRequest(guildID: string) {

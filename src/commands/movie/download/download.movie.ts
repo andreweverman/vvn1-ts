@@ -79,32 +79,31 @@ const command: commandProperties = {
                         false
                     )
 
-                    updateStatus(stcResponse, firstRequestedMovie._id)
+                    const statusMessage = stcResponse.messages[0]
+                    updateStatus(statusMessage, firstRequestedMovie._id)
                 }
 
-                async function updateStatus(stcResponse: sendUtilResponse, movieID: Schema.Types.ObjectId) {
-                    const statusMessage = stcResponse.messages[0]
+                async function updateStatus(statusMessage: Message, movieID: Schema.Types.ObjectId) {
                     if (statusMessage) {
                         let downloadRequest = await Movie.lookupMovieDownloadByID(guildID, movieID)
                         if (!downloadRequest) return
 
-                        let updateString: string
+                        let updateString: string = ""
                         if (downloadRequest.downloading) {
                             updateString = `Downloading ${downloadRequest.movieName}: ${downloadRequest.downloadPercent}%\nTime Elapsed: ${downloadRequest.secondsDownloading}`
                         } else if (downloadRequest.uploading) {
                             updateString = `Uploading ${downloadRequest.movieName}: ${downloadRequest.uploadPercent}%\nTime Elapsed: ${downloadRequest.secondsUploading}`
                         } else if (downloadRequest.uploaded) {
-                            updateString = 'Movie hasx been uploaded'
-                            deleteMessage(statusMessage, 30)
-                        } else {
-                            downloadRequest.error
-                                ? sendToChannel(textChannel, `Error downloading. Quitting...`)
-                                : sendToChannel(textChannel, 'Something went wrong. Quitting...')
-                            return
+                            updateString = 'Movie has been uploaded'
+                            deleteMessage(statusMessage, 30*NumberConstants.secs)
+                        } else if (downloadRequest.error) {
+                            sendToChannel(textChannel, `Error downloading. Quitting...`)
+                            return 
                         }
+                        
                         statusMessage.edit(updateString)
                         setTimeout(() => {
-                            updateStatus(stcResponse, movieID)
+                            updateStatus(statusMessage, movieID)
                         }, 5000)
                     }
                 }
