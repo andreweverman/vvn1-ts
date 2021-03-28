@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/andreweverman/vvn1-ts.svg?token=d54KyybAaqRxeqHK3Bso&branch=main)
+[![Build Status](https://travis-ci.com/andreweverman/vvn1-ts.svg?token=d54KyybAaqRxeqHK3Bso&branch=main)](https://travis-ci.com/andreweverman/vvn1-ts)
 # vvn1
 
 ### A discord bot for cleaning messages, playing links, and watching movies
