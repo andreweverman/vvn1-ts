@@ -37,3 +37,5 @@ const command: commandProperties = {
 }
 
 export default command
+
+
