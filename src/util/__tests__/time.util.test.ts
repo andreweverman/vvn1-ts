@@ -79,7 +79,7 @@ describe('dateInPast', () => {
     describe('date is not in past', () => {
         it.each([['1/1/2020'], ['01/1/2020']])('double(%p)', (input) => {
             const inPast = dateInPast(tz, input, moment(new Date('1/1/2021')))
-            expect(inPast).toBe(true)
+            expect(inPast).toBe(false)
         })
     })
 

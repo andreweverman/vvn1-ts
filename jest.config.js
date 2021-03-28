@@ -1,7 +1,7 @@
 
 module.exports = {
   "roots": [
-    "<rootDir>/src"
+    "<rootDir>/dist"
   ],
   "testMatch": [
     "**/__tests__/**/*.+(ts|tsx|js)",
