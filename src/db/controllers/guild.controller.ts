@@ -850,6 +850,7 @@ export namespace Movie {
                     requested
                     const response2 = await Guilds.updateOne(
                         { guild_id: guildID },
+                        //@ts-ignore
                         { $pull: { 'movie.requests': { name: nameMatch } } },
                         { multi: true }
                     )
@@ -908,6 +909,7 @@ export namespace Movie {
                 { guild_id: guildID },
                 {
                     $pull: {
+                        //@ts-ignore
                         'movie.movies': { _id: { $in: deleteIDs } },
                         'movie.downloads.uploadedQueue': { _id: { $in: deleteMegaIDs } },
                     },
@@ -1162,6 +1164,7 @@ export namespace Movie {
                 }
                 response = await Guilds.updateOne(
                     { guild_id: guildID },
+                    //@ts-ignore
                     { $pull: { 'movie.requests': { _id: requestDoc._id } } }
                 )
             } else {
@@ -1173,6 +1176,7 @@ export namespace Movie {
                     { guild_id: guildID, 'movie.requests._id': requestDoc._id },
                     {
                         $pull: {
+                            //@ts-ignore
                             'movie.requests.$.users': userID,
                         },
                     }
@@ -1278,7 +1282,12 @@ export namespace Movie {
 
             const response = await Guilds.updateOne(
                 { guild_id: guildID, 'movie.movies._id': deleteElements.map((x) => x._id) },
-                { $pull: { 'movie.movies.$.want_to_watch': userID } }
+                {
+                    $pull: {
+                        //@ts-ignore
+                        'movie.movies.$.want_to_watch': userID,
+                    },
+                }
             )
 
             updateOneResponseHandler(response, updateStrings, textChannel)
@@ -1373,8 +1382,14 @@ export namespace Movie {
         const response = await Guilds.updateOne(
             { guild_id: guildID },
             {
-                $pull: { 'movie.downloads.downloadQueue': { _id: movie._id } },
-                $push: { 'movie.downloads.uploadedQueue': movie },
+                $pull: {
+                    //@ts-ignore
+                    'movie.downloads.downloadQueue': { _id: movie._id },
+                },
+                $push: {
+                    //@ts-ignore
+                    'movie.downloads.uploadedQueue': movie,
+                },
             }
         )
 
@@ -1627,6 +1642,7 @@ export namespace Config {
                 { guild_id: guildID },
                 {
                     $pull: {
+                        //@ts-ignore
                         'config.autodelete': { _id: { $in: [elementDoc._id] } },
                     },
                 }
@@ -1687,6 +1703,7 @@ export namespace Config {
                 },
                 {
                     $pull: {
+                        //@ts-ignore
                         'config.autodelete.$.allowList': { $in: deleteNames },
                     },
                 }
@@ -1785,6 +1802,7 @@ export namespace Config {
                     'config.autodelete._id': elementDoc._id,
                 },
                 {
+                    //@ts-ignore
                     $pull: { 'config.autodelete.$.specified': specifiedObj },
                 }
             )

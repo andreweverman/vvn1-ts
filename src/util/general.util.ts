@@ -281,8 +281,7 @@ export namespace MovieUtil {
                     const liResults = $('ul.results li div[data-film-link]')
                     liResults.length < 1
                         ? resolve(null)
-                        : // @ts-ignore
-                          resolve(urlBase + liResults.first().attr('data-film-link'))
+                        : resolve(urlBase + liResults.first().attr('data-film-link'))
                 })
                 .catch((err) => {
                     resolve(null)

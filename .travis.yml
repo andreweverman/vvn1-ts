@@ -7,7 +7,6 @@ branches:
     except:
         - legacy
         - experimental
-        - mongoRefactor
 cache:
     directories:
         - node_modules
