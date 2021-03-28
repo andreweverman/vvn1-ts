@@ -111,7 +111,7 @@ const command: commandProperties = {
                 // more logic for getting the file when done and stuff like that
                 // want to keep as much db stuff in TS as I can to make sure that it works the best
             } else {
-                sendToChannel(textChannel, 'This server does not have vvn1 premium. Message gardenweasel#1512')
+                sendToChannel(textChannel, 'This server does not have vvn1 premium. Message gardenweasel#1114')
             }
         } catch (error) {
             Prompt.handleGetSameUserInputError(error)

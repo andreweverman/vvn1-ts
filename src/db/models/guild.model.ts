@@ -268,13 +268,26 @@ const MovieSchema = new mongoose.Schema({
     downloads: MovieDownloadContainerSchema,
 })
 
+interface IPlayer{
+    lastStreamingTime:Date
+    lastChannelID:string
+}
+
+interface IPlayerDoc extends IPlayer,Document {}
+
+const PlayerSchema = new mongoose.Schema({
+    lastStreamingTime: {type:Date, required: true,default: new Date()},
+    lastChannelID:{type:String}
+})
+
 export interface IGuild {
     guild_id: string
     premium: boolean
     config: IConfigDoc
     aliases: IAliasDoc[]
     movie: IMovieContainerDoc
-    links: ILinkDoc[]
+    links: ILinkDoc[],
+    player:IPlayerDoc
 }
 
 export interface IGuildDoc extends IGuild, Document {}
@@ -286,6 +299,7 @@ const GuildSchema = new mongoose.Schema({
     aliases: [AliasSchema],
     movie: { type: MovieSchema, default: {} },
     links: [LinkSchema],
+    player: PlayerSchema
 })
 
 export default mongoose.model<IGuildDoc>('Guild', GuildSchema)

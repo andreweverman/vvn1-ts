@@ -17,7 +17,7 @@ import Guilds, {
     IMovieDownloadElement,
     IMovieDownloadElementDoc,
 } from '../models/guild.model'
-import {  MongooseUpdateQuery, UpdateQuery } from 'mongoose'
+import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
 import {
     findOrCreateResponse,
     uniqueArrayObject,
@@ -34,6 +34,7 @@ import { stringMatch } from '../../util/string.util'
 import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/general.util'
 import { Schema } from 'mongoose'
+import { time } from 'console'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -758,8 +759,8 @@ export namespace Movie {
         }
     }
 
-    export async function lookupMovieByID(guildID: string,lookupID:Schema.Types.ObjectId){
-        return (await getMovies(guildID,[])).movies.find(x=>x._id==lookupID)
+    export async function lookupMovieByID(guildID: string, lookupID: Schema.Types.ObjectId) {
+        return (await getMovies(guildID, [])).movies.find((x) => x._id == lookupID)
     }
 
     export async function getMovieDefaultPassword(guildID: string): Promise<string> {
@@ -1336,10 +1337,9 @@ export namespace Movie {
         return guildDoc.movie.downloads
     }
 
-
-    export async function lookupMovieDownloadByID(guildID: string,movieID:Schema.Types.ObjectId){
+    export async function lookupMovieDownloadByID(guildID: string, movieID: Schema.Types.ObjectId) {
         const movieContainer = await getDownloadMovieContainer(guildID)
-        const movie = movieContainer.downloadQueue.find(x=> x._id.equals(movieID))
+        const movie = movieContainer.downloadQueue.find((x) => x._id.equals(movieID))
         return movie
     }
 
@@ -1847,23 +1847,48 @@ export namespace Config {
     }
 
     export async function toggleArchiveSaveBotMessages(guildID: string, textChannel?: MessageChannel) {
-        try {
-            const config = await getGuildConfig(guildID)
-            const enabled = config.archive.save_bot_commands
-            const status = !enabled ? 'enabled' : 'disabled'
-            const updateStrings: updateOneStrings = {
-                success: `Saving bot commands is now ${status}.`,
-                failure: 'Error toggling save bot commands mode. It will stay as ' + status,
-            }
-
-            const response = await Guilds.updateOne(
-                { guild_id: guildID },
-                { $set: { 'config.archive.save_bot_commands': !enabled } }
-            )
-
-            updateOneResponseHandler(response, updateStrings, textChannel)
-        } catch (error) {
-            throw error
+        const config = await getGuildConfig(guildID)
+        const enabled = config.archive.save_bot_commands
+        const status = !enabled ? 'enabled' : 'disabled'
+        const updateStrings: updateOneStrings = {
+            success: `Saving bot commands is now ${status}.`,
+            failure: 'Error toggling save bot commands mode. It will stay as ' + status,
         }
+
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            { $set: { 'config.archive.save_bot_commands': !enabled } }
+        )
+
+        updateOneResponseHandler(response, updateStrings, textChannel)
+    }
+}
+
+export namespace Player {
+    export async function updateLastVoiceActivity(guildID: string, channelID: string, timestamp: Date) {
+        const updateStrings: updateOneStrings = {
+            success: 'Updated the last voice activity',
+            failure: `Failure updating the last voice activity for guild id = ${guildID}`,
+        }
+
+        const response = await Guilds.updateOne(
+            {
+                guild_id: guildID,
+            },
+            {
+                $set: {
+                    'player.lastStreamingTime': timestamp,
+                    'player.lastChannelID': channelID,
+                },
+            }
+        )
+
+        updateOneResponseHandler(response, updateStrings)
+    }
+
+    export async function getPlayer(guildID: string) {
+        const guild = await Guild.getGuild(guildID)
+
+        return guild.player
     }
 }
