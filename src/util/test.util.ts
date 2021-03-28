@@ -79,12 +79,12 @@ export namespace Mocks {
     }
 
     export function textChannel(messages: MessageMinimum[], channelType = 'text', timeout = false) {
-        if (!process.env.botUserID) {
-            throw new Error('botUserID needs to be set in .env')
+        if (!process.env.BOT_USER_ID) {
+            throw new Error('BOT_USER_ID needs to be set in .env')
         }
         return {
             type: channelType,
-            send: async (content: string | MessageEmbed) => mockMessage(content, process.env.botUserID!, channelType),
+            send: async (content: string | MessageEmbed) => mockMessage(content, process.env.BOT_USER_ID!, channelType),
             createMessageCollector: jest.fn().mockImplementationOnce((filter, _) => {
                 const self = new TCEventEmitter()
 
