@@ -566,6 +566,7 @@ export namespace Link {
 
             const response = await Guilds.updateOne(
                 { guild_id: guildID, 'links._id': link._id },
+                //@ts-ignore
                 { $pull: { 'links.$.names': { $in: names } } }
             )
 
