@@ -1401,6 +1401,7 @@ export namespace Movie {
             { guild_id: guildID },
             {
                 $pull: {
+                    //@ts-ignore
                     'movie.download.uploadedQueue': { _id: movie._id },
                     'movie.movies': { _id: movie.movieID },
                 },
