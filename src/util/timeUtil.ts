@@ -1,8 +1,9 @@
 import { CollectorFilter } from 'discord.js'
 import { escapeRegExp } from 'lodash'
 import moment, { Moment } from 'moment-timezone'
-import { Filter, AnyCollectorFilter, Prompt as MPrompt, MessageChannel } from './message.util'
-import { timeRegex, dateRegex } from './string.util'
+import { Filter, AnyCollectorFilter, Prompt as MPrompt, MessageChannel } from './messageUtil'
+import { timeRegex, dateRegex } from './stringUtil'
+import { NumberConstants } from './constants'
 
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)
@@ -112,6 +113,22 @@ export function getMomentForTZ(timeZoneName: string, options: GetMomentForTZOpti
 
 export function getCurrentTimeForTZ(timeZoneName: string): Moment {
     return moment(new Date(), timeZoneName).tz(timeZoneName)
+}
+
+export function getTimeStrFromSeconds(inputSeconds: number): string {
+
+    const days = Math.floor(inputSeconds / (3600 * 24))
+    const hours= Math.floor((inputSeconds % (3600 * 24)) / 3600)
+    const minutes = Math.floor((inputSeconds % 3600) / 60)
+    const seconds = Math.floor(inputSeconds % 60)
+    const stringArr: string[] = []
+
+    if (days > 0) stringArr.push(`${days} Day${days > 1 ? 's' : ''}`)
+    if (hours > 0) stringArr.push(`${hours} Hour${hours > 1 ? 's' : ''}`)
+    if (minutes > 0) stringArr.push(`${minutes} Minute${minutes > 1 ? 's' : ''}`)
+    if (seconds > 0) stringArr.push(`${seconds} Second${seconds > 1 ? 's' : ''}`)
+
+    return stringArr.join(', ')
 }
 
 export namespace Prompt {

@@ -1,10 +1,10 @@
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, sendToChannel } from '../../util/message.util'
-import { Link, Guild, Config, Movie, Alias } from '../../db/controllers/guild.controller'
-import { ILink, ILinkDoc } from '../../db/models/guild.model'
+import { Prompt, Filter, sendToChannel } from '../../util/messageUtil'
+import { Link, Guild, Config, Movie, Alias } from '../../db/controllers/guildController'
+import { ILink, ILinkDoc } from '../../db/models/guildModel'
 import { MessageEmbed, VoiceChannel } from 'discord.js'
-import { linkRegex, youtubeRegex, guildEmojiRegex } from '../../util/string.util'
-import { MovieUtil, ConfigUtil } from '../../util/general.util'
+import { linkRegex, youtubeRegex, guildEmojiRegex } from '../../util/stringUtil'
+import { MovieUtil, ConfigUtil } from '../../util/generalUtil'
 import {
     movieCountdownName,
     movieTimeName,

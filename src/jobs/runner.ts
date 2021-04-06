@@ -1,5 +1,5 @@
 import schedule from 'node-schedule'
-import { getJobFiles } from '../util/file.util'
+import { getJobFiles } from '../util/fiileUtil'
 
 export interface BatchJob {
     rule: schedule.RecurrenceRule | string

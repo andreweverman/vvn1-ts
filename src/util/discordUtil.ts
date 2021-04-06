@@ -10,12 +10,12 @@ import {
     MessageReaction,
     MessageEmbed,
 } from 'discord.js'
-import { Alias } from '../db/controllers/guild.controller'
+import { Alias } from '../db/controllers/guildController'
 
-import { discordMemberID, discordUserAtRegex, validUserID } from './string.util'
+import { discordMemberID, discordUserAtRegex, validUserID } from './stringUtil'
 import _ from 'lodash'
-import { AliasUtil } from './general.util'
-import { deleteMessage, MessageChannel, sendToChannel } from './message.util'
+import { AliasUtil } from './generalUtil'
+import { deleteMessage, MessageChannel, sendToChannel } from './messageUtil'
 import { NumberConstants,ready } from './constants'
 export interface ValidUserOptions {
     mustBeBot?: boolean

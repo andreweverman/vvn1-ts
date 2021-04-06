@@ -1,13 +1,13 @@
 import { CommandParams, commandProperties } from '../../bot'
 import * as lodash from 'lodash'
 import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Alias } from '../../db/controllers/guild.controller'
-import { Prompt, Filter, sendToChannel } from '../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../util/discord.util'
+import { Alias } from '../../db/controllers/guildController'
+import { Prompt, Filter, sendToChannel } from '../../util/messageUtil'
+import { extractActiveUsers, extractChannels } from '../../util/discordUtil'
 import { NumberConstants } from '../../util/constants'
 
-import createAlias from './create.alias'
-import deleteAlias from './view.alias'
+import createAlias from './createAlias'
+import deleteAlias from './deleteAlias'
 import viewAlias from './viewAlias'
 const command: commandProperties = {
     name: 'alias',

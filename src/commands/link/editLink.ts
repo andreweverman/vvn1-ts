@@ -1,10 +1,10 @@
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/message.util'
-import { Link, Guild } from '../../db/controllers/guild.controller'
-import { ILink, ILinkDoc } from '../../db/models/guild.model'
+import { Prompt, Filter } from '../../util/messageUtil'
+import { Link, Guild } from '../../db/controllers/guildController'
+import { ILink, ILinkDoc } from '../../db/models/guildModel'
 import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { LinkUtil } from '../../util/general.util'
+import { linkRegex, youtubeRegex } from '../../util/stringUtil'
+import { LinkUtil } from '../../util/generalUtil'
 
 const command: commandProperties = {
     name: 'editlink',

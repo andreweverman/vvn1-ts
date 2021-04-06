@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, ObjectId } from 'mongoose'
-import { Config, Link } from '../controllers/guild.controller'
+import { Config, Link } from '../controllers/guildController'
 import {
     NumberConstants,
     movieCountdownName,

@@ -1,11 +1,11 @@
 import { Message, Collection, Client, Guild, MessageEmbed, TextChannel, PartialMessage } from 'discord.js'
 import { commandCollection, commandCooldowns } from '../bot'
 import { NumberConstants } from '../util/constants'
-import { deleteMessage, MessageChannel, replyUtil, sendToChannel } from '../util/message.util'
-import { Config, Link } from '../db/controllers/guild.controller'
+import { deleteMessage, MessageChannel, replyUtil, sendToChannel } from '../util/messageUtil'
+import { Config, Link } from '../db/controllers/guildController'
 import playAudio from '../commands/indirect/playAudio'
-import { IConfigDoc } from '../db/models/guild.model'
-import { ConfigUtil } from '../util/general.util'
+import { IConfigDoc } from '../db/models/guildModel'
+import { ConfigUtil } from '../util/generalUtil'
 async function messageEvent(message: Message | PartialMessage): Promise<string> {
     if (!message.guild) return 'Not guild message'
     const guildID = message.guild.id

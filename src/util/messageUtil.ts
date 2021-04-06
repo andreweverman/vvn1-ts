@@ -13,8 +13,8 @@ import {
 import { last } from 'lodash'
 import { Moment } from 'moment-timezone'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
-import { stringMatch, matchOptions, spaceCommaRegex, validUserID, guildEmojiRegex } from './string.util'
-import { timeInPast, TimeInPastOptions, dateInPast, beforeMinMoment } from './time.util'
+import { stringMatch, matchOptions, spaceCommaRegex, validUserID, guildEmojiRegex } from './stringUtil'
+import { timeInPast, TimeInPastOptions, dateInPast, beforeMinMoment } from './timeUtil'
 import emoji from 'node-emoji'
 export type AsyncCollectorFilter = (...args: any[]) => Promise<boolean>
 export type AnyCollectorFilter = AsyncCollectorFilter | CollectorFilter

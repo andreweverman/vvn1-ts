@@ -1,11 +1,11 @@
 import { CommandParams, commandProperties } from '../../../bot'
 import * as lodash from 'lodash'
 import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Movie, Guild } from '../../../db/controllers/guild.controller'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../../util/discord.util'
+import { Movie, Guild } from '../../../db/controllers/guildController'
+import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
+import { extractActiveUsers, extractChannels } from '../../../util/discordUtil'
 import { NumberConstants } from '../../../util/constants'
-import { magnetRegex, validFileRegex } from '../../../util/string.util'
+import { magnetRegex, validFileRegex } from '../../../util/stringUtil'
 import { off } from 'process'
 
 const command: commandProperties = {

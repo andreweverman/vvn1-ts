@@ -1,11 +1,11 @@
 import { CommandParams, commandProperties } from '../../bot'
 import * as lodash from 'lodash'
 import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Alias } from '../../db/controllers/guild.controller'
-import { Filter, Prompt, sendToChannel } from '../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../util/discord.util'
+import { Alias } from '../../db/controllers/guildController'
+import { Filter, Prompt, sendToChannel } from '../../util/messageUtil'
+import { extractActiveUsers, extractChannels } from '../../util/discordUtil'
 import { NumberConstants } from '../../util/constants'
-import {IAliasDoc} from '../../db/models/guild.model'
+import {IAliasDoc} from '../../db/models/guildModel'
 const command: commandProperties = {
     name: 'deletealias',
     aliases: ['da', 'removealias', 'ra'],

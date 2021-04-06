@@ -1,10 +1,10 @@
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/message.util'
-import { Link } from '../../db/controllers/guild.controller'
-import { ILink } from '../../db/models/guild.model'
+import { Prompt, Filter } from '../../util/messageUtil'
+import { Link } from '../../db/controllers/guildController'
+import { ILink } from '../../db/models/guildModel'
 import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { LinkUtil } from '../../util//general.util'
+import { linkRegex, youtubeRegex } from '../../util/stringUtil'
+import { LinkUtil } from '../../util/generalUtil'
 const command: commandProperties = {
     name: 'createlink',
     aliases: ['addlink'],

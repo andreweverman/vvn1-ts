@@ -1,10 +1,10 @@
 import { Message, Collection, Client } from 'discord.js'
 import { commandCollection, commandCooldowns } from '../bot'
 import { NumberConstants } from '../util/constants'
-import { deleteMessage, replyUtil, sendToChannel } from '../util/message.util'
-import { Config, Link } from '../db/controllers/guild.controller'
+import { deleteMessage, replyUtil, sendToChannel } from '../util/messageUtil'
+import { Config, Link } from '../db/controllers/guildController'
 import playAudio from '../commands/indirect/playAudio'
-import { IConfigDoc } from '../db/models/guild.model'
+import { IConfigDoc } from '../db/models/guildModel'
 async function messageEvent(
     message: Message,
     client: Client,

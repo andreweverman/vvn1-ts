@@ -1,9 +1,9 @@
 import { CommandParams, commandProperties } from '../../bot'
 import * as lodash from 'lodash'
 import { TextChannel, Message } from 'discord.js'
-import { Alias } from '../../db/controllers/guild.controller'
-import { Prompt, Filter } from '../../util/message.util'
-import { validGuildMember, extractChannels } from '../../util/discord.util'
+import { Alias } from '../../db/controllers/guildController'
+import { Prompt, Filter } from '../../util/messageUtil'
+import { validGuildMember, extractChannels } from '../../util/discordUtil'
 
 const command: commandProperties = {
     name: 'createalias',

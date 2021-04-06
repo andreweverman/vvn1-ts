@@ -11,12 +11,12 @@ import {
     User,
     Role,
 } from 'discord.js'
-import { selfPronouns, groupPronouns, NumberConstants, vote } from '../util/constants'
-import { Guild, Link, Movie, Config, Alias } from '../db/controllers/guild.controller'
-import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/models/guild.model'
-import { extractActiveUsers, extractVCMembers } from '../util/discord.util'
-import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from '../util/string.util'
-import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from '../util/message.util'
+import { selfPronouns, groupPronouns, NumberConstants, vote } from './constants'
+import { Guild, Link, Movie, Config, Alias } from '../db/controllers/guildController'
+import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/models/guildModel'
+import { extractActiveUsers, extractVCMembers } from './discordUtil'
+import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from './stringUtil'
+import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from './messageUtil'
 import {
     IConfigDoc,
     ILinkDoc,
@@ -24,7 +24,7 @@ import {
     IAutoDeleteElementDoc,
     IAutoDeleteSpecified,
     IMovieDoc,
-} from '../db/models/guild.model'
+} from '../db/models/guildModel'
 import moment from 'moment-timezone'
 import axios from 'axios'
 import cheerio from 'cheerio'

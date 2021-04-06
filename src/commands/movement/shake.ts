@@ -1,8 +1,8 @@
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, replyUtil, sendToChannel } from '../../util/message.util'
-import { moveMembers } from '../../util/discord.util'
-import { AliasUtil } from '../../util/general.util'
-import { Alias } from '../../db/controllers/guild.controller'
+import { Prompt, Filter, replyUtil, sendToChannel } from '../../util/messageUtil'
+import { moveMembers } from '../../util/discordUtil'
+import { AliasUtil } from '../../util/generalUtil'
+import { Alias } from '../../db/controllers/guildController'
 
 const command: commandProperties = {
     name: 'shake',

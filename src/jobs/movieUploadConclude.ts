@@ -1,5 +1,5 @@
 import { BatchJob } from './runner'
-import { Movie } from '../db/controllers/guild.controller'
+import { Movie } from '../db/controllers/guildController'
 
 const rule = '* * * * *'
 const jobFunction = async function () {

@@ -1,11 +1,11 @@
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter } from '../../../util/message.util'
-import { Link, Movie } from '../../../db/controllers/guild.controller'
-import { ILink } from '../../../db/models/guild.model'
+import { Prompt, Filter } from '../../../util/messageUtil'
+import { Link, Movie } from '../../../db/controllers/guildController'
+import { ILink } from '../../../db/models/guildModel'
 import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { AliasUtil, MovieUtil } from '../../../util/general.util'
-import { IMovieDoc } from '../../../db/models/guild.model'
+import { linkRegex, youtubeRegex } from '../../../util/stringUtil'
+import { AliasUtil, MovieUtil } from '../../../util/generalUtil'
+import { IMovieDoc } from '../../../db/models/guildModel'
 const command: commandProperties = {
     name: 'deletemovie',
     aliases: ['delete_movie', 'removemovie'],

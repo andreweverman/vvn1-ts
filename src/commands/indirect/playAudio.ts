@@ -1,7 +1,7 @@
 import { VoiceChannel } from 'discord.js'
-import { ILinkDoc } from '../../db/models/guild.model'
-import { Player } from '../../db/controllers/guild.controller'
-import { sendToChannel, MessageChannel } from '../../util/message.util'
+import { ILinkDoc } from '../../db/models/guildModel'
+import { Player } from '../../db/controllers/guildController'
+import { sendToChannel, MessageChannel } from '../../util/messageUtil'
 import ytdl from 'ytdl-core'
 import { NumberConstants } from '../../util/constants'
 

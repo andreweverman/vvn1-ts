@@ -16,7 +16,7 @@ import Guilds, {
     IMovieRequestDoc,
     IMovieDownloadElement,
     IMovieDownloadElementDoc,
-} from '../models/guild.model'
+} from '../models/guildModel'
 import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
 import {
     findOrCreateResponse,
@@ -29,10 +29,10 @@ import {
 import _, { over, reject } from 'lodash'
 import { keywords, NumberConstants } from '../../util/constants'
 import { MessageEmbed, Guild as GuildD } from 'discord.js'
-import { sendToChannel, MessageChannel, Prompt } from '../../util/message.util'
-import { stringMatch } from '../../util/string.util'
+import { sendToChannel, MessageChannel, Prompt } from '../../util/messageUtil'
+import { stringMatch } from '../../util/stringUtil'
 import moment from 'moment-timezone'
-import { EmojiUtil, MovieUtil } from '../../util/general.util'
+import { EmojiUtil, MovieUtil } from '../../util/generalUtil'
 import { Schema } from 'mongoose'
 import { time } from 'console'
 export namespace Guild {

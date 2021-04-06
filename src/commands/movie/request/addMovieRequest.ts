@@ -1,12 +1,12 @@
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { Link, Guild, Config, Movie } from '../../../db/controllers/guild.controller'
-import { ILink, ILinkDoc } from '../../../db/models/guild.model'
+import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
+import { Link, Guild, Config, Movie } from '../../../db/controllers/guildController'
+import { ILink, ILinkDoc } from '../../../db/models/guildModel'
 import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { ConfigUtil, MovieUtil } from '../../../util/general.util'
-import { replyUtil } from '../../../util/message.util'
-import { readyCheck } from '../../../util/discord.util'
+import { linkRegex, youtubeRegex } from '../../../util/stringUtil'
+import { ConfigUtil, MovieUtil } from '../../../util/generalUtil'
+import { replyUtil } from '../../../util/messageUtil'
+import { readyCheck } from '../../../util/discordUtil'
 const command: commandProperties = {
     name: 'addmovierequest',
     description: 'Adds a request for a movie to be added to the list',
