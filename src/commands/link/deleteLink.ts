@@ -1,9 +1,17 @@
+/**
+ * Deletes an link in mongo
+ *
+ * User is presented with available links and clips currently in the channel.
+ * They can select one or more to delete in one go
+ * 
+ * @file   Link is deleted in mongo.
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/message.util'
-import { Link } from '../../db/controllers/guild.controller'
-import { ILink } from '../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/string.util'
+import { Prompt} from '../../util/messageUtil'
+import { Link } from '../../db/controllers/guildController'
 
 const command: commandProperties = {
     name: 'deletelink',

@@ -1,7 +1,20 @@
+/**
+ * Plays youtube videos through the voice channel
+ *
+ * Plays a voice clip with params from mongo.
+ * Bot then plays sound through discord
+ * Plays from youtube.
+ * 
+ * 
+ * @file   All logic for playing a youtube video through bot
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { VoiceChannel } from 'discord.js'
-import { ILinkDoc } from '../../db/models/guild.model'
-import { Player } from '../../db/controllers/guild.controller'
-import { sendToChannel, MessageChannel } from '../../util/message.util'
+import { ILinkDoc } from '../../db/models/guildModel'
+import { Player } from '../../db/controllers/guildController'
+import { sendToChannel, MessageChannel } from '../../util/messageUtil'
 import ytdl from 'ytdl-core'
 import { NumberConstants } from '../../util/constants'
 

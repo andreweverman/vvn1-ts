@@ -1,10 +1,17 @@
+/**
+ * Views aliases for a user/channel in mongo
+ *
+ * All aliases for a specified id are displayed.
+ *
+ * @file   Views mongo aliases for id
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Alias } from '../../db/controllers/guild.controller'
-import { Prompt, Filter, sendToChannel } from '../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../util/discord.util'
-import { NumberConstants } from '../../util/constants'
+import { Message } from 'discord.js'
+import { Alias } from '../../db/controllers/guildController'
+import { Prompt, Filter } from '../../util/messageUtil'
 
 const command: commandProperties = {
     name: 'viewalias',

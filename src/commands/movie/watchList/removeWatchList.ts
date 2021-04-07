@@ -1,12 +1,18 @@
+/**
+ * Removes a movie from user's watch list
+ *
+ * Only deletes for the user
+ *
+ * @file   Deletes watchlisted movie entry
+ * @author andrew everman.
+ * @since  18.2.2021
+ *
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { Link, Movie } from '../../../db/controllers/guild.controller'
-import { ILink } from '../../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { AliasUtil, MovieUtil } from '../../../util/general.util'
-import { NumberConstants } from '../../../util/constants'
-import { IMovieDoc } from '../../../db/models/guild.model'
+import { Prompt, sendToChannel } from '../../../util/messageUtil'
+import { Movie } from '../../../db/controllers/guildController'
+import { IMovieDoc } from '../../../db/models/guildModel'
 const command: commandProperties = {
     name: 'removewatchlist',
     aliases: ['deletewatchlist'],

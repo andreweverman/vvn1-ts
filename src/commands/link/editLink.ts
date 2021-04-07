@@ -1,10 +1,20 @@
+/**
+ *  Edits a link alias for a user/channel in mongo.
+ *
+ *  For both links and clips, can change the
+ *  names
+ *  link itself
+ *  and volume if it is a clip
+ *
+ * @file   Edits a link in mongo
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/message.util'
-import { Link, Guild } from '../../db/controllers/guild.controller'
-import { ILink, ILinkDoc } from '../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { LinkUtil } from '../../util/general.util'
+import { Prompt } from '../../util/messageUtil'
+import { Link } from '../../db/controllers/guildController'
+import { LinkUtil } from '../../util/generalUtil'
 
 const command: commandProperties = {
     name: 'editlink',
@@ -38,8 +48,9 @@ const command: commandProperties = {
                 { name: 'Edit link url', function: editLinkUrl },
                 { name: 'Add names', function: addNames },
                 { name: 'Remove names', function: removeNames },
-                { name: 'Edit volume ', function: editVolume },
             ]
+
+            if (link.type == Link.LinkTypes.clip) options.push({ name: 'Edit volume ', function: editVolume })
 
             Prompt.optionSelect(userID, textChannel, options)
 

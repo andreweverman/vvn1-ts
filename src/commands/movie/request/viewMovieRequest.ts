@@ -1,12 +1,17 @@
+/**
+ * View the current movie requests
+ * 
+ * Views all requested movies for the guild
+ *
+ * @file   View current movie requests
+ * @author Andrew Everman.
+ * @since  18.2.2021
+ * 
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { Link, Guild, Config, Movie } from '../../../db/controllers/guild.controller'
-import { ILink, ILinkDoc } from '../../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { ConfigUtil } from '../../../util/general.util'
-import { replyUtil } from '../../../util/message.util'
-import { readyCheck } from '../../../util/discord.util'
+import { Prompt, sendToChannel } from '../../../util/messageUtil'
+import { Movie } from '../../../db/controllers/guildController'
 import { NumberConstants } from '../../../util/constants'
 const command: commandProperties = {
     name: 'viewmovierequests',

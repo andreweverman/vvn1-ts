@@ -1,11 +1,25 @@
+/**
+ *
+ * Entry point for the program
+ *
+ * Initializes discord bot
+ * Connects to mongo
+ * Links the events to their handlers 
+ * Spins up the batch job processor
+ * 
+ * @file   Entry point for program
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
 import { Client, Collection, Message, TextChannel, User } from 'discord.js'
 import dotenv from 'dotenv'
 
 import { NumberConstants } from './util/constants'
-import { getCommandFiles } from './util/file.util'
-import messageEvent from './events/message.event'
-import messageDeleteEvent from './events/message.delete.event'
-import guildCreateEvent from './events/guild.create.event'
+import { getCommandFiles } from './util/fiileUtil'
+import messageEvent from './events/messageEvent'
+import messageDeleteEvent from './events/messageDeleteEvent'
+import guildCreateEvent from './events/guildCreateEvent'
 import connect from './db/connect'
 import {runJobs} from './jobs/runner'
 

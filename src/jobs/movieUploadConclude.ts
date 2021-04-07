@@ -1,5 +1,17 @@
+/**
+ *
+ *  Job for when movies are done being uploaded
+ * 
+ *  If a movie is uploaded, move the movie to the uploaded queue and
+ *  add it to the movie list
+ * 
+ * @file   Movie uploaded job
+ * @author Andrew Everman.
+ * @since  25.2.2021
+ */
+
 import { BatchJob } from './runner'
-import { Movie } from '../db/controllers/guild.controller'
+import { Movie } from '../db/controllers/guildController'
 
 const rule = '* * * * *'
 const jobFunction = async function () {

@@ -1,14 +1,24 @@
+/**
+ * Creates a download ticket for the moviedownload.py server to download
+ *
+ * User gives the name, magnet link, zip name, and zip password.
+ * This command then puts that info in mongo for the python server to download
+ * This code can be found at https://github.com/andreweverman/moviedownload
+ *
+ * @file   Creates download ticket
+ * @author Andrew Everman.
+ * @since  17.1.2021
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Movie, Guild } from '../../../db/controllers/guild.controller'
-import { Prompt, Filter, sendToChannel, sendUtilResponse, deleteMessage } from '../../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../../util/discord.util'
+import { Message } from 'discord.js'
+import { Movie, Guild } from '../../../db/controllers/guildController'
+import { Prompt, Filter, sendToChannel, sendUtilResponse, deleteMessage } from '../../../util/messageUtil'
 import { NumberConstants } from '../../../util/constants'
-import { magnetRegex, validFileRegex } from '../../../util/string.util'
-import { IMovieDownloadElementDoc } from '../../../db/models/guild.model'
-import { MovieUtil } from '../../../util/general.util'
+import { magnetRegex, validFileRegex } from '../../../util/stringUtil'
+import { MovieUtil } from '../../../util/generalUtil'
 import { Schema } from 'mongoose'
+import { getTimeStrFromSeconds } from '../../../util/timeUtil'
 
 const command: commandProperties = {
     name: 'downloadmovie',
@@ -88,20 +98,25 @@ const command: commandProperties = {
                         let downloadRequest = await Movie.lookupMovieDownloadByID(guildID, movieID)
                         if (!downloadRequest) return
 
-                        let updateString: string = ""
+                        let updateString: string = ''
                         if (downloadRequest.downloading) {
-                            updateString = `Downloading ${downloadRequest.movieName}: ${downloadRequest.downloadPercent}%\nTime Elapsed: ${downloadRequest.secondsDownloading}`
+                            updateString = `Downloading ${downloadRequest.movieName}: ${
+                                downloadRequest.downloadPercent
+                            }%\nTime Elapsed: ${getTimeStrFromSeconds(downloadRequest.secondsDownloading)}`
                         } else if (downloadRequest.uploading) {
-                            updateString = `Uploading ${downloadRequest.movieName}: ${downloadRequest.uploadPercent}%\nTime Elapsed: ${downloadRequest.secondsUploading}`
+                            updateString = `Uploading ${downloadRequest.movieName}: ${
+                                downloadRequest.uploadPercent
+                            }%\nTime Elapsed: ${getTimeStrFromSeconds(downloadRequest.secondsUploading)}`
                         } else if (downloadRequest.uploaded) {
-                            updateString = 'Movie has been uploaded'
-                            deleteMessage(statusMessage, 30*NumberConstants.secs)
+                            updateString = `${downloadRequest.movieName} has been uploaded'`
+                            deleteMessage(statusMessage, 30 * NumberConstants.secs)
+                            return
                         } else if (downloadRequest.error) {
                             sendToChannel(textChannel, `Error downloading. Quitting...`)
-                            return 
+                            return
                         }
-                        
-                        statusMessage.edit(updateString)
+
+                        if (updateString != '') statusMessage.edit(updateString)
                         setTimeout(() => {
                             updateStatus(statusMessage, movieID)
                         }, 5000)

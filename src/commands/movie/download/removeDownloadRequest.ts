@@ -1,17 +1,23 @@
+/**
+ * Removes a movie download request
+ * 
+ * User gets promted for a request to delete
+ * Then we delete it
+ * 
+ * @file   Deletes download request
+ * @author Andrew Everman.
+ * @since  17.1.2021
+ */
+
+
 import { CommandParams, commandProperties } from '../../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Movie, Guild } from '../../../db/controllers/guild.controller'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../../util/discord.util'
-import { NumberConstants } from '../../../util/constants'
-import { magnetRegex, validFileRegex } from '../../../util/string.util'
-import { off } from 'process'
+import { Movie, Guild } from '../../../db/controllers/guildController'
+import { Prompt,  sendToChannel } from '../../../util/messageUtil'
 
 const command: commandProperties = {
-    name: 'deletemoviedownload',
+    name: 'deletedownloadrequest',
     args: false,
-    description: 'Delete a megashare movie',
+    description: 'Delete a torrent request',
     usage: ', then follow the prompts',
     cooldown: 1,
     guildOnly: true,
@@ -33,9 +39,8 @@ const command: commandProperties = {
                 })
 
                 if (response.arrayElements) {
-                    response.arrayElements.forEach(async (movie) => {
-                        const movieDoc = await Movie.lookupMovieByID(guildID, movie._id)
-                        if (movieDoc) Movie.deleteMovie(guildID, movieDoc)
+                    response.arrayElements.forEach((movie) => {
+                        // Movie.deleteMovie(guildID,movie)                        
                     })
                 } else {
                     sendToChannel(textChannel, 'Error on my end')

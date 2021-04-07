@@ -1,13 +1,18 @@
-import { CommandParams, commandProperties } from '../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Alias } from '../../db/controllers/guild.controller'
-import { Prompt, Filter, sendToChannel } from '../../util/message.util'
-import { extractActiveUsers, extractChannels } from '../../util/discord.util'
-import { NumberConstants } from '../../util/constants'
+/**
+ * Central command for all alias related commands
+ * 
+ * Launch other commands from this central location if you can't remember the names
+ * 
+ * @file   All alias commands
+ * @author Andrew Everman.
+ * @since  16.2.2021
+ */
 
-import createAlias from './create.alias'
-import deleteAlias from './view.alias'
+import { CommandParams, commandProperties } from '../../bot'
+import { Prompt } from '../../util/messageUtil'
+
+import createAlias from './createAlias'
+import deleteAlias from './deleteAlias'
 import viewAlias from './viewAlias'
 const command: commandProperties = {
     name: 'alias',

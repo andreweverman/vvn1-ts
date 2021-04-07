@@ -1,19 +1,29 @@
+/**
+ * Central movie command launcher
+ * 
+ * Use all the movie commands from this command
+ *
+ * @file   Central movie command launcher
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt } from '../../util/message.util'
+import { Prompt } from '../../util/messageUtil'
 import addMovie from './movieListOperations/addMovie'
 import deleteMovie from './movieListOperations/deleteMovie'
-import movieConfig from './movie.config'
+import movieConfig from './movieConfig'
 import viewMovie from './movieListOperations/viewMovie'
 import addMovieRequest from './request/addMovieRequest'
 import deleteMovieRequest from './request/deleteMovieRequest'
 import viewMovieRequest from './request/viewMovieRequest'
-import watchMovie from './watch.movie'
+import watchMovie from './watchMovie'
 import addToWatchList from './watchList/addToWatchList'
 import viewWatchlist from './watchList/viewWatchList'
 import removeWatchList from './watchList/removeWatchList'
-import downloadMovie from './download/download.movie'
-import deleteDownloadRequest from './download/remove.download.request'
-import deleteDownload from './download/delete.movie.download'
+import downloadMovie from './download/downloadMovie'
+import deleteDownloadRequest from './download/removeDownloadRequest'
+import deleteDownload from './download/deleteMovieRequest'
 
 const command: commandProperties = {
     name: 'movie',
@@ -24,7 +34,6 @@ const command: commandProperties = {
     cooldown: 1,
     guildOnly: true,
     async execute(e: CommandParams) {
-        const guildID = e.message.guild!.id
         const userID = e.message.author.id
         const textChannel = e.message.channel
 

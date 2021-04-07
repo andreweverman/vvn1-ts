@@ -1,10 +1,15 @@
+/**
+ * Central command for all link related commands
+ * 
+ * Launch other commands from this central location if you can't remember the names
+ * 
+ * @file   All link commands
+ * @author Andrew Everman.
+ * @since  16.2.2021
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/message.util'
-import { Link } from '../../db/controllers/guild.controller'
-import { ILink } from '../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/string.util'
-import { reject } from 'lodash'
+import { Prompt } from '../../util/messageUtil'
 
 import createLink from './createLink'
 import deleteLink from './deleteLink'

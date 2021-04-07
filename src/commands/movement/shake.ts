@@ -1,8 +1,18 @@
+/**
+ * Shakes a user to wake them up
+ * 
+ * Moves the user back and forth from their current channel to afk.
+ * This will hopefully wake them up.
+ * 
+ * @file   Shakes a user
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, replyUtil, sendToChannel } from '../../util/message.util'
-import { moveMembers } from '../../util/discord.util'
-import { AliasUtil } from '../../util/general.util'
-import { Alias } from '../../db/controllers/guild.controller'
+import { replyUtil} from '../../util/messageUtil'
+import { AliasUtil } from '../../util/generalUtil'
+import { Alias } from '../../db/controllers/guildController'
 
 const command: commandProperties = {
     name: 'shake',

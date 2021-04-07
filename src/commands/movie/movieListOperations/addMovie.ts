@@ -1,10 +1,21 @@
+/**
+ * Add a link to a movie for downloading.
+ * 
+ * This will store the:
+ * 		name of the movie
+ * 		download link
+ * 		the zip password
+ * 		the id of the uploader
+ * 
+ * @file   Creates link in mongo
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter } from '../../../util/message.util'
-import { Link, Movie } from '../../../db/controllers/guild.controller'
-import { ILink } from '../../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { AliasUtil, MovieUtil } from '../../../util/general.util'
+import { Prompt } from '../../../util/messageUtil'
+import { Movie } from '../../../db/controllers/guildController'
+import { MovieUtil } from '../../../util/generalUtil'
 
 const command: commandProperties = {
     name: 'addmovie',
@@ -18,7 +29,7 @@ const command: commandProperties = {
     async execute(e: CommandParams) {
         const guildID = e.message.guild!.id
         const userID = e.message.author.id
-        const textChannel = e.message.channel 
+        const textChannel = e.message.channel
 
         const args = {
             userID: userID,

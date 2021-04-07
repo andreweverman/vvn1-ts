@@ -1,12 +1,18 @@
+/**
+ * Adds a request for a movie to be uploaded for viewing
+ * 
+ * Requests from this will be deleted when they are added in the movie list way
+ * 
+ * @file   Adds request for movie
+ * @author Andrew Everman.
+ * @since  18.2.2021
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { Link, Guild, Config, Movie } from '../../../db/controllers/guild.controller'
-import { ILink, ILinkDoc } from '../../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { ConfigUtil, MovieUtil } from '../../../util/general.util'
-import { replyUtil } from '../../../util/message.util'
-import { readyCheck } from '../../../util/discord.util'
+import { Prompt } from '../../../util/messageUtil'
+import { Movie } from '../../../db/controllers/guildController'
+import { MovieUtil } from '../../../util/generalUtil'
+
 const command: commandProperties = {
     name: 'addmovierequest',
     description: 'Adds a request for a movie to be added to the list',

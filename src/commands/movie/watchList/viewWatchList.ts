@@ -1,10 +1,22 @@
+/**
+ * Views the user's watchlisted movies
+ *
+ * Only views their watchlist for the current guild
+ *
+ * @file   View watch listed movies
+ * @author andrew everman.
+ * @since  18.2.2021
+ *
+ */
+
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { Link, Movie } from '../../../db/controllers/guild.controller'
-import { ILink } from '../../../db/models/guild.model'
+import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
+import { Link, Movie } from '../../../db/controllers/guildController'
+import { ILink } from '../../../db/models/guildModel'
 import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { AliasUtil, MovieUtil } from '../../../util/general.util'
+import { linkRegex, youtubeRegex } from '../../../util/stringUtil'
+import { AliasUtil, MovieUtil } from '../../../util/generalUtil'
 import { NumberConstants } from '../../../util/constants'
 
 const command: commandProperties = {

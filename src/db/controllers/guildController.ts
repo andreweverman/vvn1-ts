@@ -1,3 +1,15 @@
+/**
+ *
+ * Mongo controller for the guild collection
+ *
+ * Consists of every function that is used to modify the guild collection.
+ * Broken into namespaces for the different areas that are used.
+ *
+ * @file   Mongo guild collection controller
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
 import Guilds, {
     IAlias,
     IGuildDoc,
@@ -16,7 +28,7 @@ import Guilds, {
     IMovieRequestDoc,
     IMovieDownloadElement,
     IMovieDownloadElementDoc,
-} from '../models/guild.model'
+} from '../models/guildModel'
 import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
 import {
     findOrCreateResponse,
@@ -26,20 +38,18 @@ import {
     updateOneResponseHandlerResponse,
     updateOneStrings,
 } from '../db.util'
-import _, { over, reject } from 'lodash'
-import { keywords, NumberConstants } from '../../util/constants'
+import _ from 'lodash'
+import { NumberConstants } from '../../util/constants'
 import { MessageEmbed, Guild as GuildD } from 'discord.js'
-import { sendToChannel, MessageChannel, Prompt } from '../../util/message.util'
-import { stringMatch } from '../../util/string.util'
+import { sendToChannel, MessageChannel, Prompt } from '../../util/messageUtil'
+import { stringMatch } from '../../util/stringUtil'
 import moment from 'moment-timezone'
-import { EmojiUtil, MovieUtil } from '../../util/general.util'
+import { EmojiUtil, MovieUtil } from '../../util/generalUtil'
 import { Schema } from 'mongoose'
-import { time } from 'console'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
         // there is no good type definition
-
         return new Promise((resolve, reject) => {
             const query = { guild_id: guildID }
             Guilds.findOne(query)
@@ -414,6 +424,7 @@ export namespace Link {
 
                 const fields: any = []
                 let overallCount = 0
+                let typeCount = 0
                 types.forEach((type) => {
                     const arr = type.array
                     let i: number,
@@ -423,7 +434,9 @@ export namespace Link {
                         let startCount = overallCount
                         const linkChunk = arr.slice(i, i + chunk)
                         const linkMessage = linkChunk.map((x, k) => {
-                            return `${'**' + (i + k + offset) + '**. '}[${x.names.join(', ')}](${x.link} 'Link')`
+                            return `${'**' + (i + k + offset + typeCount) + '**. '}[${x.names.join(', ')}](${
+                                x.link
+                            } 'Link')`
                         })
                         overallCount += linkChunk.length
                         fields.push({
@@ -432,6 +445,7 @@ export namespace Link {
                             inline: true,
                         })
                     }
+                    typeCount += overallCount
                 })
 
                 embed = new MessageEmbed().setTitle('Link Catalog').addFields(fields)
@@ -460,7 +474,6 @@ export namespace Link {
         textChannel: MessageChannel,
         multiple: boolean
     ): Promise<ILinkDoc | ILinkDoc[] | undefined> {
-        //TODO: fill this out
         try {
             const { links, message, offset } = await viewLinks(guildID)
 
@@ -566,6 +579,7 @@ export namespace Link {
 
             const response = await Guilds.updateOne(
                 { guild_id: guildID, 'links._id': link._id },
+                //@ts-ignore
                 { $pull: { 'links.$.names': { $in: names } } }
             )
 
@@ -849,6 +863,7 @@ export namespace Movie {
                     requested
                     const response2 = await Guilds.updateOne(
                         { guild_id: guildID },
+                        //@ts-ignore
                         { $pull: { 'movie.requests': { name: nameMatch } } },
                         { multi: true }
                     )
@@ -907,6 +922,7 @@ export namespace Movie {
                 { guild_id: guildID },
                 {
                     $pull: {
+                        //@ts-ignore
                         'movie.movies': { _id: { $in: deleteIDs } },
                         'movie.downloads.uploadedQueue': { _id: { $in: deleteMegaIDs } },
                     },
@@ -1161,6 +1177,7 @@ export namespace Movie {
                 }
                 response = await Guilds.updateOne(
                     { guild_id: guildID },
+                    //@ts-ignore
                     { $pull: { 'movie.requests': { _id: requestDoc._id } } }
                 )
             } else {
@@ -1172,6 +1189,7 @@ export namespace Movie {
                     { guild_id: guildID, 'movie.requests._id': requestDoc._id },
                     {
                         $pull: {
+                            //@ts-ignore
                             'movie.requests.$.users': userID,
                         },
                     }
@@ -1277,7 +1295,12 @@ export namespace Movie {
 
             const response = await Guilds.updateOne(
                 { guild_id: guildID, 'movie.movies._id': deleteElements.map((x) => x._id) },
-                { $pull: { 'movie.movies.$.want_to_watch': userID } }
+                {
+                    $pull: {
+                        //@ts-ignore
+                        'movie.movies.$.want_to_watch': userID,
+                    },
+                }
             )
 
             updateOneResponseHandler(response, updateStrings, textChannel)
@@ -1372,8 +1395,14 @@ export namespace Movie {
         const response = await Guilds.updateOne(
             { guild_id: guildID },
             {
-                $pull: { 'movie.downloads.downloadQueue': { _id: movie._id } },
-                $push: { 'movie.downloads.uploadedQueue': movie },
+                $pull: {
+                    //@ts-ignore
+                    'movie.downloads.downloadQueue': { _id: movie._id },
+                },
+                $push: {
+                    //@ts-ignore
+                    'movie.downloads.uploadedQueue': movie,
+                },
             }
         )
 
@@ -1385,6 +1414,7 @@ export namespace Movie {
             { guild_id: guildID },
             {
                 $pull: {
+                    //@ts-ignore
                     'movie.download.uploadedQueue': { _id: movie._id },
                     'movie.movies': { _id: movie.movieID },
                 },
@@ -1626,6 +1656,7 @@ export namespace Config {
                 { guild_id: guildID },
                 {
                     $pull: {
+                        //@ts-ignore
                         'config.autodelete': { _id: { $in: [elementDoc._id] } },
                     },
                 }
@@ -1686,6 +1717,7 @@ export namespace Config {
                 },
                 {
                     $pull: {
+                        //@ts-ignore
                         'config.autodelete.$.allowList': { $in: deleteNames },
                     },
                 }
@@ -1784,6 +1816,7 @@ export namespace Config {
                     'config.autodelete._id': elementDoc._id,
                 },
                 {
+                    //@ts-ignore
                     $pull: { 'config.autodelete.$.specified': specifiedObj },
                 }
             )

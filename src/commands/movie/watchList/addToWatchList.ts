@@ -1,15 +1,23 @@
+/**
+ * Adds a watch list entry for a user
+ *
+ * The watch list is a way for a user to mark interest in an uploaded movie
+ * Marked in mongo under the movie that is uploaded
+ *
+ * @file   Add watch list entry
+ * @author Andrew Everman.
+ * @since  18.2.2021
+ *
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/message.util'
-import { Link, Movie } from '../../../db/controllers/guild.controller'
-import { ILink } from '../../../db/models/guild.model'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/string.util'
-import { AliasUtil, MovieUtil } from '../../../util/general.util'
-import { NumberConstants } from '../../../util/constants'
+import { Prompt } from '../../../util/messageUtil'
+import { Movie } from '../../../db/controllers/guildController'
+import { MovieUtil } from '../../../util/generalUtil'
 
 const command: commandProperties = {
     name: 'addtowatchlist',
-    aliases: ['addtolist','want','addwatchlist'],
+    aliases: ['addtolist', 'want', 'addwatchlist'],
     description: 'Mark what movies you are interested in watching',
     usage: 'Select what movies you want to watch',
     cooldown: 0,

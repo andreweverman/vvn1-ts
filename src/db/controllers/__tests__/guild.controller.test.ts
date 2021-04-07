@@ -1,6 +1,6 @@
-import { Mongo } from '../../../util/test.util'
+import { Mongo } from '../../../util/testUtil'
 import dotenv from 'dotenv'
-import { Guild, Alias } from '../../controllers/guild.controller'
+import { Guild, Alias } from '../guildController'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 
 dotenv.config()

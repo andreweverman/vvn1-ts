@@ -1,3 +1,16 @@
+/**
+ *
+ * Utility for all regex strings
+ *
+ * Any regex string is placed here to be able to use across many files
+ * 
+ * @file   Utility for regex strings
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
+
+
 export interface matchOptions {
     insensitive?: boolean
     trimInput?: boolean

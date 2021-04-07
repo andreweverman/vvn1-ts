@@ -1,13 +1,13 @@
-import { Mongo } from '../test.util'
+import { Mongo } from '../testUtil'
 import dotenv from 'dotenv'
-import { Guild } from '../../db/controllers/guild.controller'
+import { Guild } from '../../db/controllers/guildController'
 import { MongoMemoryServer } from 'mongodb-memory-server'
-import { Mocks } from '../test.util'
-import { AnyCollectorFilter, Filter, Prompt } from '../message.util'
+import { Mocks } from '../testUtil'
+import { AnyCollectorFilter, Filter, Prompt } from '../messageUtil'
 import { mocked } from 'ts-jest/utils'
-import { MessageChannel } from '../message.util'
+import { MessageChannel } from '../messageUtil'
 import { TextChannel } from 'discord.js'
-import { dateInPast, parseDate, timeInPast } from '../time.util'
+import { dateInPast, parseDate, timeInPast, getTimeStrFromSeconds } from '../timeUtil'
 import moment from 'moment-timezone'
 dotenv.config()
 
@@ -79,7 +79,7 @@ describe('dateInPast', () => {
     describe('date is not in past', () => {
         it.each([['1/1/2020'], ['01/1/2020']])('double(%p)', (input) => {
             const inPast = dateInPast(tz, input, moment(new Date('1/1/2021')))
-            expect(inPast).toBe(true)
+            expect(inPast).toBe(false)
         })
     })
 
@@ -88,5 +88,17 @@ describe('dateInPast', () => {
             const inPast = dateInPast(tz, input, moment(new Date('1/1/2021')))
             expect(inPast).toBe(false)
         })
+    })
+})
+
+describe('getTimeStrFromSeconds', () => {
+    it.each([
+        [33, '33 Seconds'],
+        [61, '1 Minute, 1 Second'],
+        [92, '1 Minute, 32 Seconds'],
+        [123456, '1 Day, 10 Hours, 17 Minutes, 36 Seconds'],
+    ])('getTimeStrFromSeconds(%d)', (input, expected) => {
+        const ret = getTimeStrFromSeconds(input)
+        expect(ret).toBe(expected)
     })
 })
