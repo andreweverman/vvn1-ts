@@ -1,10 +1,14 @@
+/**
+ * View the the movies in mongo
+ * 
+ * @file   View the the movies in mongo
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
-import { Link, Movie } from '../../../db/controllers/guildController'
-import { ILink } from '../../../db/models/guildModel'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../../util/stringUtil'
-import { AliasUtil, MovieUtil } from '../../../util/generalUtil'
+import { sendToChannel } from '../../../util/messageUtil'
+import { Movie } from '../../../db/controllers/guildController'
 import { NumberConstants } from '../../../util/constants'
 
 const command: commandProperties = {

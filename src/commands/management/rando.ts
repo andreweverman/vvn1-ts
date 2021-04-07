@@ -1,10 +1,20 @@
+/**
+ * Creates a temporary guild invite
+ * 
+ * This will create and send an invite in the text channel the command was invoked
+ * This invite will kick the user that is brought in with this invite if not given a role within 
+ * a certain amount of time, currently 4hr I believe.
+ * 
+ * @file   Creates temp invite to guild
+ * @author Andrew Everman.
+ * @since  12.2.2021
+ */
+
+
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter,sendToChannel } from '../../util/messageUtil'
-import { Link, Guild, Config } from '../../db/controllers/guildController'
-import { ILink, ILinkDoc } from '../../db/models/guildModel'
-import { MessageEmbed,TextChannel } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/stringUtil'
-import { ConfigUtil } from '../../util/generalUtil'
+import { Prompt, sendToChannel } from '../../util/messageUtil'
+import { TextChannel } from 'discord.js'
 import { NumberConstants } from '../../util/constants'
 
 const command: commandProperties = {

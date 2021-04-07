@@ -1,9 +1,22 @@
+/**
+ * Configures guild settings
+ * 
+ * Currenly does:
+ * 	Guild prefix
+ * 	Server time zone
+ * 	Autodelte messages for
+ * 		-prefix
+ * 		-user
+ * 	Set up message archive
+ * 
+ * @file   Configures guild settings
+ * @author Andrew Everman.
+ * @since  19.7.2020 
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/messageUtil'
-import { Link, Guild, Config } from '../../db/controllers/guildController'
-import { ILink, ILinkDoc } from '../../db/models/guildModel'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/stringUtil'
+import { Prompt} from '../../util/messageUtil'
+import { Config } from '../../db/controllers/guildController'
 import { ConfigUtil } from '../../util/generalUtil'
 
 const command: commandProperties = {

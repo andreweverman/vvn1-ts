@@ -1,10 +1,15 @@
+/**
+ * Central command for all alias related commands
+ * 
+ * Launch other commands from this central location if you can't remember the names
+ * 
+ * @file   All alias commands
+ * @author Andrew Everman.
+ * @since  16.2.2021
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
-import { Alias } from '../../db/controllers/guildController'
-import { Prompt, Filter, sendToChannel } from '../../util/messageUtil'
-import { extractActiveUsers, extractChannels } from '../../util/discordUtil'
-import { NumberConstants } from '../../util/constants'
+import { Prompt } from '../../util/messageUtil'
 
 import createAlias from './createAlias'
 import deleteAlias from './deleteAlias'

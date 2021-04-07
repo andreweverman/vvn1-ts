@@ -1,11 +1,19 @@
+/**
+ * Deletes an alias for a user/channel in mongo
+ *
+ * Alias is deleted in mongo. This file is executed from the bot.js file.
+ *
+ *
+ * @file   Alias is deleted in mongo.
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
 import { CommandParams, commandProperties } from '../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
+import {  Message, MessageEmbed } from 'discord.js'
 import { Alias } from '../../db/controllers/guildController'
 import { Filter, Prompt, sendToChannel } from '../../util/messageUtil'
-import { extractActiveUsers, extractChannels } from '../../util/discordUtil'
-import { NumberConstants } from '../../util/constants'
-import {IAliasDoc} from '../../db/models/guildModel'
+import { IAliasDoc } from '../../db/models/guildModel'
+
 const command: commandProperties = {
     name: 'deletealias',
     aliases: ['da', 'removealias', 'ra'],
@@ -81,12 +89,12 @@ const command: commandProperties = {
                             multiple: true,
                         })
                             .then((aliases) => {
-                                let userAliases : IAliasDoc|IAliasDoc[]|undefined
-                                if(aliases.arrayElement) userAliases = aliases.arrayElement
-                                if(aliases.arrayElements) userAliases = aliases.arrayElements
-                            
-                                if(userAliases==undefined) return undefined
-                                
+                                let userAliases: IAliasDoc | IAliasDoc[] | undefined
+                                if (aliases.arrayElement) userAliases = aliases.arrayElement
+                                if (aliases.arrayElements) userAliases = aliases.arrayElements
+
+                                if (userAliases == undefined) return undefined
+
                                 Alias.deleteAliases(guildID, userAliases, textChannel)
                                     .then(() => {
                                         resolve(true)

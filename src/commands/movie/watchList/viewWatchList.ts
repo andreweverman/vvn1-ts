@@ -1,3 +1,15 @@
+/**
+ * Views the user's watchlisted movies
+ *
+ * Only views their watchlist for the current guild
+ *
+ * @file   View watch listed movies
+ * @author andrew everman.
+ * @since  18.2.2021
+ *
+ */
+
+
 import { CommandParams, commandProperties } from '../../../bot'
 import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
 import { Link, Movie } from '../../../db/controllers/guildController'

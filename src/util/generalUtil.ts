@@ -1,18 +1,27 @@
+/**
+ *
+ *  Utility for misc things
+ *
+ *  This is a place for any functionality form the commands that is useful to reuse can be put
+ *  This is good for the prompting of things that can be used across multiple areas
+ *
+ * @file   Utility for misc things
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
 import {
     Client,
     GuildMember,
     VoiceChannel,
-    TextChannel,
     Guild as GuildD,
     GuildChannel,
     Collection,
     GuildEmoji,
-    Emoji,
-    User,
     Role,
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from './constants'
-import { Guild, Link, Movie, Config, Alias } from '../db/controllers/guildController'
+import { Guild, Link, Movie, Config } from '../db/controllers/guildController'
 import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/models/guildModel'
 import { extractActiveUsers, extractVCMembers } from './discordUtil'
 import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from './stringUtil'
@@ -21,7 +30,6 @@ import {
     IConfigDoc,
     ILinkDoc,
     IAutoDeleteElement,
-    IAutoDeleteElementDoc,
     IAutoDeleteSpecified,
     IMovieDoc,
 } from '../db/models/guildModel'

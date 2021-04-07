@@ -1,3 +1,15 @@
+/**
+ *
+ * Mongo controller for the guild collection
+ *
+ * Consists of every function that is used to modify the guild collection.
+ * Broken into namespaces for the different areas that are used.
+ *
+ * @file   Mongo guild collection controller
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
 import Guilds, {
     IAlias,
     IGuildDoc,
@@ -26,20 +38,18 @@ import {
     updateOneResponseHandlerResponse,
     updateOneStrings,
 } from '../db.util'
-import _, { over, reject } from 'lodash'
-import { keywords, NumberConstants } from '../../util/constants'
+import _ from 'lodash'
+import { NumberConstants } from '../../util/constants'
 import { MessageEmbed, Guild as GuildD } from 'discord.js'
 import { sendToChannel, MessageChannel, Prompt } from '../../util/messageUtil'
 import { stringMatch } from '../../util/stringUtil'
 import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/generalUtil'
 import { Schema } from 'mongoose'
-import { time } from 'console'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
         // there is no good type definition
-
         return new Promise((resolve, reject) => {
             const query = { guild_id: guildID }
             Guilds.findOne(query)
@@ -414,6 +424,7 @@ export namespace Link {
 
                 const fields: any = []
                 let overallCount = 0
+                let typeCount = 0
                 types.forEach((type) => {
                     const arr = type.array
                     let i: number,
@@ -423,7 +434,9 @@ export namespace Link {
                         let startCount = overallCount
                         const linkChunk = arr.slice(i, i + chunk)
                         const linkMessage = linkChunk.map((x, k) => {
-                            return `${'**' + (i + k + offset) + '**. '}[${x.names.join(', ')}](${x.link} 'Link')`
+                            return `${'**' + (i + k + offset + typeCount) + '**. '}[${x.names.join(', ')}](${
+                                x.link
+                            } 'Link')`
                         })
                         overallCount += linkChunk.length
                         fields.push({
@@ -432,6 +445,7 @@ export namespace Link {
                             inline: true,
                         })
                     }
+                    typeCount += overallCount
                 })
 
                 embed = new MessageEmbed().setTitle('Link Catalog').addFields(fields)
@@ -460,7 +474,6 @@ export namespace Link {
         textChannel: MessageChannel,
         multiple: boolean
     ): Promise<ILinkDoc | ILinkDoc[] | undefined> {
-        //TODO: fill this out
         try {
             const { links, message, offset } = await viewLinks(guildID)
 

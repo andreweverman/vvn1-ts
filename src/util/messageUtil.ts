@@ -1,4 +1,15 @@
-import { time } from 'console'
+/**
+ *
+ * Utility for all Discord message related thigns
+ *
+ * Defines the way that we handle all our IO with the user
+ * Prompt is used in most of the functions 
+ * 
+ * @file   Utility for Discord message things
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
 import {
     Message,
     MessageEmbed,
@@ -6,16 +17,12 @@ import {
     CollectorFilter,
     DMChannel,
     NewsChannel,
-    Channel,
     Guild,
     GuildEmoji,
 } from 'discord.js'
-import { last } from 'lodash'
-import { Moment } from 'moment-timezone'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
-import { stringMatch, matchOptions, spaceCommaRegex, validUserID, guildEmojiRegex } from './stringUtil'
-import { timeInPast, TimeInPastOptions, dateInPast, beforeMinMoment } from './timeUtil'
-import emoji from 'node-emoji'
+import { stringMatch, matchOptions, spaceCommaRegex, guildEmojiRegex } from './stringUtil'
+import { timeInPast, TimeInPastOptions, dateInPast } from './timeUtil'
 export type AsyncCollectorFilter = (...args: any[]) => Promise<boolean>
 export type AnyCollectorFilter = AsyncCollectorFilter | CollectorFilter
 export type MessageChannel = TextChannel | DMChannel | NewsChannel

@@ -1,7 +1,18 @@
+/**
+ *
+ * Mongo model for the guild collection
+ *
+ * The guild document as well as its subdocuments are defined here
+ * 
+ *
+ * @file   Mongo guild collection model
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
 import mongoose, { Schema, Document, ObjectId } from 'mongoose'
 import { Config, Link } from '../controllers/guildController'
 import {
-    NumberConstants,
     movieCountdownName,
     movieTimeName,
     readyEmojiName,

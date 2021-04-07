@@ -1,12 +1,19 @@
+/**
+ * Checks if users are ready.
+ * 
+ * A message is put in chat.
+ * Users that are ready react to the message. 
+ * 
+ * @file   Cheks if users are ready
+ * @author Andrew Everman.
+ * @since  19.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, sendToChannel } from '../../util/messageUtil'
-import { Link, Guild, Config } from '../../db/controllers/guildController'
-import { ILink, ILinkDoc } from '../../db/models/guildModel'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/stringUtil'
-import { ConfigUtil } from '../../util/generalUtil'
+import { Prompt, sendToChannel } from '../../util/messageUtil'
 import { replyUtil } from '../../util/messageUtil'
 import { readyCheck } from '../../util/discordUtil'
+
 const command: commandProperties = {
     name: 'readycheck',
     description: 'Ready checks a channel a command',
@@ -18,8 +25,6 @@ const command: commandProperties = {
 
     async execute(e: CommandParams) {
         try {
-            const guildID = e.message.guild!.id
-            const userID = e.message.author.id
             const textChannel = e.message.channel
 
             if (e.message.member!.voice.channel == null) {

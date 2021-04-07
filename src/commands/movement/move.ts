@@ -1,5 +1,16 @@
+/**
+ * Moves users between voice channels
+ * 
+ * Parses string for user and channel aliases and moves accordingly.
+ * Will always use the first voice channel to move (for now).
+ * 
+ * @file   Moves users from move command
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, replyUtil, sendToChannel } from '../../util/messageUtil'
+import { replyUtil, sendToChannel } from '../../util/messageUtil'
 import { moveMembers } from '../../util/discordUtil'
 import { AliasUtil } from '../../util/generalUtil'
 

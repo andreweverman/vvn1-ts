@@ -1,3 +1,16 @@
+/**
+ *
+ * Utility for functions that are used in setting up jest or running it
+ *
+ * Currently just the different mongo setup and closing down
+ * 
+ * @file   Utility for testing environment
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
+
+
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import events from 'events'

@@ -1,12 +1,17 @@
+/**
+ * Deltes a downloaded movie
+ * 
+ * Deletes a downloaded movie in the moviedownload.py and in the 
+ * movie list
+ * 
+ * @file   Deletes downloaded movie
+ * @author Andrew Everman.
+ * @since  17.1.2021
+ */
+
 import { CommandParams, commandProperties } from '../../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
 import { Movie, Guild } from '../../../db/controllers/guildController'
-import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
-import { extractActiveUsers, extractChannels } from '../../../util/discordUtil'
-import { NumberConstants } from '../../../util/constants'
-import { magnetRegex, validFileRegex } from '../../../util/stringUtil'
-import { off } from 'process'
+import { Prompt, sendToChannel } from '../../../util/messageUtil'
 
 const command: commandProperties = {
     name: 'deletemoviedownload',

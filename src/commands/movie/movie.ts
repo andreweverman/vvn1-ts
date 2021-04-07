@@ -1,3 +1,13 @@
+/**
+ * Central movie command launcher
+ * 
+ * Use all the movie commands from this command
+ *
+ * @file   Central movie command launcher
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt } from '../../util/messageUtil'
 import addMovie from './movieListOperations/addMovie'
@@ -24,7 +34,6 @@ const command: commandProperties = {
     cooldown: 1,
     guildOnly: true,
     async execute(e: CommandParams) {
-        const guildID = e.message.guild!.id
         const userID = e.message.author.id
         const textChannel = e.message.channel
 

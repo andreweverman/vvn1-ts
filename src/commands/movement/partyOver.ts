@@ -1,7 +1,17 @@
+/**
+ * Moves users to the aliases main channel
+ * 
+ * Moves users in current channel of the command invoker to alias "main".
+ * If it can't find one then it will tell them.
+ * 
+ * @file   Moves users to main
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, replyUtil, sendToChannel } from '../../util/messageUtil'
+import { replyUtil } from '../../util/messageUtil'
 import { moveMembers } from '../../util/discordUtil'
-import { AliasUtil } from '../../util/generalUtil'
 import { Alias } from '../../db/controllers/guildController'
 
 const command: commandProperties = {

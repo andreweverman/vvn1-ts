@@ -1,6 +1,16 @@
+/**
+ * Creates an alias for a user/channel in mongo
+ *
+ * Alias is created in mongo if that alias is not currently 
+ * in use by another user. Checks in this file.
+ * 
+ * @file   This file is executed from the bot.js file
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message } from 'discord.js'
+import {  Message } from 'discord.js'
 import { Alias } from '../../db/controllers/guildController'
 import { Prompt, Filter } from '../../util/messageUtil'
 import { validGuildMember, extractChannels } from '../../util/discordUtil'

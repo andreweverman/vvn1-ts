@@ -1,3 +1,23 @@
+/**
+ * Starts up a movie night service
+ * 
+ * The magnum opus of vvn1
+ * The user selects a movie or can vote for it.
+ * They set a time for the movie
+ * There will then be a message embed sent to notify users.
+ * When time goes off, there are a series of actions:
+ *  - users who said they want to watch get pinged
+ *  - users who said they are ready get moved to the movie channel (if aliased)
+ *  - a movie time sound if played (if configured) *  
+ * There is then a ready check message sent in the channel
+ * When ready check passed, a countdown is played (if configured)
+ * 
+ * 
+ * @file   Command for organizing watching movies
+ * @author Andrew Everman.
+ * @since  17.7.2020 
+ */
+
 import { MessageEmbed, MessageCollector, Message, ReactionCollector, GuildEmoji, VoiceChannel, Role } from 'discord.js'
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt, Filter, sendToChannel, replyUtil, deleteMessage } from '../../util/messageUtil'

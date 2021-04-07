@@ -1,3 +1,14 @@
+/**
+ *
+ * Some interfaces and general things that will be used across controllers
+ * 
+ * Mostly for error checking
+ * 
+ * @file   Mongo db utility 
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
 import { Document } from 'mongoose'
 import { sendToChannel, MessageChannel } from '../util/messageUtil'
 import { keywords } from '../util/constants'

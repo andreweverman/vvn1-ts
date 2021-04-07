@@ -1,11 +1,19 @@
-import { Message, Collection, Client, Guild as GuildD, MessageEmbed, TextChannel, PartialMessage } from 'discord.js'
-import { commandCollection, commandCooldowns } from '../bot'
-import { NumberConstants } from '../util/constants'
-import { deleteMessage, MessageChannel, replyUtil, sendToChannel } from '../util/messageUtil'
-import { Config, Link, Guild } from '../db/controllers/guildController'
-import playAudio from '../commands/indirect/playAudio'
-import { IConfigDoc } from '../db/models/guildModel'
-import { ConfigUtil } from '../util/generalUtil'
+/**
+ *
+ * Event handler for when invited to a guild
+ *
+ * If a guild is not found in the db,
+ * initialize the document in mongo
+ *
+ *
+ * @file   Guild invite event
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
+import { Guild as GuildD } from 'discord.js'
+import { Guild } from '../db/controllers/guildController'
+
 async function guildCreate(guild: GuildD) {
     try {
         await Guild.getGuild(guild.id).catch((err) => {

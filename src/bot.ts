@@ -1,3 +1,17 @@
+/**
+ *
+ * Entry point for the program
+ *
+ * Initializes discord bot
+ * Connects to mongo
+ * Links the events to their handlers 
+ * Spins up the batch job processor
+ * 
+ * @file   Entry point for program
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
 import { Client, Collection, Message, TextChannel, User } from 'discord.js'
 import dotenv from 'dotenv'
 

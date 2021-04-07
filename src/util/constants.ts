@@ -1,5 +1,13 @@
-export enum NumberConstants {
+/**
+ * 
+ *  Defining some commonly used numbers and strings
+ * 
+ * @file   Defining common numbers and strings
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
 
+export enum NumberConstants {
     secs = 1000,
     mins = secs * 60,
     hours = mins * 60,

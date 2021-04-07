@@ -1,3 +1,11 @@
+/**
+ *
+ * Connects to mongodb
+ * 
+ * @file   Connects to mongodb
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
 import mongoose from 'mongoose'
 
 type TInput = {

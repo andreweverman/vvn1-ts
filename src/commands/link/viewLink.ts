@@ -1,10 +1,17 @@
+/**
+ * Views stored links from mongo.
+ * 
+ * Straightforward for now. Just dumps the links
+ * Will probably run into an issue if we get too many with the current
+ * implementation. Will look into it when that day arrives.
+ * 
+ * @file   Views stored links from mongo.
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/messageUtil'
 import { Link } from '../../db/controllers/guildController'
-import { ILink } from '../../db/models/guildModel'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/stringUtil'
-import { reject } from 'lodash'
 
 const command: commandProperties = {
     name: 'viewlink',

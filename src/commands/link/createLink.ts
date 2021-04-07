@@ -1,5 +1,17 @@
+/**
+ * Creates a link alias for a user/channel in mongo 
+ * 
+ * Either is a link or a clip
+ * A link is a static link that is just input to the chat
+ * A clip is a youtube video that will have its audio played in a voice channel
+ * 
+ * @file   Creates link in mongo
+ * @author Andrew Everman.
+ * @since  16.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter } from '../../util/messageUtil'
+import { Prompt  } from '../../util/messageUtil'
 import { Link } from '../../db/controllers/guildController'
 import { ILink } from '../../db/models/guildModel'
 import { MessageEmbed } from 'discord.js'

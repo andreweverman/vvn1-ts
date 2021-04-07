@@ -1,3 +1,16 @@
+/**
+ *
+ * Event handler for when a message is sent
+ *
+ * The main event we care about.
+ * This will run when a message is dm'd or sent in a guild it is in
+ * This will execute the command
+ * 
+ * @file   Message sent event handler
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
 import { Message, Collection, Client } from 'discord.js'
 import { commandCollection, commandCooldowns } from '../bot'
 import { NumberConstants } from '../util/constants'

@@ -1,14 +1,20 @@
+/**
+ * Helps the users use the bot.
+ * 
+ * Help alone will list commands.
+ * Help with a command name will show how to use that command.
+ * 
+ * @file   Helps user use bot
+ * @author Andrew Everman.
+ * @since  19.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, sendToChannel, sendUtil } from '../../util/messageUtil'
-import { Link, Guild, Config } from '../../db/controllers/guildController'
-import { ILink, ILinkDoc } from '../../db/models/guildModel'
-import { MessageEmbed } from 'discord.js'
-import { linkRegex, youtubeRegex } from '../../util/stringUtil'
-import { ConfigUtil } from '../../util/generalUtil'
+import { sendToChannel, sendUtil } from '../../util/messageUtil'
+import { Config } from '../../db/controllers/guildController'
 import { replyUtil } from '../../util/messageUtil'
-import { readyCheck } from '../../util/discordUtil'
-import path from 'path'
 import { NumberConstants } from '../../util/constants'
+
 const command: commandProperties = {
     name: 'help',
     description: 'List of all commmand or info about a specific one',

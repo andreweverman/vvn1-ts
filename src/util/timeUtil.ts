@@ -1,9 +1,17 @@
-import { CollectorFilter } from 'discord.js'
-import { escapeRegExp } from 'lodash'
+/**
+ *
+ * Utility for functions pertain to time zones
+ *
+ * Contains functions for dealing with time and all its issues
+ * 
+ * @file   Utility for time and time zones
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
 import moment, { Moment } from 'moment-timezone'
 import { Filter, AnyCollectorFilter, Prompt as MPrompt, MessageChannel } from './messageUtil'
 import { timeRegex, dateRegex } from './stringUtil'
-import { NumberConstants } from './constants'
 
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)

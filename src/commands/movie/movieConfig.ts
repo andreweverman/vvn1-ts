@@ -1,10 +1,16 @@
+/**
+ * Configures the movie settings in mongo
+ * 
+ * @file   Configures the movie settings in mongo
+ * @author Andrew Everman.
+ * @since  17.7.2020
+ */
+
 import { CommandParams, commandProperties } from '../../bot'
-import { Prompt, Filter, sendToChannel } from '../../util/messageUtil'
-import { Link, Guild, Config, Movie, Alias } from '../../db/controllers/guildController'
-import { ILink, ILinkDoc } from '../../db/models/guildModel'
-import { MessageEmbed, VoiceChannel } from 'discord.js'
-import { linkRegex, youtubeRegex, guildEmojiRegex } from '../../util/stringUtil'
-import { MovieUtil, ConfigUtil } from '../../util/generalUtil'
+import { Prompt, Filter } from '../../util/messageUtil'
+import { Link, Movie, Alias } from '../../db/controllers/guildController'
+import { VoiceChannel } from 'discord.js'
+import { youtubeRegex } from '../../util/stringUtil'
 import {
     movieCountdownName,
     movieTimeName,
@@ -87,7 +93,9 @@ const command: commandProperties = {
                     args: { name: 'Ready', db: readyEmojiName },
                 },
                 {
-                    name: `Edit default zip file password (currently${movieDoc.default_password!=''?`: ${movieDoc.default_password}`:' is not set'})`,
+                    name: `Edit default zip file password (currently${
+                        movieDoc.default_password != '' ? `: ${movieDoc.default_password}` : ' is not set'
+                    })`,
                     function: editDefaultPassword,
                 },
             ]

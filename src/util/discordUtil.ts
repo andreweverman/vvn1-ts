@@ -1,3 +1,17 @@
+/**
+ *
+ *  Utility for common discord API functionality
+ *
+ *  Defines the functionality for discord usage for:
+ *      Checking for valid users and channels for IDs     
+ *      Moving Users
+ *      Ready Checking
+ *
+ * @file   Defining common discord API functionality
+ * @author Andrew Everman.
+ * @since  15.10.2020
+ */
+
 import {
     Guild,
     GuildMember,
@@ -5,18 +19,16 @@ import {
     Client,
     User,
     VoiceChannel,
-    TextChannel,
     GuildChannelResolvable,
     MessageReaction,
     MessageEmbed,
 } from 'discord.js'
-import { Alias } from '../db/controllers/guildController'
 
-import { discordMemberID, discordUserAtRegex, validUserID } from './stringUtil'
+import { validUserID } from './stringUtil'
 import _ from 'lodash'
 import { AliasUtil } from './generalUtil'
-import { deleteMessage, MessageChannel, sendToChannel } from './messageUtil'
-import { NumberConstants,ready } from './constants'
+import { deleteMessage, MessageChannel } from './messageUtil'
+import { NumberConstants, ready } from './constants'
 export interface ValidUserOptions {
     mustBeBot?: boolean
     mustBeHuman?: boolean
@@ -126,7 +138,7 @@ export async function getVoiceChannelFromAliases(
     }
 }
 
-export async function readyCheck(guild:Guild,textChannel: MessageChannel, voiceChannel: VoiceChannel, waitTime = 1) {
+export async function readyCheck(guild: Guild, textChannel: MessageChannel, voiceChannel: VoiceChannel, waitTime = 1) {
     const ready_members: any[] = []
 
     const msg = new MessageEmbed()
@@ -138,13 +150,13 @@ export async function readyCheck(guild:Guild,textChannel: MessageChannel, voiceC
         return Promise.reject('Error sending')
     })
 
-    const filter = (reaction: MessageReaction, user: User) =>{
-        const notAlreaadyReady =!ready_members.find((x) => user.id == x) 
+    const filter = (reaction: MessageReaction, user: User) => {
+        const notAlreaadyReady = !ready_members.find((x) => user.id == x)
         const guildMember = guild.member(user.id)
-        const inVoice =  guildMember &&  guildMember.voice.channelID == voiceChannel.id
-        return notAlreaadyReady && inVoice==true
+        const inVoice = guildMember && guildMember.voice.channelID == voiceChannel.id
+        return notAlreaadyReady && inVoice == true
     }
-        // not in there already and in the voice channel we are checking
+    // not in there already and in the voice channel we are checking
 
     return new Promise((resolve, reject) => {
         const reaction_collector = instr_msg.createReactionCollector(filter, {
@@ -153,10 +165,10 @@ export async function readyCheck(guild:Guild,textChannel: MessageChannel, voiceC
         reaction_collector.on('collect', (reaction, user) => {
             ready_members.push(user)
 
-            let vc_people =extractVCMembers(voiceChannel)
+            let vc_people = extractVCMembers(voiceChannel)
             let vcIDs = vc_people.filter((x) => !x.user.bot).map((x) => x.id)
 
-            if (vcIDs.every((x:any) => ready_members.find((y) => x == y))) {
+            if (vcIDs.every((x: any) => ready_members.find((y) => x == y))) {
                 reaction_collector.stop(ready)
             }
         })

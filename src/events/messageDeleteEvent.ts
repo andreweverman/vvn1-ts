@@ -1,11 +1,16 @@
-import { Message, Collection, Client, Guild, MessageEmbed, TextChannel, PartialMessage } from 'discord.js'
-import { commandCollection, commandCooldowns } from '../bot'
-import { NumberConstants } from '../util/constants'
-import { deleteMessage, MessageChannel, replyUtil, sendToChannel } from '../util/messageUtil'
-import { Config, Link } from '../db/controllers/guildController'
-import playAudio from '../commands/indirect/playAudio'
-import { IConfigDoc } from '../db/models/guildModel'
-import { ConfigUtil } from '../util/generalUtil'
+/**
+ *
+ * Event handler for when a message is deleted
+ *
+ * Handles the autodelete functionality for prefixes and users
+ *
+ * @file   Message delete event handler
+ * @author Andrew Everman.
+ * @since  29.10.2020
+ */
+
+import { Message, TextChannel, PartialMessage,MessageEmbed} from 'discord.js'
+import { Config} from '../db/controllers/guildController'
 async function messageEvent(message: Message | PartialMessage): Promise<string> {
     if (!message.guild) return 'Not guild message'
     const guildID = message.guild.id

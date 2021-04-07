@@ -1,12 +1,18 @@
+/**
+ * Removes a movie download request
+ * 
+ * User gets promted for a request to delete
+ * Then we delete it
+ * 
+ * @file   Deletes download request
+ * @author Andrew Everman.
+ * @since  17.1.2021
+ */
+
+
 import { CommandParams, commandProperties } from '../../../bot'
-import * as lodash from 'lodash'
-import { TextChannel, Message, MessageEmbed } from 'discord.js'
 import { Movie, Guild } from '../../../db/controllers/guildController'
-import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
-import { extractActiveUsers, extractChannels } from '../../../util/discordUtil'
-import { NumberConstants } from '../../../util/constants'
-import { magnetRegex, validFileRegex } from '../../../util/stringUtil'
-import { off } from 'process'
+import { Prompt,  sendToChannel } from '../../../util/messageUtil'
 
 const command: commandProperties = {
     name: 'deletedownloadrequest',
