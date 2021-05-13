@@ -97,8 +97,8 @@ export interface IConfigDoc extends Document {
 }
 
 const ConfigSchema = new mongoose.Schema({
-    premium: { type: Boolean, default: false,required: true},
-    prefix: { type: String, default: '?',required: true },
+    premium: { type: Boolean, default: false, required: true },
+    prefix: { type: String, default: '?', required: true },
     autodelete: [AutoDeleteSchema],
     archive: {
         enabled: { type: Boolean, default: false },
@@ -162,6 +162,8 @@ export interface IReactionEmoji {
 export interface IReactionEmojiDoc extends IReactionEmoji, Document {}
 
 export interface IMovieDownloadElement {
+    statusUpdating: boolean
+    textChannelID?: string
     userID: string
     movieName: string
     torrentLink: string
@@ -184,6 +186,8 @@ export interface IMovieDownloadElement {
 export interface IMovieDownloadElementDoc extends IMovieDownloadElement, Document {}
 
 const MovieDownloadElementSchema = new mongoose.Schema({
+    statusUpdating: { type: Boolean, default: false },
+    textChannelID: { type: String },
     userID: { type: String, required: true },
     movieName: { type: String, required: true },
     torrentLink: { type: String, required: true },

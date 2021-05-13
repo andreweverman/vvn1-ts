@@ -30,11 +30,9 @@ const jobFunction = async function () {
                     true,
                     movie._id
                 )
-                const movies = await Movie.getMovies(guild.guildID, [movie.movieName])
 
-                const movieDoc = movies.movies[0]
 
-                Movie.moveToUploaded(guild.guildID, movie, movieDoc)
+                Movie.moveToUploaded(guild.guildID, movie)
             }
         })
     })

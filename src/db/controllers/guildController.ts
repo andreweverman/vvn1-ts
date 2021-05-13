@@ -46,6 +46,7 @@ import { stringMatch } from '../../util/stringUtil'
 import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/generalUtil'
 import { Schema } from 'mongoose'
+import downloadMovie from '../../commands/movie/download/downloadMovie'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -1327,6 +1328,8 @@ export namespace Movie {
         if (!zipName.endsWith('.zip')) validZipName += '.zip'
 
         const downloadObj: IMovieDownloadElement = {
+            statusUpdating: false,
+            textChannelID: textChannel?.id,
             userID: userID,
             movieName: movieName,
             torrentLink: torrentLink,
@@ -1372,9 +1375,13 @@ export namespace Movie {
         return null
     }
 
+    interface downloadMovieJob {
+        guildID: string
+        downloads: IMovieDownloadElementDoc
+    }
     export async function getDownloadedMovies() {
         const guildDocs = await Guilds.find({
-            $and: [{ premium: true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
+            $and: [{ 'config.premium': true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
         })
 
         if (guildDocs.length > 0) {
@@ -1390,7 +1397,39 @@ export namespace Movie {
         }
     }
 
-    export async function moveToUploaded(guildID: string, movie: IMovieDownloadElementDoc, movieDoc: IMovieDoc) {
+    export async function getDownloadingMovies() {
+        const guildDocs = await Guilds.find({
+            $and: [{ 'config.premium': true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
+        })
+        let resArr: downloadMovieJob[] = []
+        if (guildDocs.length > 0) {
+            guildDocs.forEach((guildDoc) => {
+                const downloadQueue = guildDoc.movie.downloads.downloadQueue
+                if (downloadQueue[0].uploaded == false)
+                    resArr.push({
+                        guildID: guildDoc.guild_id,
+                        downloads: downloadQueue[0],
+                    })
+            })
+        }
+        return resArr
+    }
+
+    export async function updateStatusUpdating(guildID: string, movie: IMovieDownloadElementDoc,newVal=true) {
+        const response = await Guilds.updateOne(
+            { guild_id: guildID, 'movie.downloads.downloadQueue._id': movie._id },
+            {
+                $set: {
+                    //@ts-ignore
+                    'movie.downloads.downloadQueue.$.statusUpdating': newVal,
+                },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
+    }
+
+    export async function moveToUploaded(guildID: string, movie: IMovieDownloadElementDoc) {
         // movie.movieID = movieDoc._id
         const response = await Guilds.updateOne(
             { guild_id: guildID },

@@ -3,7 +3,7 @@
  * Utility for functions pertain to time zones
  *
  * Contains functions for dealing with time and all its issues
- * 
+ *
  * @file   Utility for time and time zones
  * @author Andrew Everman.
  * @since  15.10.2020
@@ -124,9 +124,8 @@ export function getCurrentTimeForTZ(timeZoneName: string): Moment {
 }
 
 export function getTimeStrFromSeconds(inputSeconds: number): string {
-
     const days = Math.floor(inputSeconds / (3600 * 24))
-    const hours= Math.floor((inputSeconds % (3600 * 24)) / 3600)
+    const hours = Math.floor((inputSeconds % (3600 * 24)) / 3600)
     const minutes = Math.floor((inputSeconds % 3600) / 60)
     const seconds = Math.floor(inputSeconds % 60)
     const stringArr: string[] = []
@@ -207,4 +206,8 @@ export namespace Prompt {
             MPrompt.handleGetSameUserInputError(error)
         }
     }
+}
+
+export function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
 }

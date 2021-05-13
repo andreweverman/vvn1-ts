@@ -83,14 +83,7 @@ const command: commandProperties = {
                 if (firstRequestedMovie?.movieName == movieName) {
                     // this means we will update send a messages about the status of the download
 
-                    const stcResponse = await sendToChannel(
-                        textChannel,
-                        'First in download queue. Will update download status here...',
-                        false
-                    )
-
-                    const statusMessage = stcResponse.messages[0]
-                    updateStatus(statusMessage, firstRequestedMovie._id)
+                 
                 }
 
                 async function updateStatus(statusMessage: Message, movieID: Schema.Types.ObjectId) {
