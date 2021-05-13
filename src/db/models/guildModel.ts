@@ -3,7 +3,7 @@
  * Mongo model for the guild collection
  *
  * The guild document as well as its subdocuments are defined here
- * 
+ *
  *
  * @file   Mongo guild collection model
  * @author Andrew Everman.
@@ -12,12 +12,7 @@
 
 import mongoose, { Schema, Document, ObjectId } from 'mongoose'
 import { Config, Link } from '../controllers/guildController'
-import {
-    movieCountdownName,
-    movieTimeName,
-    readyEmojiName,
-    willWatchEmojiName,
-} from '../../util/constants'
+import { movieCountdownName, movieTimeName, readyEmojiName, willWatchEmojiName } from '../../util/constants'
 export interface ILink {
     names: string[]
     link: string
@@ -94,6 +89,7 @@ export interface IConfig {
 }
 
 export interface IConfigDoc extends Document {
+    premium: boolean
     prefix: string
     autodelete: IAutoDeleteElementDoc[]
     archive: IArchiveDoc
@@ -101,7 +97,8 @@ export interface IConfigDoc extends Document {
 }
 
 const ConfigSchema = new mongoose.Schema({
-    prefix: { type: String, default: '?' },
+    premium: { type: Boolean, default: false,required: true},
+    prefix: { type: String, default: '?',required: true },
     autodelete: [AutoDeleteSchema],
     archive: {
         enabled: { type: Boolean, default: false },
@@ -122,7 +119,7 @@ export interface IMovie {
     want_to_watch: string[]
     mega: boolean
     megaID?: ObjectId
-    zipName?:string
+    zipName?: string
 }
 
 export interface IMovieDoc extends IMovie, Document {}
@@ -135,7 +132,7 @@ const IndividualMovieSchema = new mongoose.Schema({
     want_to_watch: { type: Array, default: [] },
     mega: { type: Boolean, required: true, default: false },
     megaID: { type: mongoose.Schema.Types.ObjectId },
-    zipName: { type: String, },
+    zipName: { type: String },
 })
 
 export interface IMovieRequest {
@@ -215,7 +212,7 @@ export interface IMovieDownloadContainer {
 export interface IMovieDownloadContainerDoc extends IMovieDownloadContainer, Document {
     downloadQueue: IMovieDownloadElementDoc[]
     uploadedQueue: IMovieDownloadElementDoc[]
-    deleteQueue:string[]
+    deleteQueue: string[]
 }
 
 const MovieDownloadContainerSchema = new mongoose.Schema({
@@ -279,38 +276,36 @@ const MovieSchema = new mongoose.Schema({
     downloads: MovieDownloadContainerSchema,
 })
 
-interface IPlayer{
-    lastStreamingTime:Date
-    lastChannelID:string
+interface IPlayer {
+    lastStreamingTime: Date
+    lastChannelID: string
 }
 
-interface IPlayerDoc extends IPlayer,Document {}
+interface IPlayerDoc extends IPlayer, Document {}
 
 const PlayerSchema = new mongoose.Schema({
-    lastStreamingTime: {type:Date, required: true,default: new Date()},
-    lastChannelID:{type:String}
+    lastStreamingTime: { type: Date, required: true, default: new Date() },
+    lastChannelID: { type: String },
 })
 
 export interface IGuild {
     guild_id: string
-    premium: boolean
     config: IConfigDoc
     aliases: IAliasDoc[]
     movie: IMovieContainerDoc
-    links: ILinkDoc[],
-    player:IPlayerDoc
+    links: ILinkDoc[]
+    player: IPlayerDoc
 }
 
 export interface IGuildDoc extends IGuild, Document {}
 
 const GuildSchema = new mongoose.Schema({
     guild_id: { type: String, unique: true, index: true },
-    premium: { type: Boolean, required: true, default: false },
     config: { type: ConfigSchema, default: {} },
     aliases: [AliasSchema],
     movie: { type: MovieSchema, default: {} },
     links: [LinkSchema],
-    player: PlayerSchema
+    player: PlayerSchema,
 })
 
 export default mongoose.model<IGuildDoc>('Guild', GuildSchema)

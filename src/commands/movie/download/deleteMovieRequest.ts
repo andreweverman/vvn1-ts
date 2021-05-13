@@ -28,7 +28,7 @@ const command: commandProperties = {
 
             const guildDoc = await Guild.getGuild(guildID)
 
-            if (guildDoc.premium) {
+            if (guildDoc.config.premium) {
                 const offset = 1
                 const movies = await Movie.getUploadedMovies(guildID)
                 const msg = movies.map((x, i) => `${i + offset}. ${x.movieName}`).join('\n')

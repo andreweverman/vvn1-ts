@@ -480,6 +480,8 @@ const command: commandProperties = {
                     const movieDoc = await Movie.getMovie(guildID)
                     if (movieDoc == undefined) return
 
+                    const configDoc = await Config.getGuildConfig(guildID)
+
                     const movieTimeObj = movieDoc.sounds.find((x) => x.name == movieTimeName)
                     const movieTimeEnabled = movieTimeObj && movieTimeObj.enabled
 
@@ -488,7 +490,7 @@ const command: commandProperties = {
 
                     if (voiceChannel && movieTimeEnabled) {
                         const movie_time = await Link.lookupLink(guildID, movieTimeName)
-                        if (movie_time && movie_time.type == 'clip') playAudio(voiceChannel, movie_time, textChannel)
+                        if (movie_time && movie_time.type == 'clip') playAudio(configDoc,voiceChannel, movie_time, textChannel)
                     }
 
                     await readyCheck(e.message.guild!, textChannel, voiceChannel, 15).catch((err) => console.error(err))
@@ -496,7 +498,7 @@ const command: commandProperties = {
                     if (voiceChannel && startCountDownEnabled) {
                         const start_countdown = await Link.lookupLink(guildID, movieCountdownName)
                         if (start_countdown && start_countdown.type == 'clip')
-                            playAudio(voiceChannel, start_countdown, textChannel)
+                            playAudio(configDoc,voiceChannel, start_countdown, textChannel)
                     }
 
                     if (movieRoleAt) deleteMessage(movieRoleAt, 0)

@@ -1,18 +1,17 @@
 /**
  * Removes a movie download request
- * 
+ *
  * User gets promted for a request to delete
  * Then we delete it
- * 
+ *
  * @file   Deletes download request
  * @author Andrew Everman.
  * @since  17.1.2021
  */
 
-
 import { CommandParams, commandProperties } from '../../../bot'
 import { Movie, Guild } from '../../../db/controllers/guildController'
-import { Prompt,  sendToChannel } from '../../../util/messageUtil'
+import { Prompt, sendToChannel } from '../../../util/messageUtil'
 
 const command: commandProperties = {
     name: 'deletedownloadrequest',
@@ -29,7 +28,7 @@ const command: commandProperties = {
 
             const guildDoc = await Guild.getGuild(guildID)
 
-            if (guildDoc.premium) {
+            if (guildDoc.config.premium) {
                 const offset = 1
                 const movies = await Movie.getUploadedMovies(guildID)
                 const msg = movies.map((x, i) => `${i + offset}. ${x.movieName}`).join('\n')
@@ -40,7 +39,7 @@ const command: commandProperties = {
 
                 if (response.arrayElements) {
                     response.arrayElements.forEach((movie) => {
-                        // Movie.deleteMovie(guildID,movie)                        
+                        // Movie.deleteMovie(guildID,movie)
                     })
                 } else {
                     sendToChannel(textChannel, 'Error on my end')

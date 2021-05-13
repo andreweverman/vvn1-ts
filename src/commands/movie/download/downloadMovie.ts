@@ -35,7 +35,7 @@ const command: commandProperties = {
 
             const guildDoc = await Guild.getGuild(guildID)
 
-            if (guildDoc.premium) {
+            if (guildDoc.config.premium) {
                 const movieNameMessage = await Prompt.getSameUserInput(
                     userID,
                     textChannel,

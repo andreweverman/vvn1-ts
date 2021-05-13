@@ -11,17 +11,23 @@
  * @since  16.7.2020
  */
 
-import { VoiceChannel, StreamDispatcher } from 'discord.js'
+import { VoiceChannel } from 'discord.js'
 import { ILinkDoc } from '../../db/models/guildModel'
 import { Player } from '../../db/controllers/guildController'
 import { sendToChannel, MessageChannel } from '../../util/messageUtil'
 import ytdl from 'ytdl-core'
 import { NumberConstants } from '../../util/constants'
-import { getClipFiles, clipsPath } from '../../util/fiileUtil'
+import { getClipFiles, clipsPath, ensureDirExists } from '../../util/fiileUtil'
 import fs from 'fs'
 import { Readable } from 'stream'
+import { IConfigDoc } from '../../db/models/guildModel'
 
-const execute = async function (voiceChannel: VoiceChannel, clip: ILinkDoc, textChannel: MessageChannel) {
+const execute = async function (
+    configDoc: IConfigDoc,
+    voiceChannel: VoiceChannel,
+    clip: ILinkDoc,
+    textChannel: MessageChannel
+) {
     try {
         const guildID = voiceChannel.guild.id
         if (!clip) {
@@ -33,22 +39,23 @@ const execute = async function (voiceChannel: VoiceChannel, clip: ILinkDoc, text
 
         let playVal: Readable | string = ''
 
-        // todo actually get if they are premium or not
-        const premium = true
-        if (premium) {
+        const cacheClip = configDoc.premium && process.env.CLIP_CACHE == '1'
+        if (cacheClip) {
             const dlClip = findClip(clip)
             if (dlClip) {
                 playVal = dlClip
             }
         }
         if (playVal == '') {
+            /*
+            I don't know if with the way that the discord thing is setup if I am able to reuse the stream in two spots.
+            I don't think I am so I will make two streams for this one instance.
+            Then it will be reused anyways to it is all good
+            */
             playVal = ytdl(clip.link, { filter: 'audioonly' })
-            let piper = ytdl(clip.link, { filter: 'audioonly' })
-
-            if (premium) {
-                if (!fs.existsSync(clipsPath)) {
-                    fs.mkdirSync(clipsPath)
-                }
+            const piper = ytdl(clip.link, { filter: 'audioonly' })
+            if (cacheClip) {
+                ensureDirExists(clipsPath)
                 let filePath = `${clipsPath}/${justVEquals(clip.link)}.mp3`
                 piper.pipe(fs.createWriteStream(filePath))
             }

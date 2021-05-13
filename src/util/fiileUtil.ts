@@ -13,7 +13,6 @@ import path from 'path'
 import walk from 'walk'
 import fs from 'fs'
 
-
 const dev = process.env.NODE_ENV == 'dev' ? true : false
 const commandsPath = `./${!dev ? 'dist' : 'src'}/commands`
 const jobsPath = `./${!dev ? 'dist' : 'src'}/jobs`
@@ -55,20 +54,18 @@ export function getJobFiles(): Array<string> | null {
     return null
 }
 
-interface findFile{
-    path:string, 
-    end:string
+interface findFile {
+    path: string
+    end: string
 }
 export function getClipFiles(): Array<findFile> {
-    if (!fs.existsSync(clipsPath)) {
-        fs.mkdirSync(clipsPath)
-    }
+    ensureDirExists(clipsPath)
     let files: Array<findFile> = []
     let options = {
         listeners: {
             file: function (root: string, stat: any, next: Function) {
                 // Add this file to the list of files
-                files.push({path:root + '/' + stat.name, end:stat.name})
+                files.push({ path: root + '/' + stat.name, end: stat.name })
                 next()
             },
         },
@@ -77,4 +74,10 @@ export function getClipFiles(): Array<findFile> {
     const res: Array<findFile> = files.filter((file) => file.end.endsWith('.mp3'))
 
     return res
+}
+
+export function ensureDirExists(dirPath:string) {
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath)
+    }
 }
