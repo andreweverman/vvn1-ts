@@ -8,3 +8,4 @@ node_modules/
 globalConfig.json
 .env
 dist/
+*.mp3
