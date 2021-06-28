@@ -46,7 +46,8 @@ const command: commandProperties = {
                 userID,
                 textChannel,
                 watchListArray,
-                message,
+                (x: IMovieDoc) => `${x.name}`,
+                'Select a watch list item to delete',
                 { multiple: true }
             )
 

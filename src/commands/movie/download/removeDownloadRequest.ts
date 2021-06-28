@@ -31,11 +31,17 @@ const command: commandProperties = {
             if (guildDoc.config.premium) {
                 const offset = 1
                 const movies = await Movie.getUploadedMovies(guildID)
-                const msg = movies.map((x, i) => `${i + offset}. ${x.movieName}`).join('\n')
-                const response = await Prompt.arraySelect(userID, textChannel, movies, msg, {
-                    customOffset: offset,
-                    multiple: true,
-                })
+                const response = await Prompt.arraySelect(
+                    userID,
+                    textChannel,
+                    movies,
+                    (x, i) => `${i + offset}. ${x.movieName}`,
+                    'Select a request to delete',
+                    {
+                        customOffset: offset,
+                        multiple: true,
+                    }
+                )
 
                 if (response.arrayElements) {
                     response.arrayElements.forEach((movie) => {

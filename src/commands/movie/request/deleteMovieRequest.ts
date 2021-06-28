@@ -1,6 +1,6 @@
 /**
  * Deletes a movie request
- * 
+ *
  * Delete any of the requests made by the user for the specific guild
  *
  * @file   Deletes movie request
@@ -11,6 +11,7 @@
 import { CommandParams, commandProperties } from '../../../bot'
 import { Prompt } from '../../../util/messageUtil'
 import { Movie } from '../../../db/controllers/guildController'
+import { IMovieRequestDoc } from '../../../db/models/guildModel'
 
 const command: commandProperties = {
     name: 'deletemovierequest',
@@ -29,9 +30,16 @@ const command: commandProperties = {
 
             const { requestedMovies, message } = await Movie.getUserRequestedMovies(guildID, userID)
 
-            const m = await Prompt.arraySelect(userID, textChannel, requestedMovies, message, {
-                multiple: false,
-            })
+            const m = await Prompt.arraySelect(
+                userID,
+                textChannel,
+                requestedMovies,
+                (x: IMovieRequestDoc) => `${x.name}`,
+                'Select a request to delete',
+                {
+                    multiple: false,
+                }
+            )
 
             if (m.arrayElement) {
                 Movie.deleteRequestedMovie(guildID, userID, m.arrayElement, textChannel)

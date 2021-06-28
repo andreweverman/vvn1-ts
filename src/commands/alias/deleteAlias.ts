@@ -9,7 +9,7 @@
  * @since  16.7.2020
  */
 import { CommandParams, commandProperties } from '../../bot'
-import {  Message, MessageEmbed } from 'discord.js'
+import { Message, MessageEmbed } from 'discord.js'
 import { Alias } from '../../db/controllers/guildController'
 import { Filter, Prompt, sendToChannel } from '../../util/messageUtil'
 import { IAliasDoc } from '../../db/models/guildModel'
@@ -84,7 +84,7 @@ const command: commandProperties = {
                             true
                         )
 
-                        Prompt.arraySelect(userID, textChannel, aliases, msg, {
+                        Prompt.arraySelect(userID, textChannel, aliases, (x, i) => `${i + offset}: ${x.name}`,'Select a movie to delete', {
                             customOffset: offset,
                             multiple: true,
                         })

@@ -12,6 +12,7 @@
 
 import { BatchJob } from './runner'
 import { Movie } from '../db/controllers/guildController'
+import { IMovieDownloadElementDoc } from '../db/models/guildModel'
 
 const rule = '* * * * *'
 const jobFunction = async function () {
@@ -19,6 +20,8 @@ const jobFunction = async function () {
 
     downloadedMoviesArr.forEach((guild) => {
         guild.downloads.forEach(async (movie) => {
+            // being weird Idk
+            // movie = movie as IMovieDownloadElementDoc
             if (movie.uploadLink) {
                 await Movie.addMovie(
                     guild.guildID,

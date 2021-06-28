@@ -26,13 +26,7 @@ import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/m
 import { extractActiveUsers, extractVCMembers } from './discordUtil'
 import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from './stringUtil'
 import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from './messageUtil'
-import {
-    IConfigDoc,
-    ILinkDoc,
-    IAutoDeleteElement,
-    IAutoDeleteSpecified,
-    IMovieDoc,
-} from '../db/models/guildModel'
+import { IConfigDoc, ILinkDoc, IAutoDeleteElement, IAutoDeleteSpecified, IMovieDoc } from '../db/models/guildModel'
 import moment from 'moment-timezone'
 import axios from 'axios'
 import cheerio from 'cheerio'
@@ -203,11 +197,17 @@ export namespace LinkUtil {
 
                 const offset = 1
                 const currentNames = args.currentLink.names
-                const prompt = `Current names are: ${currentNames.map((x, i) => `\n${offset + i}: ${x}`)}`
-                const names = await MPrompt.arraySelect(args.userID, args.textChannel, args.currentLink.names, prompt, {
-                    multiple: true,
-                    customOffset: offset,
-                })
+                const names = await MPrompt.arraySelect(
+                    args.userID,
+                    args.textChannel,
+                    args.currentLink.names,
+                    (x, i) => `\n${offset + i}: ${x}`,
+                    'Select a name to delete',
+                    {
+                        multiple: true,
+                        customOffset: offset,
+                    }
+                )
                 if (!Array.isArray(names)) {
                     throw new Error('Expected an array')
                 } else {
@@ -249,11 +249,18 @@ export namespace MovieUtil {
             let extraStringOptions = []
             if (voteAllowed) extraStringOptions.push(vote)
             const { movies, message } = await Movie.getMovies(guildID, [], true)
-            const movie = await MPrompt.arraySelect(userID, textChannel, movies, message, {
-                multiple: multiple,
-                customOffset: 1,
-                extraStringOptions: extraStringOptions,
-            })
+            const movie = await MPrompt.arraySelect(
+                userID,
+                textChannel,
+                movies,
+                (x: IMovieDoc) => `${x.name}`,
+                'Select a movie',
+                {
+                    multiple: multiple,
+                    customOffset: 1,
+                    extraStringOptions: extraStringOptions,
+                }
+            )
 
             return movie
         } catch (error) {
@@ -287,9 +294,7 @@ export namespace MovieUtil {
                     const $ = cheerio.load(html)
 
                     const liResults = $('ul.results li div[data-film-link]')
-                    liResults.length < 1
-                        ? resolve(null)
-                        : resolve(urlBase + liResults.first().attr('data-film-link'))
+                    liResults.length < 1 ? resolve(null) : resolve(urlBase + liResults.first().attr('data-film-link'))
                 })
                 .catch((err) => {
                     resolve(null)
@@ -465,10 +470,17 @@ export namespace ConfigUtil {
 
             const countryPrompt = `Select a country code:\n${countries.map((x, i) => `${i + offset}. ${x}`).join('\n')}`
 
-            const countryMessage = await MPrompt.arraySelect(args.userID, args.textChannel, countries, countryPrompt, {
-                multiple: false,
-                customOffset: offset,
-            })
+            const countryMessage = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                countries,
+                (x, i) => `${i + offset}. ${x}`,
+                'Select a new time zone',
+                {
+                    multiple: false,
+                    customOffset: offset,
+                }
+            )
 
             if (!countryMessage.arrayElement) {
                 throw new Error('Got an array when I should not have from arraySelect')
@@ -477,14 +489,18 @@ export namespace ConfigUtil {
             const country = countryMessage.arrayElement
 
             const arr = moment.tz.zonesForCountry(country, true)
-            const message = `Select a timezone:\n${arr
-                .map((x, i) => `${i + offset}: ${x.name}, ${x.offset}`)
-                .join('\n')}`
 
-            const m = await MPrompt.arraySelect(args.userID, args.textChannel, arr, message, {
-                multiple: false,
-                customOffset: offset,
-            })
+            const m = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                arr,
+                (x, i) => `${i + offset}: ${x.name}, ${x.offset}`,
+                'Select a new time zone',
+                {
+                    multiple: false,
+                    customOffset: offset,
+                }
+            )
 
             if (!m.arrayElement) {
                 throw new Error('Got an array when I should not have from arraySelect')
@@ -604,10 +620,22 @@ export namespace ConfigUtil {
                         }`
                 )
                 .join('\n')}`
-            const element = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
-                multiple: false,
-                customOffset: offset,
-            })
+            const element = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                typedAutoDeleteArr,
+                (x, i) =>
+                    `${i + offset}. ${
+                        args.autoDeleteType == Config.AutoDeleteType.user
+                            ? args.guild.members.resolve(x.matchOn)?.displayName
+                            : x.matchOn
+                    }`,
+                'Select auto delete member',
+                {
+                    multiple: false,
+                    customOffset: offset,
+                }
+            )
 
             if (element.arrayElement) {
                 return element.arrayElement
@@ -822,14 +850,18 @@ export namespace ConfigUtil {
             const arr = elementDoc.specified
 
             const offset = 1
-            const prompt = arr
-                .map((x, i) => `${i + offset}. ${x.startsWith} after ${x.timeToDelete} seconds`)
-                .join('\n')
 
-            const specifiedObj = await MPrompt.arraySelect(args.userID, args.textChannel, arr, prompt, {
-                customOffset: 1,
-                multiple: false,
-            })
+            const specifiedObj = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                arr,
+                (x, i) => `${i + offset}. ${x.startsWith} after ${x.timeToDelete} seconds`,
+                'Select element to delete',
+                {
+                    customOffset: 1,
+                    multiple: false,
+                }
+            )
 
             if (!specifiedObj.arrayElement) {
                 return undefined
@@ -997,14 +1029,18 @@ export namespace ConfigUtil {
 
             const allowList = elementDoc.allowList
             const offset = 1
-            const prompt =
-                'Enter the ones you want to remove from the list (can enter multiple):\n' +
-                allowList.map((x, i) => `${i + offset}. ${x}\n`)
 
-            const deleteNames = await MPrompt.arraySelect(args.userID, args.textChannel, allowList, prompt, {
-                multiple: true,
-                customOffset: 1,
-            })
+            const deleteNames = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                allowList,
+                (x, i) => `${i + offset}. ${x}\n`,
+                'Select element to remove',
+                {
+                    multiple: true,
+                    customOffset: 1,
+                }
+            )
 
             if (!Array.isArray(deleteNames)) {
                 return undefined

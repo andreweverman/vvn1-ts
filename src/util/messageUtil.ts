@@ -3,8 +3,8 @@
  * Utility for all Discord message related thigns
  *
  * Defines the way that we handle all our IO with the user
- * Prompt is used in most of the functions 
- * 
+ * Prompt is used in most of the functions
+ *
  * @file   Utility for Discord message things
  * @author Andrew Everman.
  * @since  15.10.2020
@@ -274,6 +274,8 @@ export namespace Prompt {
     export interface GSUIOptions {
         extraStringOptions?: string[]
         time?: number
+        pagination?: boolean
+        paginationEmbeds?: MessageEmbed[]
     }
     // want to return the message
     //todo make the userID an optional arry
@@ -295,6 +297,10 @@ export namespace Prompt {
                     const messageCollector = textChannel.createMessageCollector(Filter.sameUserFilter(userID), {
                         time: time,
                     })
+
+                    if (options?.pagination && options?.paginationEmbeds) {
+                        setPaginationReaction(promptMessage, options.paginationEmbeds, userID)
+                    }
 
                     messageCollector.on('collect', async (m: Message) => {
                         // valid response. need to further filter and respond accordingly
@@ -484,10 +490,12 @@ export namespace Prompt {
     }
 
     export interface arraySelectOptions {
+        justShow?: boolean
         customOffset?: number
         time?: number
         multiple?: boolean
         extraStringOptions?: string[]
+        paginationOptions?: arrayToPaginatedArrayOptions
     }
     export interface ArraySelectResponse<T> {
         arrayElement?: T
@@ -498,24 +506,32 @@ export namespace Prompt {
         userID: string,
         textChannel: MessageChannel,
         array: Array<T>,
-        message: MessageEmbed | string,
+        mapFunction: (t: any, i?: any) => string,
+        title:string,
         options?: arraySelectOptions
     ): Promise<ArraySelectResponse<T>> {
         const time = options?.time ? options.time : 15 * NumberConstants.mins
         const offset = options?.customOffset ? options.customOffset : 1
-        const multiple = options?.multiple ? true : false
+        const multiple = options?.multiple ? options.multiple : false
+        const justShow = options?.justShow ? options.justShow : false
 
         return new Promise(async (resolve, reject) => {
             try {
                 const arraySelectResponse: ArraySelectResponse<T> = {}
+                const embeds = arrayToPaginatedArray(array, title, mapFunction, options?.paginationOptions)
                 const userSelectionMsg = await getSameUserInput(
                     userID,
                     textChannel,
-                    message,
+                    embeds[0],
                     Filter.numberRangeFilter(offset, array.length, {
                         multipleInputAllowed: multiple,
                     }),
-                    { time: time, extraStringOptions: options?.extraStringOptions }
+                    {
+                        time: time,
+                        extraStringOptions: options?.extraStringOptions,
+                        pagination: true,
+                        paginationEmbeds: embeds,
+                    }
                 )
 
                 if (multiple) {
@@ -550,5 +566,71 @@ export namespace Prompt {
                 handleGetSameUserInputError(error, reject)
             }
         })
+    }
+
+    export async function setPaginationReaction(message: Message, pages: MessageEmbed[], authorID: string) {
+        let page = 0
+        const emojiList = ['⏪', '⏩']
+
+        message.edit(pages[page].setFooter(`Page ${page + 1} / ${pages.length}`))
+        for (const emoji of emojiList) message.react(emoji)
+        const reactionCollector = message.createReactionCollector(
+            (reaction, user) => emojiList.includes(reaction.emoji.name) && !user.bot,
+            { time: 5 * NumberConstants.mins }
+        )
+        reactionCollector.on('collect', (reaction) => {
+            reaction.users.remove(authorID)
+            switch (reaction.emoji.name) {
+                case emojiList[0]:
+                    page = page > 0 ? --page : pages.length - 1
+                    break
+                case emojiList[1]:
+                    page = page + 1 < pages.length ? ++page : 0
+                    break
+                default:
+                    break
+            }
+            message.edit(pages[page].setFooter(`Page ${page + 1} / ${pages.length}`))
+        })
+        reactionCollector.on('end', () => {
+            if (!message.deleted) {
+                message.reactions.removeAll()
+            }
+        })
+    }
+
+    export interface arrayToPaginatedArrayOptions {
+        numbered?: boolean
+        pageSize?: number
+        offset?: number
+        chunk?: number
+    }
+
+    export function arrayToPaginatedArray(
+        arr: any[],
+        title: string,
+        mapFunction: (t: any) => string,
+        options?: arrayToPaginatedArrayOptions
+    ): MessageEmbed[] {
+        const embeds: MessageEmbed[] = []
+        const offset = options?.offset || 1
+        const chunk = options?.chunk || 15
+
+        let i: number, j: number
+        for (i = 0, j = arr.length; i < j; i += chunk) {
+            const linkChunk = arr.slice(i, i + chunk)
+            const linkMessage = linkChunk.map((x, k) => {
+                return `${'**' + (i + k + offset) + '**. '}${mapFunction(x)}`
+            })
+
+            const field = {
+                name: title,
+                value: linkMessage,
+                inline: true,
+            }
+            const message = new MessageEmbed().addFields(field)
+            embeds.push(message)
+        }
+        return embeds
     }
 }

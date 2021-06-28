@@ -1,9 +1,9 @@
 /**
  * Deltes a downloaded movie
- * 
- * Deletes a downloaded movie in the moviedownload.py and in the 
+ *
+ * Deletes a downloaded movie in the moviedownload.py and in the
  * movie list
- * 
+ *
  * @file   Deletes downloaded movie
  * @author Andrew Everman.
  * @since  17.1.2021
@@ -31,11 +31,17 @@ const command: commandProperties = {
             if (guildDoc.config.premium) {
                 const offset = 1
                 const movies = await Movie.getUploadedMovies(guildID)
-                const msg = movies.map((x, i) => `${i + offset}. ${x.movieName}`).join('\n')
-                const response = await Prompt.arraySelect(userID, textChannel, movies, msg, {
-                    customOffset: offset,
-                    multiple: true,
-                })
+                const response = await Prompt.arraySelect(
+                    userID,
+                    textChannel,
+                    movies,
+                    (x, i) => `${i + offset}. ${x.movieName}`,
+                    'Select a movie request to delete',
+                    {
+                        customOffset: offset,
+                        multiple: true,
+                    }
+                )
 
                 if (response.arrayElements) {
                     response.arrayElements.forEach(async (movie) => {

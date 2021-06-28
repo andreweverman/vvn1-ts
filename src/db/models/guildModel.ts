@@ -13,6 +13,7 @@
 import mongoose, { Schema, Document, ObjectId } from 'mongoose'
 import { Config, Link } from '../controllers/guildController'
 import { movieCountdownName, movieTimeName, readyEmojiName, willWatchEmojiName } from '../../util/constants'
+import { findLastKey } from 'lodash'
 export interface ILink {
     names: string[]
     link: string
@@ -225,6 +226,39 @@ const MovieDownloadContainerSchema = new mongoose.Schema({
     deleteQueue: { type: [String], required: true, default: [] },
 })
 
+export interface IDownloadedMovie {
+    path: string
+    name: string
+}
+
+export interface IDownloadedMovieDoc extends IDownloadedMovie, Document {}
+
+const DownloadedMovieSchema = new mongoose.Schema({
+    path: { type: String, required: true },
+    name: { type: String, required: true },
+})
+
+export interface IMovieList {
+    movies: IDownloadedMovie[]
+    last_updated: Date
+    awaiting_update: boolean
+    uploadQueue: IDownloadedMovie[]
+}
+
+export interface IMovieListDoc extends IMovieList, Document {
+    movies: IDownloadedMovieDoc[]
+    last_updated: Date
+    awaiting_update: boolean
+    uploadQueue: IDownloadedMovieDoc[]
+}
+
+const MovieListSchema = new mongoose.Schema({
+    movies: { type: [DownloadedMovieSchema], default: [], required: true },
+    awaiting_update: { type: Boolean, default: true, required: true },
+    last_updated: { type: Date, required: true, default: new Date() },
+    uploadQueue: { type: [DownloadedMovieSchema], default: [], required: true },
+})
+
 export interface IMovieContainer {
     default_password: string
     sounds: ISound[]
@@ -232,8 +266,8 @@ export interface IMovieContainer {
     movies: IMovie[]
     requests: IMovieRequest[]
     downloads: IMovieDownloadContainer[]
+    movie_list: IMovieList
 }
-
 export interface IMovieContainerDoc extends Document {
     default_password: string
     sounds: ISoundDoc[]
@@ -241,6 +275,7 @@ export interface IMovieContainerDoc extends Document {
     movies: IMovieDoc[]
     requests: IMovieRequestDoc[]
     downloads: IMovieDownloadContainerDoc
+    movie_list: IMovieListDoc
 }
 
 const MovieSchema = new mongoose.Schema({
@@ -278,6 +313,7 @@ const MovieSchema = new mongoose.Schema({
     movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
     downloads: MovieDownloadContainerSchema,
+    movie_list: MovieListSchema,
 })
 
 interface IPlayer {

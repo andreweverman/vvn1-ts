@@ -28,6 +28,9 @@ import Guilds, {
     IMovieRequestDoc,
     IMovieDownloadElement,
     IMovieDownloadElementDoc,
+    IDownloadedMovie,
+    IDownloadedMovieDoc,
+    IMovieListDoc,
 } from '../models/guildModel'
 import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
 import {
@@ -47,6 +50,7 @@ import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/generalUtil'
 import { Schema } from 'mongoose'
 import downloadMovie from '../../commands/movie/download/downloadMovie'
+import { delay } from '../../util/timeUtil'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -487,7 +491,8 @@ export namespace Link {
                 return undefined
             }
 
-            const link = await Prompt.arraySelect(userID, textChannel, links, message, {
+            const mapFunction = (x: ILinkDoc) => `[${x.names.join(', ')}](${x.link} 'Link')`
+            const link = await Prompt.arraySelect(userID, textChannel, links, mapFunction, 'Select a link',{
                 multiple: multiple,
                 customOffset: offset,
             })
@@ -1415,7 +1420,7 @@ export namespace Movie {
         return resArr
     }
 
-    export async function updateStatusUpdating(guildID: string, movie: IMovieDownloadElementDoc,newVal=true) {
+    export async function updateStatusUpdating(guildID: string, movie: IMovieDownloadElementDoc, newVal = true) {
         const response = await Guilds.updateOne(
             { guild_id: guildID, 'movie.downloads.downloadQueue._id': movie._id },
             {
@@ -1468,6 +1473,51 @@ export namespace Movie {
     export async function getUploadedMovies(guildID: string) {
         const downloadDoc = await getDownloadMovieContainer(guildID)
         return downloadDoc.uploadedQueue
+    }
+
+    export async function selectMovieListUpload(guildID: string, uploadedMovie: IDownloadedMovieDoc) {
+        const guildDoc = await Guild.getGuild(guildID)
+        if (guildDoc.config.premium) {
+            const movieList = guildDoc.movie.movie_list
+            movieList.uploadQueue.push(uploadedMovie)
+            movieList.save()
+        } else {
+            throw 'Not premium'
+        }
+    }
+
+    export async function requestMovieListUpdate(guildID: string) {
+        const guildDoc = await Guild.getGuild(guildID)
+        guildDoc.movie.movie_list.awaiting_update = true
+        guildDoc.movie.movie_list.last_updated = new Date()
+        guildDoc.save()
+    }
+
+    export async function getMovieList(guildID: string,textChannel:MessageChannel, userID:string,number = false) {
+        requestMovieListUpdate(guildID)
+        const request_time = new Date()
+        let embeds: MessageEmbed[]
+
+        let maxTries = 5
+        let tries = 0
+
+        while (tries < maxTries) {
+            const guildDoc = await Guild.getGuild(guildID)
+            if (guildDoc.config.premium) {
+                let movieList = guildDoc.movie.movie_list
+                if (movieList.last_updated < request_time) {
+                    tries++
+                    await delay(10 * NumberConstants.secs)
+                } else {
+                    const movies = movieList.movies
+                    Prompt.arraySelect(userID,textChannel,movies,(x:IDownloadedMovieDoc) =>`${x.name}`,'Offline movies',{})
+                    return
+                }
+            } else {
+                throw 'Not premium'
+            }
+        }
+        throw 'Nothing found'
     }
 }
 

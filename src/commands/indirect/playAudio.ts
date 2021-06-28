@@ -54,8 +54,8 @@ const execute = async function (
             Then it will be reused anyways to it is all good
             */
             playVal = ytdl(clip.link, { filter: 'audioonly' })
-            const piper = ytdl(clip.link, { filter: 'audioonly' })
             if (cacheClip) {
+                const piper = ytdl(clip.link, { filter: 'audioonly' })
                 ensureDirExists(clipsPath)
                 let filePath = `${clipsPath}/${justVEquals(clip.link)}.mp3`
                 piper.pipe(fs.createWriteStream(filePath))
