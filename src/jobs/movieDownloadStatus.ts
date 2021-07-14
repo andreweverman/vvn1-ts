@@ -18,17 +18,21 @@ import { getTimeStrFromSeconds, delay } from '../util/timeUtil'
 import { NumberConstants } from '../util/constants'
 import { sendToChannel, deleteMessage, MessageChannel } from '../util/messageUtil'
 import { client } from '../bot'
+import { MovieStatus } from '../db/models/guildModel'
 
 const rule = '* * * * *'
 const jobFunction = async function () {
-    const downloadingArr = await Movie.getDownloadingMovies()
+    const downloadingArr = await Movie.getStatusUpdaters()
 
     downloadingArr.forEach((x) => {
-        if (x.downloads.textChannelID && !x.downloads.statusUpdating) {
-            Movie.updateStatusUpdating(x.guildID,x.downloads)
-            let textChannel = client.channels.resolve(x.downloads.textChannelID) as MessageChannel
-            updateStatus(x.guildID, textChannel, x.downloads._id)
-        }
+        x.arr.forEach((el) => {
+            if (!el.started) {
+                Movie.updateStatusUpdating(x.guildID, el)
+
+                let textChannel = client.channels.resolve(el.textChannelID) as MessageChannel
+                updateStatus(x.guildID, textChannel, el._id)
+            }
+        })
     })
 }
 
@@ -42,23 +46,26 @@ async function updateStatus(guildID: string, textChannel: MessageChannel, movieI
     const statusMessage = stcResponse.messages[0]
     while (true) {
         if (statusMessage) {
-            let downloadRequest = await Movie.lookupMovieDownloadByID(guildID, movieID)
-            if (!downloadRequest) return
+            let statusUpdate = await Movie.lookupStatusUpdateByID(guildID, movieID)
+            if (!statusUpdate) {
+                deleteMessage(statusMessage, 0)
+                return
+            }
 
             let updateString: string = ''
-            if (downloadRequest.downloading) {
-                updateString = `Downloading ${downloadRequest.movieName}: ${
-                    downloadRequest.downloadPercent
-                }%\nTime Elapsed: ${getTimeStrFromSeconds(downloadRequest.secondsDownloading)}`
-            } else if (downloadRequest.uploading) {
-                updateString = `Uploading ${downloadRequest.movieName}: ${
-                    downloadRequest.uploadPercent
-                }%\nTime Elapsed: ${getTimeStrFromSeconds(downloadRequest.secondsUploading)}`
-            } else if (downloadRequest.uploaded) {
-                updateString = `${downloadRequest.movieName} has been uploaded'`
+            if (statusUpdate.status == MovieStatus.DOWNLOADING) {
+                updateString = `Downloading ${statusUpdate.movieName}: ${
+                    statusUpdate.percent
+                }%\nTime Elapsed: ${getTimeStrFromSeconds(statusUpdate.seconds)}`
+            } else if (statusUpdate.status == MovieStatus.UPLOADING) {
+                updateString = `Uploading ${statusUpdate.movieName}: ${
+                    statusUpdate.percent
+                }%\nTime Elapsed: ${getTimeStrFromSeconds(statusUpdate.seconds)}`
+            } else if (statusUpdate.status == MovieStatus.UPLOADED) {
+                updateString = `${statusUpdate.movieName} has been uploaded'`
                 deleteMessage(statusMessage, 30 * NumberConstants.secs)
                 return
-            } else if (downloadRequest.error) {
+            } else if (statusUpdate.status == MovieStatus.ERROR) {
                 sendToChannel(textChannel, `Error downloading. Quitting...`)
                 return
             }

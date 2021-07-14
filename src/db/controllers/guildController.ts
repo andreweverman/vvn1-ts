@@ -31,6 +31,9 @@ import Guilds, {
     IDownloadedMovie,
     IDownloadedMovieDoc,
     IMovieListDoc,
+    IMovieUploadedElementDoc,
+    IMovieUploadElementDoc,
+    IMovieStatusUpdateDoc,
 } from '../models/guildModel'
 import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
 import {
@@ -492,7 +495,7 @@ export namespace Link {
             }
 
             const mapFunction = (x: ILinkDoc) => `[${x.names.join(', ')}](${x.link} 'Link')`
-            const link = await Prompt.arraySelect(userID, textChannel, links, mapFunction, 'Select a link',{
+            const link = await Prompt.arraySelect(userID, textChannel, links, mapFunction, 'Select a link', {
                 multiple: multiple,
                 customOffset: offset,
             })
@@ -801,7 +804,6 @@ export namespace Movie {
         movieLink: string,
         movieName: string,
         moviePassword: string,
-        zipName?: string,
         mega = false,
         megaID?: Schema.Types.ObjectId,
         guild?: GuildD,
@@ -821,7 +823,6 @@ export namespace Movie {
                 want_to_watch: [],
                 mega: mega,
                 megaID: megaID,
-                zipName: zipName,
             }
 
             let update: boolean = false
@@ -904,14 +905,12 @@ export namespace Movie {
             let deleteIDs: any[] = []
             let deleteNames: string[] = []
             let deleteMegaIDs: any[] = []
-            let deleteZipNames: string[] = []
             if (Array.isArray(movie)) {
                 movie.forEach((x) => {
                     deleteIDs.push(x._id)
                     deleteNames.push(x.name)
                     if (x.mega) {
                         deleteMegaIDs.push(x.megaID)
-                        if (x.zipName) deleteZipNames.push(x.zipName)
                     }
                 })
             } else {
@@ -932,7 +931,6 @@ export namespace Movie {
                         'movie.movies': { _id: { $in: deleteIDs } },
                         'movie.downloads.uploadedQueue': { _id: { $in: deleteMegaIDs } },
                     },
-                    $addToSet: { 'movie.downloads.deleteQueue': deleteZipNames },
                 },
                 { multi: true }
             )
@@ -1333,22 +1331,15 @@ export namespace Movie {
         if (!zipName.endsWith('.zip')) validZipName += '.zip'
 
         const downloadObj: IMovieDownloadElement = {
-            statusUpdating: false,
+            inProgress: false,
+            completed: false,
             textChannelID: textChannel?.id,
             userID: userID,
             movieName: movieName,
             torrentLink: torrentLink,
             zipName: validZipName,
             zipPassword: zipPassword,
-            downloaded: false,
-            downloading: false,
-            secondsDownloading: 0,
-            downloadPercent: 0,
-            uploaded: false,
-            uploading: false,
-            secondsUploading: 0,
-            uploadPercent: 0,
-            error: false,
+            percentDone: 0,
         }
 
         const response = await Guilds.updateOne(
@@ -1373,6 +1364,11 @@ export namespace Movie {
         const movie = movieContainer.downloadQueue.find((x) => x._id.equals(movieID))
         return movie
     }
+    export async function lookupStatusUpdateByID(guildID: string, id: Schema.Types.ObjectId) {
+        const movieContainer = await getDownloadMovieContainer(guildID)
+        const movie = movieContainer.statusUpdate.find((x) => x._id.equals(id))
+        return movie
+    }
 
     export async function getFirstDownloadRequest(guildID: string) {
         const downloadsDoc = await getDownloadMovieContainer(guildID)
@@ -1386,15 +1382,15 @@ export namespace Movie {
     }
     export async function getDownloadedMovies() {
         const guildDocs = await Guilds.find({
-            $and: [{ 'config.premium': true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
+            $and: [{ 'config.premium': true }, { 'movie.downloads.uploadQueue': { $not: { $size: 0 } } }],
         })
 
         if (guildDocs.length > 0) {
             return guildDocs.map((guildDoc) => {
-                const downloadQueue = guildDoc.movie.downloads.downloadQueue
+                const downloadQueue = guildDoc.movie.downloads.uploadQueue
                 return {
                     guildID: guildDoc.guild_id,
-                    downloads: downloadQueue.filter((x) => x.uploaded == true),
+                    downloads: downloadQueue.filter((x) => x.completed),
                 }
             })
         } else {
@@ -1402,31 +1398,34 @@ export namespace Movie {
         }
     }
 
-    export async function getDownloadingMovies() {
+    export interface statusUpdateJob {
+        guildID: string
+        arr: IMovieStatusUpdateDoc[]
+    }
+    export async function getStatusUpdaters() {
         const guildDocs = await Guilds.find({
-            $and: [{ 'config.premium': true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
+            $and: [{ 'config.premium': true }, { 'movie.downloads.statusUpdate': { $not: { $size: 0 } } }],
         })
-        let resArr: downloadMovieJob[] = []
+        let resArr: statusUpdateJob[] = []
         if (guildDocs.length > 0) {
             guildDocs.forEach((guildDoc) => {
-                const downloadQueue = guildDoc.movie.downloads.downloadQueue
-                if (downloadQueue[0].uploaded == false)
-                    resArr.push({
-                        guildID: guildDoc.guild_id,
-                        downloads: downloadQueue[0],
-                    })
+                const downloadQueue = guildDoc.movie.downloads.statusUpdate
+                resArr.push({
+                    guildID: guildDoc.guild_id,
+                    arr: downloadQueue,
+                })
             })
         }
         return resArr
     }
 
-    export async function updateStatusUpdating(guildID: string, movie: IMovieDownloadElementDoc, newVal = true) {
+    export async function updateStatusUpdating(guildID: string, movie: IMovieStatusUpdateDoc, newVal = true) {
         const response = await Guilds.updateOne(
-            { guild_id: guildID, 'movie.downloads.downloadQueue._id': movie._id },
+            { guild_id: guildID, 'movie.downloads.statusUpdate._id': movie._id },
             {
                 $set: {
                     //@ts-ignore
-                    'movie.downloads.downloadQueue.$.statusUpdating': newVal,
+                    'movie.downloads.statusUpdate.$.started': newVal,
                 },
             }
         )
@@ -1434,7 +1433,7 @@ export namespace Movie {
         updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 
-    export async function moveToUploaded(guildID: string, movie: IMovieDownloadElementDoc) {
+    export async function moveToUploaded(guildID: string, movie: IMovieUploadElementDoc) {
         // movie.movieID = movieDoc._id
         const response = await Guilds.updateOne(
             { guild_id: guildID },
@@ -1453,17 +1452,16 @@ export namespace Movie {
         updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 
-    export async function deleteMegaMovie(guildID: string, movie: IMovieDownloadElementDoc) {
+    export async function deleteMegaMovie(guildID: string, movie: IMovieUploadedElementDoc) {
         const response = await Guilds.updateOne(
-            { guild_id: guildID },
+            { guild_id: guildID, 'movie.movies.uploadedQueue._id': movie._id },
             {
+                $set: {
+                    'movie.movies.uploadedQueue.$.removeElement': true,
+                },
                 $pull: {
-                    //@ts-ignore
-                    'movie.download.uploadedQueue': { _id: movie._id },
                     'movie.movies': { _id: movie.movieID },
                 },
-
-                $push: { 'movie.download.deleteQueue': movie.zipName },
             }
         )
 
@@ -1493,7 +1491,7 @@ export namespace Movie {
         guildDoc.save()
     }
 
-    export async function getMovieList(guildID: string,textChannel:MessageChannel, userID:string,number = false) {
+    export async function getMovieList(guildID: string, textChannel: MessageChannel, userID: string, number = false) {
         requestMovieListUpdate(guildID)
         const request_time = new Date()
         let embeds: MessageEmbed[]
@@ -1510,7 +1508,14 @@ export namespace Movie {
                     await delay(10 * NumberConstants.secs)
                 } else {
                     const movies = movieList.movies
-                    Prompt.arraySelect(userID,textChannel,movies,(x:IDownloadedMovieDoc) =>`${x.name}`,'Offline movies',{})
+                    Prompt.arraySelect(
+                        userID,
+                        textChannel,
+                        movies,
+                        (x: IDownloadedMovieDoc) => `${x.name}`,
+                        'Offline movies',
+                        {}
+                    )
                     return
                 }
             } else {

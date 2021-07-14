@@ -120,7 +120,6 @@ export interface IMovie {
     want_to_watch: string[]
     mega: boolean
     megaID?: ObjectId
-    zipName?: string
 }
 
 export interface IMovieDoc extends IMovie, Document {}
@@ -133,7 +132,6 @@ const IndividualMovieSchema = new mongoose.Schema({
     want_to_watch: { type: Array, default: [] },
     mega: { type: Boolean, required: true, default: false },
     megaID: { type: mongoose.Schema.Types.ObjectId },
-    zipName: { type: String },
 })
 
 export interface IMovieRequest {
@@ -163,67 +161,115 @@ export interface IReactionEmoji {
 export interface IReactionEmojiDoc extends IReactionEmoji, Document {}
 
 export interface IMovieDownloadElement {
-    statusUpdating: boolean
-    textChannelID?: string
+    inProgress: boolean
+    completed: boolean
     userID: string
+    textChannelID?: string
     movieName: string
-    torrentLink: string
     zipName: string
     zipPassword: string
-    downloading: boolean
-    secondsDownloading: number
-    downloaded: boolean
-    downloadPercent: number
-    uploading: boolean
-    uploaded: boolean
-    secondsUploading: number
-    uploadPercent: number
-    error: boolean
-    errorReason?: string
-    uploadLink?: string
-    movieID?: mongoose.ObjectId
+    torrentLink: string
+    percentDone: number
 }
 
 export interface IMovieDownloadElementDoc extends IMovieDownloadElement, Document {}
 
 const MovieDownloadElementSchema = new mongoose.Schema({
-    statusUpdating: { type: Boolean, default: false },
-    textChannelID: { type: String },
+    inProgress: { type: Boolean, required: true, default: false },
+    completed: { type: Boolean, required: true, default: false },
     userID: { type: String, required: true },
+    textChannelID: { type: String, required: false },
     movieName: { type: String, required: true },
     torrentLink: { type: String, required: true },
     zipName: { type: String, required: true },
     zipPassword: { type: String, required: true },
-    downloading: { type: Boolean, required: true },
-    secondsDownloading: { type: Number, required: true },
-    downloaded: { type: Boolean, required: true },
-    downloadPercent: { type: Number, required: true },
-    uploading: { type: Boolean, required: true },
-    uploaded: { type: Boolean, required: true },
-    secondsUploading: { type: Number, required: true },
-    uploadPercent: { type: Number, required: true },
-    error: { type: Boolean, required: true },
-    errorReason: { type: String, required: false },
+    percentDone: { type: Number, required: true, default: 0 },
+})
+
+export interface IMovieUploadElement {
+    inProgress: boolean
+    completed: boolean
+    userID: string
+    textChannelID?: string
+    movieName: string
+    zipPassword: string
+    zipPath: string
+    megaPath?: string
+    uploadLink?: string
+    percentDone: number
+}
+export interface IMovieUploadElementDoc extends IMovieUploadElement, Document {}
+const MovieUploadElementSchema = new mongoose.Schema({
+    inProgress: { type: Boolean, required: true, default: false },
+    completed: { type: Boolean, required: true, default: false },
+    userID: { type: String, required: true },
+    textChannelID: { type: String, required: false },
+    movieName: { type: String, required: true },
+    zipPath: { type: String, required: true },
+    megaPath: { type: String, required: false },
     uploadLink: { type: String, required: false },
-    movieID: { type: mongoose.Schema.Types.ObjectId, required: false },
+    percentDone: { type: Number, required: true, default: 0 },
+})
+
+export interface IMovieUploadedElement {
+    movieID: ObjectId
+    megaLink: string
+    removeElement: boolean
+}
+
+export interface IMovieUploadedElementDoc extends IMovieUploadedElement, Document {}
+
+const MovieUploadedElementSchema = new mongoose.Schema({
+    movieID: { type: mongoose.Schema.Types.ObjectId },
+    megaLink: { type: String, required: true },
+    removeElement: { type: Boolean, required: true, default: false },
+})
+
+export enum MovieStatus {
+    DOWNLOADING = 'DOWNLOADING',
+    UPLOADING = 'UPLOADING',
+    UPLOADED = 'UPLOADED',
+    ERROR = 'ERROR',
+}
+export interface IMovieStatusUpdate {
+    started: boolean
+    userID: string
+    textChannelID: string
+    status: MovieStatus
+    percent: number
+    movieName: string
+    seconds: number
+}
+export interface IMovieStatusUpdateDoc extends IMovieStatusUpdate, Document {}
+const MovieStatusUpdateSchema = new mongoose.Schema({
+    started: { type: Boolean, required: true, default: false },
+    userID: { type: String, required: true },
+    textChannelID: { type: String, required: true },
+    status: { type: String, required: true },
+    percentDone: { type: Number, required: true, default: 0 },
+    movieName: { type: String, required: true },
+    seconds: { type: Number, required: true, default: 0 },
 })
 
 export interface IMovieDownloadContainer {
     downloadQueue: IMovieDownloadElement[]
-    uploadedQueue: IMovieDownloadElement[]
-    deleteQueue: string[]
+    uploadQueue: IMovieUploadElement[]
+    uploadedQueue: IMovieUploadedElement[]
+    statusUpdate: IMovieStatusUpdate[]
 }
 
 export interface IMovieDownloadContainerDoc extends IMovieDownloadContainer, Document {
     downloadQueue: IMovieDownloadElementDoc[]
-    uploadedQueue: IMovieDownloadElementDoc[]
-    deleteQueue: string[]
+    uploadQueue: IMovieUploadElementDoc[]
+    uploadedQueue: IMovieUploadedElementDoc[]
+    statusUpdate: IMovieStatusUpdateDoc[]
 }
 
 const MovieDownloadContainerSchema = new mongoose.Schema({
     downloadQueue: { type: [MovieDownloadElementSchema], required: true, default: [] },
-    uploadedQueue: { type: [MovieDownloadElementSchema], required: true, default: [] },
-    deleteQueue: { type: [String], required: true, default: [] },
+    uploadQueue: { type: [MovieUploadElementSchema], required: true, default: [] },
+    uploadedQueue: { type: [MovieUploadedElementSchema], required: true, default: [] },
+    statusUpdate: { type: [MovieStatusUpdateSchema], required: true, default: [] },
 })
 
 export interface IDownloadedMovie {

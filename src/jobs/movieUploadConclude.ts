@@ -29,11 +29,9 @@ const jobFunction = async function () {
                     movie.uploadLink,
                     movie.movieName,
                     movie.zipPassword,
-                    movie.zipName,
                     true,
                     movie._id
                 )
-
 
                 Movie.moveToUploaded(guild.guildID, movie)
             }
