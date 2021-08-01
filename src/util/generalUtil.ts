@@ -249,6 +249,7 @@ export namespace MovieUtil {
             let extraStringOptions = []
             if (voteAllowed) extraStringOptions.push(vote)
             const { movies, message } = await Movie.getMovies(guildID, [], true)
+            if (movies.length ==0) {return null}
             const movie = await MPrompt.arraySelect(
                 userID,
                 textChannel,

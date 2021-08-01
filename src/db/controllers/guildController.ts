@@ -34,8 +34,11 @@ import Guilds, {
     IMovieUploadedElementDoc,
     IMovieUploadElementDoc,
     IMovieStatusUpdateDoc,
+    MovieStatusMap,
+    IMovieUploadedElement,
+    MovieStatus,
 } from '../models/guildModel'
-import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
+import { MongooseUpdateQuery, ObjectId, UpdateQuery } from 'mongoose'
 import {
     findOrCreateResponse,
     uniqueArrayObject,
@@ -682,6 +685,17 @@ export namespace Movie {
         }
     }
 
+    export async function getMovieByID(guildID: string, id: Schema.Types.ObjectId) {
+        const guildDoc = await Guild.getGuild(guildID)
+        return guildDoc.movie.movies.find((x) => x._id.equals(id))
+    }
+
+    export async function getMovieByUploadID(guildID: string, id: Schema.Types.ObjectId) {
+        const guildDoc = await Guild.getGuild(guildID)
+        //@ts-ignore
+        return guildDoc.movie.movies.find((x) => x.megaID && id.equals(x.megaID))
+    }
+
     export interface viewMovieParamsResponse {
         matcher: any
         regex: RegExp
@@ -904,19 +918,16 @@ export namespace Movie {
         try {
             let deleteIDs: any[] = []
             let deleteNames: string[] = []
-            let deleteMegaIDs: any[] = []
             if (Array.isArray(movie)) {
                 movie.forEach((x) => {
                     deleteIDs.push(x._id)
                     deleteNames.push(x.name)
-                    if (x.mega) {
-                        deleteMegaIDs.push(x.megaID)
-                    }
                 })
             } else {
                 deleteIDs.push(movie._id)
                 deleteNames.push(movie.name)
             }
+
 
             const updateStrings: updateOneStrings = {
                 success: `${deleteNames.join(', ')} has been deleted from the catalog`,
@@ -929,10 +940,12 @@ export namespace Movie {
                     $pull: {
                         //@ts-ignore
                         'movie.movies': { _id: { $in: deleteIDs } },
-                        'movie.downloads.uploadedQueue': { _id: { $in: deleteMegaIDs } },
+                    },
+                    $set: {
+                        'movie.downloads.uploadedQueue.$[elem].removeElement': true,
                     },
                 },
-                { multi: true }
+                { arrayFilters: [{ 'elem.movieID': { $in: deleteIDs } }], multi: true }
             )
 
             return await updateOneResponseHandler(response, updateStrings, textChannel)
@@ -1339,7 +1352,8 @@ export namespace Movie {
             torrentLink: torrentLink,
             zipName: validZipName,
             zipPassword: zipPassword,
-            percentDone: 0,
+            percent: 0,
+            time: 0,
         }
 
         const response = await Guilds.updateOne(
@@ -1367,7 +1381,13 @@ export namespace Movie {
     export async function lookupStatusUpdateByID(guildID: string, id: Schema.Types.ObjectId) {
         const movieContainer = await getDownloadMovieContainer(guildID)
         const movie = movieContainer.statusUpdate.find((x) => x._id.equals(id))
-        return movie
+        let operationDoc: any
+        if (movie) {
+            operationDoc = movieContainer
+                .get(MovieStatusMap[movie.status])
+                .find((x: any) => movie._id.equals(x.statusUpdateID))
+        }
+        return { statusUpdate: movie, doc: operationDoc }
     }
 
     export async function getFirstDownloadRequest(guildID: string) {
@@ -1433,21 +1453,39 @@ export namespace Movie {
         updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 
-    export async function moveToUploaded(guildID: string, movie: IMovieUploadElementDoc) {
-        // movie.movieID = movieDoc._id
-        const response = await Guilds.updateOne(
-            { guild_id: guildID },
-            {
-                $pull: {
-                    //@ts-ignore
-                    'movie.downloads.downloadQueue': { _id: movie._id },
-                },
-                $push: {
-                    //@ts-ignore
-                    'movie.downloads.uploadedQueue': movie,
-                },
-            }
-        )
+    export async function moveToUploaded(guildID: string, movie: IMovieUploadElementDoc, id: Schema.Types.ObjectId) {
+        const zz = await Movie.getMovieByUploadID(guildID, id)
+        const movieID = zz!._id
+
+        const uploaded: IMovieUploadedElement = {
+            _id: id,
+            movieID: movieID,
+            removeElement: false,
+            uploadLink: movie.uploadLink!,
+            uploadPath: movie.uploadPath!,
+        }
+
+        const query: any = { guild_id: guildID }
+
+        const updater: any = {
+            $pull: {
+                //@ts-ignore
+                'movie.downloads.uploadQueue': { _id: movie._id },
+            },
+            $push: {
+                //@ts-ignore
+                'movie.downloads.uploadedQueue': uploaded,
+            },
+        }
+
+        const response = await Guilds.updateOne(query, updater)
+
+        if (movie.statusUpdateID) {
+            const response2 = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $set: { 'movie.downloads.statusUpdate.$.status': MovieStatus.UPLOADED } }
+            )
+        }
 
         updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
@@ -1523,6 +1561,19 @@ export namespace Movie {
             }
         }
         throw 'Nothing found'
+    }
+
+    export async function deleteStatusUpdateObj(guildID: string, statUpdateObj: IMovieStatusUpdateDoc) {
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $pull: {
+                    'movie.downloads.statusUpdate': { _id: statUpdateObj._id },
+                },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 }
 

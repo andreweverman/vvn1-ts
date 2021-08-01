@@ -15,7 +15,7 @@ import { Message, Collection, Client } from 'discord.js'
 import { commandCollection, commandCooldowns } from '../bot'
 import { NumberConstants } from '../util/constants'
 import { deleteMessage, replyUtil, sendToChannel } from '../util/messageUtil'
-import { Config, Link } from '../db/controllers/guildController'
+import { Config, Guild, Link } from '../db/controllers/guildController'
 import playAudio from '../commands/indirect/playAudio'
 import { IConfigDoc } from '../db/models/guildModel'
 async function messageEvent(
@@ -35,7 +35,11 @@ async function messageEvent(
                 configDoc = await Config.getGuildConfig(guildID)
                 guildPrefix = configDoc.prefix
             } catch (error) {
-                console.error(error)
+
+                if(error == undefined) {
+                    await Guild.initializeGuild(guildID)
+                }
+                else throw error
             }
         }
 

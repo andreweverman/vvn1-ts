@@ -13,6 +13,7 @@
 import { BatchJob } from './runner'
 import { Movie } from '../db/controllers/guildController'
 import { IMovieDownloadElementDoc } from '../db/models/guildModel'
+import { Types } from 'mongoose'
 
 const rule = '* * * * *'
 const jobFunction = async function () {
@@ -23,17 +24,18 @@ const jobFunction = async function () {
             // being weird Idk
             // movie = movie as IMovieDownloadElementDoc
             if (movie.uploadLink) {
-                await Movie.addMovie(
+                const movieID = new Types.ObjectId() as any
+                const movieObj = await Movie.addMovie(
                     guild.guildID,
                     movie.userID,
                     movie.uploadLink,
                     movie.movieName,
                     movie.zipPassword,
                     true,
-                    movie._id
+                    movieID
                 )
 
-                Movie.moveToUploaded(guild.guildID, movie)
+                Movie.moveToUploaded(guild.guildID, movie,movieID)
             }
         })
     })

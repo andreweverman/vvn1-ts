@@ -23,7 +23,7 @@ import viewWatchlist from './watchList/viewWatchList'
 import removeWatchList from './watchList/removeWatchList'
 import downloadMovie from './download/downloadMovie'
 import deleteDownloadRequest from './download/removeDownloadRequest'
-import deleteDownload from './download/deleteMovieRequest'
+import deleteDownload from './download/deleteMovieDownload'
 
 const command: commandProperties = {
     name: 'movie',

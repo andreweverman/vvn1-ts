@@ -19,6 +19,7 @@ import { magnetRegex, validFileRegex } from '../../../util/stringUtil'
 import { MovieUtil } from '../../../util/generalUtil'
 import { Schema } from 'mongoose'
 import { getTimeStrFromSeconds } from '../../../util/timeUtil'
+import { MovieStatus } from '../../../db/models/guildModel'
 
 const command: commandProperties = {
     name: 'downloadmovie',
@@ -82,39 +83,8 @@ const command: commandProperties = {
                 if (firstRequestedMovie === null) return
                 if (firstRequestedMovie?.movieName == movieName) {
                     // this means we will update send a messages about the status of the download
-
-                 
                 }
 
-                async function updateStatus(statusMessage: Message, movieID: Schema.Types.ObjectId) {
-                    if (statusMessage) {
-                        let downloadRequest = await Movie.lookupMovieDownloadByID(guildID, movieID)
-                        if (!downloadRequest) return
-
-                        let updateString: string = ''
-                        if (downloadRequest.downloading) {
-                            updateString = `Downloading ${downloadRequest.movieName}: ${
-                                downloadRequest.downloadPercent
-                            }%\nTime Elapsed: ${getTimeStrFromSeconds(downloadRequest.secondsDownloading)}`
-                        } else if (downloadRequest.uploading) {
-                            updateString = `Uploading ${downloadRequest.movieName}: ${
-                                downloadRequest.uploadPercent
-                            }%\nTime Elapsed: ${getTimeStrFromSeconds(downloadRequest.secondsUploading)}`
-                        } else if (downloadRequest.uploaded) {
-                            updateString = `${downloadRequest.movieName} has been uploaded'`
-                            deleteMessage(statusMessage, 30 * NumberConstants.secs)
-                            return
-                        } else if (downloadRequest.error) {
-                            sendToChannel(textChannel, `Error downloading. Quitting...`)
-                            return
-                        }
-
-                        if (updateString != '') statusMessage.edit(updateString)
-                        setTimeout(() => {
-                            updateStatus(statusMessage, movieID)
-                        }, 5000)
-                    }
-                }
 
                 // more logic for getting the file when done and stuff like that
                 // want to keep as much db stuff in TS as I can to make sure that it works the best

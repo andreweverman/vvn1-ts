@@ -169,7 +169,10 @@ export interface IMovieDownloadElement {
     zipName: string
     zipPassword: string
     torrentLink: string
-    percentDone: number
+    percent: number
+    time:number
+    statusUpdateID?:ObjectId
+    path?:string
 }
 
 export interface IMovieDownloadElementDoc extends IMovieDownloadElement, Document {}
@@ -183,7 +186,10 @@ const MovieDownloadElementSchema = new mongoose.Schema({
     torrentLink: { type: String, required: true },
     zipName: { type: String, required: true },
     zipPassword: { type: String, required: true },
-    percentDone: { type: Number, required: true, default: 0 },
+    time: { type: Number, required: true, default: 0 },
+    percent: { type: Number, required: true, default: 0 },
+    statusUpdateID: { type:mongoose.Schema.Types.ObjectId},
+    path: { type: String, required: false },
 })
 
 export interface IMovieUploadElement {
@@ -194,9 +200,11 @@ export interface IMovieUploadElement {
     movieName: string
     zipPassword: string
     zipPath: string
-    megaPath?: string
+    uploadPath?: string
     uploadLink?: string
-    percentDone: number
+    time:number
+    percent: number
+    statusUpdateID?:ObjectId
 }
 export interface IMovieUploadElementDoc extends IMovieUploadElement, Document {}
 const MovieUploadElementSchema = new mongoose.Schema({
@@ -206,14 +214,20 @@ const MovieUploadElementSchema = new mongoose.Schema({
     textChannelID: { type: String, required: false },
     movieName: { type: String, required: true },
     zipPath: { type: String, required: true },
-    megaPath: { type: String, required: false },
+    zipPassword: { type: String, required: true },
+    uploadPath: { type: String, required: false },
     uploadLink: { type: String, required: false },
-    percentDone: { type: Number, required: true, default: 0 },
+    time: { type: Number, required: true, default: 0 },
+    percent: { type: Number, required: true, default: 0 },
+    statusUpdateID: { type:mongoose.Schema.Types.ObjectId}
 })
 
+
 export interface IMovieUploadedElement {
+    _id?:any
     movieID: ObjectId
-    megaLink: string
+    uploadLink: string
+    uploadPath:string
     removeElement: boolean
 }
 
@@ -221,7 +235,8 @@ export interface IMovieUploadedElementDoc extends IMovieUploadedElement, Documen
 
 const MovieUploadedElementSchema = new mongoose.Schema({
     movieID: { type: mongoose.Schema.Types.ObjectId },
-    megaLink: { type: String, required: true },
+    uploadLink: { type: String, required: true },
+    uploadPath: { type: String, required:true},
     removeElement: { type: Boolean, required: true, default: false },
 })
 
@@ -231,37 +246,61 @@ export enum MovieStatus {
     UPLOADED = 'UPLOADED',
     ERROR = 'ERROR',
 }
+
+interface MovieStatusMap {
+    [key:string]:string
+}
+export const MovieStatusMap:MovieStatusMap= {}
+MovieStatusMap[MovieStatus.DOWNLOADING] = 'downloadQueue'
+MovieStatusMap[MovieStatus.UPLOADING] ='uploadQueue'
+MovieStatusMap[MovieStatus.UPLOADED]='uploadedQueue'
+MovieStatusMap[MovieStatus.ERROR] = 'errorQueue'
+
 export interface IMovieStatusUpdate {
     started: boolean
     userID: string
     textChannelID: string
     status: MovieStatus
-    percent: number
-    movieName: string
-    seconds: number
 }
+
+export interface IMovieErrorQueue {
+    textChannelID?: string
+    userID:string
+    movieName:string
+    error:string
+}
+export interface IMovieErrorQueueDoc extends IMovieErrorQueue, Document{
+}
+
+const MovieErrorQueueSchema  = new mongoose.Schema({
+    error: { type:String, required: true},
+    movieName: { type:String, required: true},
+    userID: {type: String,required: true},
+    textChannelID: { type:String, required: false}
+})
+
 export interface IMovieStatusUpdateDoc extends IMovieStatusUpdate, Document {}
 const MovieStatusUpdateSchema = new mongoose.Schema({
     started: { type: Boolean, required: true, default: false },
     userID: { type: String, required: true },
     textChannelID: { type: String, required: true },
     status: { type: String, required: true },
-    percentDone: { type: Number, required: true, default: 0 },
-    movieName: { type: String, required: true },
-    seconds: { type: Number, required: true, default: 0 },
 })
 
 export interface IMovieDownloadContainer {
     downloadQueue: IMovieDownloadElement[]
     uploadQueue: IMovieUploadElement[]
     uploadedQueue: IMovieUploadedElement[]
+    errorQueue:IMovieErrorQueue[]
     statusUpdate: IMovieStatusUpdate[]
 }
+
 
 export interface IMovieDownloadContainerDoc extends IMovieDownloadContainer, Document {
     downloadQueue: IMovieDownloadElementDoc[]
     uploadQueue: IMovieUploadElementDoc[]
     uploadedQueue: IMovieUploadedElementDoc[]
+    errorQueue: IMovieErrorQueueDoc[]
     statusUpdate: IMovieStatusUpdateDoc[]
 }
 
@@ -269,6 +308,7 @@ const MovieDownloadContainerSchema = new mongoose.Schema({
     downloadQueue: { type: [MovieDownloadElementSchema], required: true, default: [] },
     uploadQueue: { type: [MovieUploadElementSchema], required: true, default: [] },
     uploadedQueue: { type: [MovieUploadedElementSchema], required: true, default: [] },
+    errorQueue: { type: [MovieErrorQueueSchema], required: true, default: []},
     statusUpdate: { type: [MovieStatusUpdateSchema], required: true, default: [] },
 })
 
@@ -305,13 +345,14 @@ const MovieListSchema = new mongoose.Schema({
     uploadQueue: { type: [DownloadedMovieSchema], default: [], required: true },
 })
 
+
 export interface IMovieContainer {
     default_password: string
     sounds: ISound[]
     emojis: IReactionEmoji[]
     movies: IMovie[]
     requests: IMovieRequest[]
-    downloads: IMovieDownloadContainer[]
+    downloads: IMovieDownloadContainer
     movie_list: IMovieList
 }
 export interface IMovieContainerDoc extends Document {
@@ -358,7 +399,7 @@ const MovieSchema = new mongoose.Schema({
     },
     movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
-    downloads: MovieDownloadContainerSchema,
+    downloads: {type:MovieDownloadContainerSchema,default:{}},
     movie_list: MovieListSchema,
 })
 

@@ -18,7 +18,7 @@ import { getTimeStrFromSeconds, delay } from '../util/timeUtil'
 import { NumberConstants } from '../util/constants'
 import { sendToChannel, deleteMessage, MessageChannel } from '../util/messageUtil'
 import { client } from '../bot'
-import { MovieStatus } from '../db/models/guildModel'
+import { IMovieStatusUpdateDoc, MovieStatus } from '../db/models/guildModel'
 
 const rule = '* * * * *'
 const jobFunction = async function () {
@@ -46,27 +46,33 @@ async function updateStatus(guildID: string, textChannel: MessageChannel, movieI
     const statusMessage = stcResponse.messages[0]
     while (true) {
         if (statusMessage) {
-            let statusUpdate = await Movie.lookupStatusUpdateByID(guildID, movieID)
-            if (!statusUpdate) {
-                deleteMessage(statusMessage, 0)
+            const res = await Movie.lookupStatusUpdateByID(guildID, movieID)
+            const stat = res.statusUpdate
+            const doc = res.doc
+            if (!stat || !doc) {
+                if (stat) {
+                    endStatusUpdate(guildID, stat, statusMessage)
+                }
                 return
             }
 
             let updateString: string = ''
-            if (statusUpdate.status == MovieStatus.DOWNLOADING) {
-                updateString = `Downloading ${statusUpdate.movieName}: ${
-                    statusUpdate.percent
-                }%\nTime Elapsed: ${getTimeStrFromSeconds(statusUpdate.seconds)}`
-            } else if (statusUpdate.status == MovieStatus.UPLOADING) {
-                updateString = `Uploading ${statusUpdate.movieName}: ${
-                    statusUpdate.percent
-                }%\nTime Elapsed: ${getTimeStrFromSeconds(statusUpdate.seconds)}`
-            } else if (statusUpdate.status == MovieStatus.UPLOADED) {
-                updateString = `${statusUpdate.movieName} has been uploaded'`
+            if (stat.status == MovieStatus.DOWNLOADING) {
+                updateString = `Downloading ${doc.movieName}: ${doc.percent}%\nTime Elapsed: ${getTimeStrFromSeconds(
+                    doc.time
+                )}`
+            } else if (stat.status == MovieStatus.UPLOADING) {
+                updateString = `Uploading ${doc.movieName}: ${doc.percent}%\nTime Elapsed: ${getTimeStrFromSeconds(
+                    doc.time
+                )}`
+            } else if (stat.status == MovieStatus.UPLOADED) {
+                updateString = `${doc.movieName} has been uploaded'`
                 deleteMessage(statusMessage, 30 * NumberConstants.secs)
+                endStatusUpdate(guildID, stat, statusMessage)
                 return
-            } else if (statusUpdate.status == MovieStatus.ERROR) {
+            } else if (stat.status == MovieStatus.ERROR) {
                 sendToChannel(textChannel, `Error downloading. Quitting...`)
+                endStatusUpdate(guildID, stat, statusMessage)
                 return
             }
 
@@ -75,6 +81,11 @@ async function updateStatus(guildID: string, textChannel: MessageChannel, movieI
             await delay(5000)
         }
     }
+}
+
+function endStatusUpdate(guildID: string, stat: IMovieStatusUpdateDoc, statusMessage: Message) {
+    Movie.deleteStatusUpdateObj(guildID, stat)
+    deleteMessage(statusMessage, 0)
 }
 
 const job: BatchJob = {

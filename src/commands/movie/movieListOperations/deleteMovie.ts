@@ -7,7 +7,7 @@
  */
 
 import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt } from '../../../util/messageUtil'
+import { Prompt, sendToChannel } from '../../../util/messageUtil'
 import { Movie } from '../../../db/controllers/guildController'
 import { MovieUtil } from '../../../util/generalUtil'
 import { IMovieDoc } from '../../../db/models/guildModel'
@@ -26,6 +26,10 @@ const command: commandProperties = {
 
         try {
             const movie = await MovieUtil.selectMovie(guildID, userID, textChannel, true)
+            if(!movie) {
+                sendToChannel(textChannel,"No movies found.")
+                return
+            }
 
             let movieToDelete: IMovieDoc | IMovieDoc[] | undefined
             if (movie?.arrayElement) movieToDelete = movie.arrayElement
