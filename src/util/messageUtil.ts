@@ -246,13 +246,25 @@ export function sendUtil(
     })
 }
 
+export interface sendPaginationOptions{
+    userID:string
+    embeds:MessageEmbed[]
+}
 export function sendToChannel(
     channel: MessageChannel,
     statement: string | MessageEmbed | any[],
     autoDelete = true,
-    autoDeleteTime = 15 * NumberConstants.secs
-): Promise<sendUtilResponse> {
-    return sendUtil(channel.send(statement), autoDelete, autoDeleteTime)
+    autoDeleteTime = 15 * NumberConstants.secs,
+    paginationOptions?: sendPaginationOptions 
+) {
+    const z = sendUtil(channel.send(statement), autoDelete, autoDeleteTime).then((x) => {
+        if (paginationOptions) {
+            Prompt.setPaginationReaction(x.messages[0], paginationOptions.embeds,paginationOptions.userID)
+        }
+        return x
+    })
+
+    return z
 }
 
 export function replyUtil(
@@ -507,7 +519,7 @@ export namespace Prompt {
         textChannel: MessageChannel,
         array: Array<T>,
         mapFunction: (t: any, i?: any) => string,
-        title:string,
+        title: string,
         options?: arraySelectOptions
     ): Promise<ArraySelectResponse<T>> {
         const time = options?.time ? options.time : 15 * NumberConstants.mins

@@ -71,9 +71,8 @@ const command: commandProperties = {
                     .then((aliasesResponse) => {
                         const aliases = aliasesResponse.aliases
                         const offset = 1
-                        if (aliases == undefined) {
+                        if (!aliases || aliases.length==0) {
                             sendToChannel(textChannel, 'There are no aliases for this id. Quitting...', true)
-
                             resolve(true)
                             return
                         }
@@ -84,7 +83,7 @@ const command: commandProperties = {
                             true
                         )
 
-                        Prompt.arraySelect(userID, textChannel, aliases, (x, i) => `${i + offset}: ${x.name}`,'Select a movie to delete', {
+                        Prompt.arraySelect(userID, textChannel, aliases, (x, i) => `${i + offset}: ${x.name}`,'Select aliases to delete', {
                             customOffset: offset,
                             multiple: true,
                         })

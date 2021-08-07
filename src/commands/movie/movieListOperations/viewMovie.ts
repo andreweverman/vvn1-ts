@@ -7,7 +7,7 @@
  */
 
 import { CommandParams, commandProperties } from '../../../bot'
-import { sendToChannel } from '../../../util/messageUtil'
+import { sendPaginationOptions, sendToChannel } from '../../../util/messageUtil'
 import { Movie } from '../../../db/controllers/guildController'
 import { NumberConstants } from '../../../util/constants'
 
@@ -25,12 +25,17 @@ const command: commandProperties = {
 
         try {
             const { movies, message } = await Movie.getMovies(guildID, e.args, false)
-
+            let options:undefined| sendPaginationOptions
+            if(Array.isArray(message)){
+                
+                options = {userID:e.message.author.id, embeds : message}
+            }
             return sendToChannel(
                 textChannel,
                 message,
                 true,
-                movies.length > 0 ? 10 * NumberConstants.mins : 15 * NumberConstants.secs
+                movies.length > 0 ? 10 * NumberConstants.mins : 15 * NumberConstants.secs,
+                options
             )
         } catch (error) {
             throw error
@@ -39,3 +44,7 @@ const command: commandProperties = {
 }
 
 export default command
+function arrayToPaginatedArray(array: any, title: any, mapFunction: any, paginationOptions: any) {
+    throw new Error('Function not implemented.')
+}
+

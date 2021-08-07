@@ -256,13 +256,13 @@ export namespace Alias {
             let messageSent: boolean = false
             let msg: string | MessageEmbed
 
-            if (aliases.length > 0) {
-                idAliases = aliases.filter((x) => x.id == id)
+            if (aliases.length < 1) {
+                msg = 'There are no aliases for this id'
             } else {
+                idAliases = aliases.filter((x) => x.id == id)
                 let content: string = idAliases.map((x) => x.name).join('\n')
                 msg = new MessageEmbed().addField(`Aliases for id: ${id}`, content, true)
             }
-            msg = 'There are no aliases for this id'
 
             if (textChannel) {
                 await sendToChannel(textChannel, msg, true, 1 * NumberConstants.mins)
@@ -720,14 +720,13 @@ export namespace Movie {
 
     export interface getMoviesResponse {
         movies: IMovieDoc[]
-        message: MessageEmbed | string
+        message: MessageEmbed[] | string
     }
     export async function getMovies(guildID: string, args: string[], number = false): Promise<getMoviesResponse> {
         try {
-            const offset = 1
             const movieName = args.join(' ')
 
-            let message: string | MessageEmbed
+            let message: string | MessageEmbed[]
             let movies: IMovieDoc[]
 
             let movieRegex: RegExp
@@ -756,38 +755,18 @@ export namespace Movie {
                 if (regexDefined) {
                     movies = movies.filter((x) => movieRegex.test(x.name))
                 }
-
-                // need to chunk the fields so discord doesnt error us out
-                const fields = []
-                let i: number,
-                    j: number,
-                    chunk = 5
-                for (i = 0, j = movies.length; i < j; i += chunk) {
-                    const movie_chunk = movies.slice(i, i + chunk)
-                    let movies_message = movie_chunk
-                        .map((x, k) => {
-                            let movie_str = `${number ? '**' + (i + k + offset) + '**. ' : ''}[${x.name}](${
-                                x.link
-                            } 'Download Link')`
-                            if (x.password != 'none' && x.password != defaultPassword)
-                                movie_str += `, ||${x.password}||`
-                            return movie_str
-                        })
-                        .join('\n')
-                    fields.push({
-                        name: `${i + 1} to ${i + chunk}`,
-                        value: movies_message,
-                        inline: true,
-                    })
+                const movieMap = (x: IMovieDoc) => {
+                    let movie_str = `[${x.name}](${x.link} 'Download Link')`
+                    if (x.password != 'none' && x.password != defaultPassword) movie_str += `, ||${x.password}||`
+                    return movie_str
                 }
-
-                message = new MessageEmbed()
-                    .setTitle(
-                        `Movie Catalog ${
-                            movieDoc.default_password != '' ? `\nDefault Password: ${defaultPassword}` : ''
-                        }`
-                    )
-                    .addFields(fields)
+                message = Prompt.arrayToPaginatedArray(
+                    movies,
+                    `Movie Catalog ${movieDoc.default_password != '' ? `\nDefault Password: ${defaultPassword}` : ''}`,
+                    movieMap,
+                    {}
+                )
+             
             }
 
             return { movies: movies, message: message }
@@ -927,7 +906,6 @@ export namespace Movie {
                 deleteIDs.push(movie._id)
                 deleteNames.push(movie.name)
             }
-
 
             const updateStrings: updateOneStrings = {
                 success: `${deleteNames.join(', ')} has been deleted from the catalog`,
@@ -1455,6 +1433,7 @@ export namespace Movie {
 
     export async function moveToUploaded(guildID: string, movie: IMovieUploadElementDoc, id: Schema.Types.ObjectId) {
         const zz = await Movie.getMovieByUploadID(guildID, id)
+        if (!zz?._id) return
         const movieID = zz!._id
 
         const uploaded: IMovieUploadedElement = {
@@ -2070,3 +2049,4 @@ export namespace Player {
         return guild.player
     }
 }
+
