@@ -1319,7 +1319,7 @@ export namespace Movie {
         }
 
         let validZipName = zipName
-        if (!zipName.endsWith('.zip')) validZipName += '.zip'
+        if (!zipName.endsWith('.zip') && zipName != '') validZipName += '.zip'
 
         const downloadObj: IMovieDownloadElement = {
             inProgress: false,
