@@ -26,7 +26,14 @@ const command: commandProperties = {
         const userID = e.message.author.id
         const textChannel = e.message.channel
 
-        await Movie.getMovieList(guildID,textChannel, userID)
+        const selection = await Movie.getMovieList(guildID, textChannel, userID)
+        if (selection.arrayElements) {
+            selection.arrayElements.forEach((movie) => {
+                Movie.createMovieUploadRequest(guildID, userID, movie, textChannel.id)
+            })
+        } else if (selection.arrayElement) {
+            Movie.createMovieUploadRequest(guildID, userID, selection.arrayElement, textChannel.id)
+        }
     },
 }
 

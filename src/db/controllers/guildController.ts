@@ -37,6 +37,7 @@ import Guilds, {
     MovieStatusMap,
     IMovieUploadedElement,
     MovieStatus,
+    IMovieUploadElement,
 } from '../models/guildModel'
 import { MongooseUpdateQuery, ObjectId, UpdateQuery } from 'mongoose'
 import {
@@ -766,7 +767,6 @@ export namespace Movie {
                     movieMap,
                     {}
                 )
-             
             }
 
             return { movies: movies, message: message }
@@ -1503,6 +1503,7 @@ export namespace Movie {
 
     export async function requestMovieListUpdate(guildID: string) {
         const guildDoc = await Guild.getGuild(guildID)
+        guildDoc.movie.serverList.movies = []
         guildDoc.movie.serverList.awaitingUpdate = true
         guildDoc.save()
     }
@@ -1519,13 +1520,15 @@ export namespace Movie {
             const guildDoc = await Guild.getGuild(guildID)
             if (guildDoc.config.premium) {
                 let movieList = guildDoc.movie.serverList
-                if (!movieList){throw 'No movie list found'}
+                if (!movieList) {
+                    throw 'No movie list found'
+                }
                 if (movieList.lastUpdated < request_time) {
                     tries++
                     await delay(10 * NumberConstants.secs)
                 } else {
                     const movies = movieList.movies
-                    Prompt.arraySelect(
+                    return await Prompt.arraySelect(
                         userID,
                         textChannel,
                         movies,
@@ -1533,7 +1536,6 @@ export namespace Movie {
                         'Offline movies',
                         {}
                     )
-                    return
                 }
             } else {
                 throw 'Not premium'
@@ -1548,6 +1550,31 @@ export namespace Movie {
             {
                 $pull: {
                     'movie.downloads.statusUpdate': { _id: statUpdateObj._id },
+                },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
+    }
+
+    export async function createMovieUploadRequest(guildID:string,userID:string, movie: IDownloadedMovieDoc,textChannelID?:string) {
+        const zipPassword = await getMovieDefaultPassword(guildID)
+        const obj: IMovieUploadElement = {
+            inProgress:false,
+            completed:false,
+            userID:userID,
+            textChannelID:textChannelID,
+            movieName:movie.name,
+            zipPassword:zipPassword,
+            moviePath:movie.path,
+            time:0,
+            percent:0
+        }
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $push: {
+                    'movie.downloads.uploadQueue':  obj ,
                 },
             }
         )
@@ -2049,4 +2076,3 @@ export namespace Player {
         return guild.player
     }
 }
-

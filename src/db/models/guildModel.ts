@@ -197,9 +197,10 @@ export interface IMovieUploadElement {
     completed: boolean
     userID: string
     textChannelID?: string
-    movieName: string
+    movieName: string, 
+    moviePath?:string
     zipPassword: string
-    zipPath: string
+    zipPath?: string
     uploadPath?: string
     uploadLink?: string
     time:number
@@ -213,7 +214,8 @@ const MovieUploadElementSchema = new mongoose.Schema({
     userID: { type: String, required: true },
     textChannelID: { type: String, required: false },
     movieName: { type: String, required: true },
-    zipPath: { type: String, required: true },
+    moviePath:{type:String,required: false},
+    zipPath: { type: String, required: false },
     zipPassword: { type: String, required: true },
     uploadPath: { type: String, required: false },
     uploadLink: { type: String, required: false },
@@ -265,8 +267,8 @@ export interface IMovieStatusUpdate {
 
 export interface IMovieErrorQueue {
     textChannelID?: string
-    userID:string
-    movieName:string
+    userID?:string
+    movieName?:string
     error:string
 }
 export interface IMovieErrorQueueDoc extends IMovieErrorQueue, Document{
@@ -274,8 +276,8 @@ export interface IMovieErrorQueueDoc extends IMovieErrorQueue, Document{
 
 const MovieErrorQueueSchema  = new mongoose.Schema({
     error: { type:String, required: true},
-    movieName: { type:String, required: true},
-    userID: {type: String,required: true},
+    movieName: { type:String, required: false},
+    userID: {type: String,required: false},
     textChannelID: { type:String, required: false}
 })
 
