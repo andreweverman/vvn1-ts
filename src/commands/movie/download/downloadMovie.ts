@@ -51,21 +51,23 @@ const command: commandProperties = {
                     Filter.regexFilter(magnetRegex, true)
                 )
 
-                const zipNameMessage = await Prompt.getSameUserInput(
-                    userID,
-                    textChannel,
-                    'Enter the name of the zip file to be created:',
-                    Filter.regexFilter(validFileRegex, true)
-                )
+                // const zipNameMessage = await Prompt.getSameUserInput(
+                //     userID,
+                //     textChannel,
+                //     'Enter the name of the zip file to be created:',
+                //     Filter.regexFilter(validFileRegex, true)
+                // )
 
-                const zipPassword = await MovieUtil.Prompt.promptMoviePassword({
-                    guildID: guildID,
-                    userID: userID,
-                    textChannel: textChannel,
-                })
+                // const zipPassword = await MovieUtil.Prompt.promptMoviePassword({
+                //     guildID: guildID,
+                //     userID: userID,
+                //     textChannel: textChannel,
+                // })
+
+                const zipPassword = await Movie.getMovieDefaultPassword(guildID)
                 const movieName = movieNameMessage.content.trim()
                 const torrentLink = torrentLinkMessage.content.trim()
-                const zipName = zipNameMessage.content.trim()
+                // const zipName = zipNameMessage.content.trim()
                 // const zipPassword = zipPasswordMessage.content.trim()
 
                 const res = await Movie.createMovieDownloadRequest(
@@ -73,7 +75,7 @@ const command: commandProperties = {
                     userID,
                     movieName,
                     torrentLink,
-                    zipName,
+                    '',
                     zipPassword,
                     textChannel
                 )

@@ -76,14 +76,8 @@ const command: commandProperties = {
                             resolve(true)
                             return
                         }
-                        let content: string = aliases.map((x, i) => `${i + offset}: ${x.name}`).join('\n')
-                        const msg = new MessageEmbed().addField(
-                            `Aliases for id: ${id}\nYou can select multiple numbers with spaces between.`,
-                            content,
-                            true
-                        )
 
-                        Prompt.arraySelect(userID, textChannel, aliases, (x, i) => `${i + offset}: ${x.name}`,'Select aliases to delete', {
+                        Prompt.arraySelect(userID, textChannel, aliases, (x) => `${x.name}`,'Select aliases to delete', {
                             customOffset: offset,
                             multiple: true,
                         })

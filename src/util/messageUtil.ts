@@ -257,14 +257,14 @@ export function sendToChannel(
     autoDeleteTime = 15 * NumberConstants.secs,
     paginationOptions?: sendPaginationOptions 
 ) {
-    const z = sendUtil(channel.send(statement), autoDelete, autoDeleteTime).then((x) => {
+    const sendRes = sendUtil(channel.send(statement), autoDelete, autoDeleteTime).then((res) => {
         if (paginationOptions) {
-            Prompt.setPaginationReaction(x.messages[0], paginationOptions.embeds,paginationOptions.userID)
+            Prompt.setPaginationReaction(res.messages[0], paginationOptions.embeds,paginationOptions.userID)
         }
-        return x
+        return res
     })
 
-    return z
+    return sendRes
 }
 
 export function replyUtil(

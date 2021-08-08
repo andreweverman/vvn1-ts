@@ -326,23 +326,22 @@ const DownloadedMovieSchema = new mongoose.Schema({
 
 export interface IMovieList {
     movies: IDownloadedMovie[]
-    last_updated: Date
-    awaiting_update: boolean
+    lastUpdated: Date
+    awaitingUpdate: boolean
     uploadQueue: IDownloadedMovie[]
 }
 
 export interface IMovieListDoc extends IMovieList, Document {
     movies: IDownloadedMovieDoc[]
-    last_updated: Date
-    awaiting_update: boolean
+    lastUpdated: Date
+    awaitingUpdate: boolean
     uploadQueue: IDownloadedMovieDoc[]
 }
 
 const MovieListSchema = new mongoose.Schema({
     movies: { type: [DownloadedMovieSchema], default: [], required: true },
-    awaiting_update: { type: Boolean, default: true, required: true },
-    last_updated: { type: Date, required: true, default: new Date() },
-    uploadQueue: { type: [DownloadedMovieSchema], default: [], required: true },
+    awaitingUpdate: { type: Boolean, default: true, required: true },
+    lastUpdated: { type: Date, required: true, default: new Date() },
 })
 
 
@@ -353,7 +352,7 @@ export interface IMovieContainer {
     movies: IMovie[]
     requests: IMovieRequest[]
     downloads: IMovieDownloadContainer
-    movie_list: IMovieList
+    serverList: IMovieList
 }
 export interface IMovieContainerDoc extends Document {
     default_password: string
@@ -362,7 +361,7 @@ export interface IMovieContainerDoc extends Document {
     movies: IMovieDoc[]
     requests: IMovieRequestDoc[]
     downloads: IMovieDownloadContainerDoc
-    movie_list: IMovieListDoc
+    serverList: IMovieListDoc
 }
 
 const MovieSchema = new mongoose.Schema({
@@ -400,7 +399,7 @@ const MovieSchema = new mongoose.Schema({
     movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
     downloads: {type:MovieDownloadContainerSchema,default:{}},
-    movie_list: MovieListSchema,
+    serverList: {type:MovieListSchema,default:{}}
 })
 
 interface IPlayer {
@@ -432,7 +431,7 @@ const GuildSchema = new mongoose.Schema({
     aliases: [AliasSchema],
     movie: { type: MovieSchema, default: {} },
     links: [LinkSchema],
-    player: PlayerSchema,
+    player: { type:PlayerSchema,default: {}}
 })
 
 export default mongoose.model<IGuildDoc>('Guild', GuildSchema)

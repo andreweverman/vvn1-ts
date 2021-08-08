@@ -293,7 +293,7 @@ export namespace Alias {
                 deleteNames.push(aliases.name)
             }
             const updateStrings: updateOneStrings = {
-                success: `The following ids have been deleted: ${deleteNames.join(', ')}`,
+                success: `The following aliases have been deleted: ${deleteNames.join(', ')}`,
                 failure: 'There was an error deleting the aliases. Please try again or contact the administrator',
             }
 
@@ -1493,7 +1493,7 @@ export namespace Movie {
     export async function selectMovieListUpload(guildID: string, uploadedMovie: IDownloadedMovieDoc) {
         const guildDoc = await Guild.getGuild(guildID)
         if (guildDoc.config.premium) {
-            const movieList = guildDoc.movie.movie_list
+            const movieList = guildDoc.movie.serverList
             movieList.uploadQueue.push(uploadedMovie)
             movieList.save()
         } else {
@@ -1503,8 +1503,7 @@ export namespace Movie {
 
     export async function requestMovieListUpdate(guildID: string) {
         const guildDoc = await Guild.getGuild(guildID)
-        guildDoc.movie.movie_list.awaiting_update = true
-        guildDoc.movie.movie_list.last_updated = new Date()
+        guildDoc.movie.serverList.awaitingUpdate = true
         guildDoc.save()
     }
 
@@ -1519,8 +1518,9 @@ export namespace Movie {
         while (tries < maxTries) {
             const guildDoc = await Guild.getGuild(guildID)
             if (guildDoc.config.premium) {
-                let movieList = guildDoc.movie.movie_list
-                if (movieList.last_updated < request_time) {
+                let movieList = guildDoc.movie.serverList
+                if (!movieList){throw 'No movie list found'}
+                if (movieList.lastUpdated < request_time) {
                     tries++
                     await delay(10 * NumberConstants.secs)
                 } else {
