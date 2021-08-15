@@ -414,11 +414,11 @@ export namespace Link {
 
     export interface viewLinksResponse {
         links: ILinkDoc[]
-        message: MessageEmbed | string
-        offset: number
+        message: MessageEmbed[] | string
     }
     export async function viewLinks(guildID: string, textChannel?: MessageChannel): Promise<viewLinksResponse> {
         try {
+            let message: string | MessageEmbed[]
             const guildDoc = await Guild.getGuild(guildID)
             let embed: MessageEmbed | string
             const allLinks = guildDoc.links
@@ -429,52 +429,17 @@ export namespace Link {
             const linksSorted = clips.concat(links)
 
             if (linksSorted.length > 0) {
-                const types = [
-                    { array: clips, header: 'Clips' },
-                    { array: links, header: 'Links' },
-                ]
+                const linkMap = (x: ILinkDoc) => {
+                    let movie_str = `[${x.names.join(', ')}](${x.link})`
 
-                const fields: any = []
-                let overallCount = 0
-                let typeCount = 0
-                types.forEach((type) => {
-                    const arr = type.array
-                    let i: number,
-                        j: number,
-                        chunk = 5
-                    for (i = 0, j = arr.length; i < j; i += chunk) {
-                        let startCount = overallCount
-                        const linkChunk = arr.slice(i, i + chunk)
-                        const linkMessage = linkChunk.map((x, k) => {
-                            return `${'**' + (i + k + offset + typeCount) + '**. '}[${x.names.join(', ')}](${
-                                x.link
-                            } 'Link')`
-                        })
-                        overallCount += linkChunk.length
-                        fields.push({
-                            name: `${type.header} ${startCount + offset} - ${overallCount}`,
-                            value: linkMessage,
-                            inline: true,
-                        })
-                    }
-                    typeCount += overallCount
-                })
-
-                embed = new MessageEmbed().setTitle('Link Catalog').addFields(fields)
+                    return movie_str
+                }
+                message = Prompt.arrayToPaginatedArray(allLinks, `All Links`, linkMap, {})
             } else {
-                embed = 'No links found'
-                linksFound = false
+                message = 'No links found'
             }
 
-            if (textChannel)
-                sendToChannel(
-                    textChannel,
-                    embed,
-                    true,
-                    linksFound ? 1 * NumberConstants.mins : 15 * NumberConstants.secs
-                )
-
-            return { links: linksSorted, message: embed, offset: offset }
+            return { links: allLinks, message: message }
         } catch (error) {
             throw error
         }
@@ -487,11 +452,7 @@ export namespace Link {
         multiple: boolean
     ): Promise<ILinkDoc | ILinkDoc[] | undefined> {
         try {
-            const { links, message, offset } = await viewLinks(guildID)
-
-            if (typeof message !== 'string') {
-                message.title = 'Select a link:'
-            }
+            const { links, message } = await viewLinks(guildID)
 
             if (links.length < 1) {
                 sendToChannel(textChannel, message + '. Quitting...', true, 15 * NumberConstants.secs)
@@ -501,7 +462,7 @@ export namespace Link {
             const mapFunction = (x: ILinkDoc) => `[${x.names.join(', ')}](${x.link} 'Link')`
             const link = await Prompt.arraySelect(userID, textChannel, links, mapFunction, 'Select a link', {
                 multiple: multiple,
-                customOffset: offset,
+                customOffset: 1,
             })
 
             let res: ILinkDoc | ILinkDoc[] | undefined
@@ -725,7 +686,7 @@ export namespace Movie {
     }
     export async function getMovies(guildID: string, args: string[], number = false): Promise<getMoviesResponse> {
         try {
-            const movieName = args.join(' ')
+            const movieName = args.join(' ').toLowerCase()
 
             let message: string | MessageEmbed[]
             let movies: IMovieDoc[]
@@ -765,7 +726,7 @@ export namespace Movie {
                     movies,
                     `Movie Catalog ${movieDoc.default_password != '' ? `\nDefault Password: ${defaultPassword}` : ''}`,
                     movieMap,
-                    {}
+                    {chunk:5}
                 )
             }
 
@@ -1557,24 +1518,29 @@ export namespace Movie {
         updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 
-    export async function createMovieUploadRequest(guildID:string,userID:string, movie: IDownloadedMovieDoc,textChannelID?:string) {
+    export async function createMovieUploadRequest(
+        guildID: string,
+        userID: string,
+        movie: IDownloadedMovieDoc,
+        textChannelID?: string
+    ) {
         const zipPassword = await getMovieDefaultPassword(guildID)
         const obj: IMovieUploadElement = {
-            inProgress:false,
-            completed:false,
-            userID:userID,
-            textChannelID:textChannelID,
-            movieName:movie.name,
-            zipPassword:zipPassword,
-            moviePath:movie.path,
-            time:0,
-            percent:0
+            inProgress: false,
+            completed: false,
+            userID: userID,
+            textChannelID: textChannelID,
+            movieName: movie.name,
+            zipPassword: zipPassword,
+            moviePath: movie.path,
+            time: 0,
+            percent: 0,
         }
         const response = await Guilds.updateOne(
             { guild_id: guildID },
             {
                 $push: {
-                    'movie.downloads.uploadQueue':  obj ,
+                    'movie.downloads.uploadQueue': obj,
                 },
             }
         )

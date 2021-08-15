@@ -617,7 +617,6 @@ export namespace Prompt {
         offset?: number
         chunk?: number
     }
-
     export function arrayToPaginatedArray(
         arr: any[],
         title: string,

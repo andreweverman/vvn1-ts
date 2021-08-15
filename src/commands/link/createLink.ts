@@ -91,7 +91,7 @@ const command: commandProperties = {
             return new Promise((resolve, reject) => {
                 try {
 
-                    Prompt.arraySelect(userID, textChannel, options, (x, i) => `${i + 1}. ${x.name}, ${x.description}`, 'Select a type')
+                    Prompt.arraySelect(userID, textChannel, options, (x) => `${x.name}, ${x.description}`, 'Select a type')
                         .then((option) => {
                             if (!option.arrayElement) {
                                 reject(null)

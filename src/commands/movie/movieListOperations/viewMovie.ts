@@ -44,7 +44,3 @@ const command: commandProperties = {
 }
 
 export default command
-function arrayToPaginatedArray(array: any, title: any, mapFunction: any, paginationOptions: any) {
-    throw new Error('Function not implemented.')
-}
-
