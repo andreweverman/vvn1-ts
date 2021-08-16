@@ -19,6 +19,8 @@ import {
     NewsChannel,
     Guild,
     GuildEmoji,
+    EmbedField,
+    EmbedFieldData,
 } from 'discord.js'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
 import { stringMatch, matchOptions, spaceCommaRegex, guildEmojiRegex } from './stringUtil'
@@ -246,20 +248,20 @@ export function sendUtil(
     })
 }
 
-export interface sendPaginationOptions{
-    userID:string
-    embeds:MessageEmbed[]
+export interface sendPaginationOptions {
+    userID: string
+    embeds: MessageEmbed[]
 }
 export function sendToChannel(
     channel: MessageChannel,
     statement: string | MessageEmbed | any[],
     autoDelete = true,
     autoDeleteTime = 15 * NumberConstants.secs,
-    paginationOptions?: sendPaginationOptions 
+    paginationOptions?: sendPaginationOptions
 ) {
     const sendRes = sendUtil(channel.send(statement), autoDelete, autoDeleteTime).then((res) => {
         if (paginationOptions) {
-            Prompt.setPaginationReaction(res.messages[0], paginationOptions.embeds,paginationOptions.userID)
+            Prompt.setPaginationReaction(res.messages[0], paginationOptions.embeds, paginationOptions.userID)
         }
         return res
     })
@@ -626,20 +628,41 @@ export namespace Prompt {
         const embeds: MessageEmbed[] = []
         const offset = options?.offset || 1
         const chunk = options?.chunk || 15
+        const maxLength = 1000
 
         let i: number, j: number
         for (i = 0, j = arr.length; i < j; i += chunk) {
+            const fields: any[] = []
+            let f: string[] = []
+            let curLength = 0
             const linkChunk = arr.slice(i, i + chunk)
-            const linkMessage = linkChunk.map((x, k) => {
-                return `${'**' + (i + k + offset) + '**. '}${mapFunction(x)}`
+            linkChunk.forEach((x, k) => {
+                const entry = `${'**' + (i + k + offset) + '**. '}${mapFunction(x)}`
+                const isUnder = curLength + entry.length < maxLength
+                if (isUnder) {
+                    f.push(entry)
+                    curLength += entry.length
+                }
+                if (!isUnder) {
+                    fields.push({
+                        name: title,
+                        value: f,
+                        inline: true,
+                    })
+                    f = []
+                    f.push(entry)
+                }
+
+                if (k == linkChunk.length - 1) {
+                    fields.push({
+                        name: title,
+                        value: f,
+                        inline: true,
+                    })
+                }
             })
 
-            const field = {
-                name: title,
-                value: linkMessage,
-                inline: true,
-            }
-            const message = new MessageEmbed().addFields(field)
+            const message = new MessageEmbed().addFields(fields)
             embeds.push(message)
         }
         return embeds

@@ -726,7 +726,7 @@ export namespace Movie {
                     movies,
                     `Movie Catalog ${movieDoc.default_password != '' ? `\nDefault Password: ${defaultPassword}` : ''}`,
                     movieMap,
-                    {chunk:5}
+                    { chunk: 20 }
                 )
             }
 
