@@ -8,7 +8,7 @@ import { mocked } from 'ts-jest/utils'
 import { MessageChannel } from '../messageUtil'
 import { TextChannel } from 'discord.js'
 import { MovieUtil } from '../generalUtil'
-import axios from 'axios'
+import puppeteer from 'puppeteer'
 dotenv.config()
 
 let mongod: MongoMemoryServer
@@ -69,7 +69,7 @@ describe('MovieUtil', () => {
         describe('when it errors', () => {
             it('should return null', async () => {
                 // making axios error out
-                axios.get = jest.fn().mockRejectedValue(new Error('Axios error'))
+                puppeteer.launch = jest.fn().mockRejectedValue(new Error('Axios error'))
 
                 const res = await MovieUtil.getInfoPage('Jimmy Neutron')
                 expect(res).toEqual(null)

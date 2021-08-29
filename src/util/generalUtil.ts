@@ -31,6 +31,7 @@ import moment from 'moment-timezone'
 import axios from 'axios'
 import cheerio from 'cheerio'
 import emoji from 'node-emoji'
+import puppeteer from 'puppeteer'
 
 export namespace AliasUtil {
     export interface parseChannelAndMembersResponse {
@@ -249,7 +250,9 @@ export namespace MovieUtil {
             let extraStringOptions = []
             if (voteAllowed) extraStringOptions.push(vote)
             const { movies, message } = await Movie.getMovies(guildID, [], true)
-            if (movies.length ==0) {return null}
+            if (movies.length == 0) {
+                return null
+            }
             const movie = await MPrompt.arraySelect(
                 userID,
                 textChannel,
@@ -281,32 +284,58 @@ export namespace MovieUtil {
         })
     }
 
-    export async function getInfoPage(movieName: string): Promise<string | null> {
-        const urlBase = 'https://letterboxd.com'
-        const searchBase = '/search/'
+    export async function getInfoPage(movieName: string): Promise<any | null> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const urlBase = 'https://letterboxd.com'
+                const searchBase = '/search/'
 
-        const searchURL = encodeURI(urlBase + searchBase + movieName)
+                const searchURL = encodeURI(urlBase + searchBase + movieName)
 
-        return new Promise((resolve, reject) => {
-            axios
-                .get(searchURL)
-                .then((response) => {
-                    const html = response.data
-                    const $ = cheerio.load(html)
+                let browser = await puppeteer.launch()
+                let page = await browser.newPage()
 
-                    const liResults = $('ul.results li div[data-film-link]')
-                    liResults.length < 1 ? resolve(null) : resolve(urlBase + liResults.first().attr('data-film-link'))
+                await page.goto(searchURL, { waitUntil: 'networkidle2' })
+
+                const results = await page.evaluate(() => {
+                    // const liresults = document.querySelector('ul.results li div[data-film-link]')
+                    return document.documentElement.innerHTML
                 })
-                .catch((err) => {
-                    resolve(null)
-                })
+
+                const html = results
+                const $ = cheerio.load(html)
+
+                const liresults = $('ul.results li div[data-film-link]')
+                liresults.length < 1 ? resolve(null) : resolve(urlBase + liresults.first().attr('data-film-link'))
+            } catch (e) {
+                resolve(null)
+            }
+            // axios
+            //     .get(searchURL)
+            //     .then((response) => {
+            //         const html = response.data
+            //         const $ = cheerio.load(html)
+
+            //         const liresults = $('ul.results li div[data-film-link]')
+            //         liresults.length < 1 ? resolve(null) : resolve(urlbase + liresults.first().attr('data-film-link'))
+            //     })
+            //     .catch((err) => {
+            //         resolve(null)
+            //     })
         })
     }
 
     export async function getMovieDuration(letterboxdLink: string): Promise<string | null> {
-        const listResponse = await axios.get(letterboxdLink)
-        const html = listResponse.data
-        const $ = cheerio.load(html)
+        let browser = await puppeteer.launch()
+        let page = await browser.newPage()
+
+        await page.goto(letterboxdLink, { waitUntil: 'networkidle2' })
+
+        const results = await page.evaluate(() => {
+            // const liresults = document.querySelector('ul.results li div[data-film-link]')
+            return document.documentElement.innerHTML
+        })
+        const $ = cheerio.load(results)
 
         const pTag = $('p.text-link')
         //@ts-ignore
