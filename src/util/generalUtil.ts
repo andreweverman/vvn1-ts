@@ -333,6 +333,7 @@ export namespace MovieUtil {
         letterboxdLink?: string
         rating?: number
         description?: string
+        year?: string
     }
     export async function getMovieInfo(movie: IMovieDoc, createMessage: boolean = true) {
         const link = await getInfoPage(movie.name)
@@ -341,17 +342,18 @@ export namespace MovieUtil {
         const duration = await getMovieDuration({ html })
         const rating = await getMovieRating({ html })
         const description = await getMovieDescription({ html })
+        const year = await getMovieYear({ html })
 
         let message: MessageEmbed | string | null = null
         if (createMessage) {
             message = new MessageEmbed()
-            message.setTitle(movie.name)
+            message.setTitle(`${movie.name}, *${year}*`)
             message.addField('Rating', rating)
             message.addField('Duration', duration)
             message.addField('Description', description)
         }
 
-        return { letterboxdLink: link, message, duration, rating, description }
+        return { letterboxdLink: link, message, duration, rating, description, year }
     }
 
     export async function getLetterboxdPageHTML(letterboxdLink: string) {
@@ -391,6 +393,32 @@ export namespace MovieUtil {
         const minutes = mins % 60
 
         return `${hours} hours ${minutes} minutes`
+    }
+
+    export async function getMovieYear(args: IScrapeArgs): Promise<string> {
+        const search = '\/films\/year\/(\d)+'
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
+        }
+        const $ = cheerio.load(pageHTML)
+        const aTags = Array.from(
+            $('a').map((i, a) => {
+                return { tag: $(a).attr('href'), value: $(a).text() }
+            })
+        )
+        const regex = new RegExp(search)
+
+        const res = aTags.filter((x: any) => x.tag && x.tag.includes('films/year'))
+        if (res.length > 0) {
+            //@ts-ignore
+            return res[0].value
+        }
+        return 'No year found'
     }
 
     export async function getMovieRating(args: IScrapeArgs) {
