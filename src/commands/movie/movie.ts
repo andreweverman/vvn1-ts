@@ -18,9 +18,6 @@ import addMovieRequest from './request/addMovieRequest'
 import deleteMovieRequest from './request/deleteMovieRequest'
 import viewMovieRequest from './request/viewMovieRequest'
 import watchMovie from './watchMovie'
-import addToWatchList from './watchList/addToWatchList'
-import viewWatchlist from './watchList/viewWatchList'
-import removeWatchList from './watchList/removeWatchList'
 import downloadMovie from './download/downloadMovie'
 import deleteDownloadRequest from './download/removeDownloadRequest'
 import deleteDownload from './download/deleteMovieDownload'
@@ -39,25 +36,16 @@ const command: commandProperties = {
 
         try {
             const options: Prompt.optionSelectElement[] = [
-                { name: 'Watch movie', function: watchMovie.execute, args: e },
-                { name: 'View movies', function: viewMovie.execute, args: e },
-                { name: 'Watch list operations', function: watchListOperations, args: e },
-                { name: 'Movie request operations', function: movieRequestOperations, args: e },
-                { name: 'Movie download operations', function: downloadOperations, args: e },
-                { name: 'Movie link operations', function: movieLinkOperations, args: e },
+                { name: 'Watch a Movie', function: watchMovie.execute, args: e },
+                { name: 'View Movies', function: viewMovie.execute, args: e },
+                { name: 'Movie List Operations', function: movieLinkOperations, args: e },
+                { name: 'Movie Download/Upload operations', function: downloadOperations, args: e },
                 { name: 'Edit movie configuration', function: movieConfig.execute, args: e },
             ]
 
             Prompt.optionSelect(userID, textChannel, options)
 
-            async function watchListOperations() {
-                const newOptions: Prompt.optionSelectElement[] = [
-                    { name: 'View watchlist', function: viewWatchlist.execute, args: e },
-                    { name: 'Add to watchlist', function: addToWatchList.execute, args: e },
-                    { name: 'Delete movie from watchlist', function: removeWatchList.execute, args: e },
-                ]
-                Prompt.optionSelect(userID, textChannel, newOptions)
-            }
+          
 
             async function movieRequestOperations() {
                 const newOptions: Prompt.optionSelectElement[] = [

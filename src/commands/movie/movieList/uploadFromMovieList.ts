@@ -13,8 +13,8 @@ import { MovieUtil } from '../../../util/generalUtil'
 import { NumberConstants } from '../../../util/constants'
 
 const command: commandProperties = {
-    name: 'upload_offline',
-    aliases: [],
+    name: 'upload',
+    aliases: ['upload_offline','upload_offline','uploadmovie','upload_movie'],
     description: 'Add a movie to the catalog. Need a link and the name',
     usage: '[movie_url] [movie name]. Ex: ?addmovie fight_club_link.com fight club. ',
     args: false,

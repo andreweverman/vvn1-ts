@@ -1,6 +1,6 @@
 /**
  * Starts up a movie night service
- * 
+ *
  * The magnum opus of vvn1
  * The user selects a movie or can vote for it.
  * They set a time for the movie
@@ -8,17 +8,17 @@
  * When time goes off, there are a series of actions:
  *  - users who said they want to watch get pinged
  *  - users who said they are ready get moved to the movie channel (if aliased)
- *  - a movie time sound if played (if configured) *  
+ *  - a movie time sound if played (if configured) *
  * There is then a ready check message sent in the channel
  * When ready check passed, a countdown is played (if configured)
- * 
- * 
- * @file   Command for organizing watching movies
+ *
+ *
+ * @file   Command for organizing watching movie/
  * @author Andrew Everman.
- * @since  17.7.2020 
+ * @since  17.7.2020
  */
 
-import { MessageEmbed, MessageCollector, Message, ReactionCollector, GuildEmoji, VoiceChannel, Role } from 'discord.js'
+import { MessageEmbed, MessageCollector, Message, ReactionCollector, GuildEmoji, VoiceChannel } from 'discord.js'
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt, Filter, sendToChannel, replyUtil, deleteMessage } from '../../util/messageUtil'
 import { Link, Movie, Config, Guild } from '../../db/controllers/guildController'
@@ -77,9 +77,6 @@ const command: commandProperties = {
         const startCommandString = '--startmovie'
         const timeZoneName = await Config.getTimeZoneName(guildID)
 
-        let movieRole: Role | undefined
-        let movieRoleAt: Message
-
         try {
             const editOptions: Prompt.optionSelectElement[] = [
                 { name: 'Change movie', function: selectMovieOrVote },
@@ -128,7 +125,6 @@ const command: commandProperties = {
                     }
                     if (selectedMovie.arrayElement) movie = selectedMovie.arrayElement
                     if (selectedMovie.stringCommand) voteMode = true
-                    manageRole()
                     return true
                 } catch (error) {
                     quitMovie(error)
@@ -136,16 +132,6 @@ const command: commandProperties = {
                 }
             }
 
-            async function manageRole() {
-                if (movieRole == undefined && movie != undefined) {
-                    movieRole = await MovieUtil.createMovieRole(movie, e.message.guild!)
-                } else {
-                    if (movieRole?.name != movie.name) {
-                        await movieRole?.delete('Change of movie')
-                        movieRole = await MovieUtil.createMovieRole(movie, e.message.guild!)
-                    }
-                }
-            }
             async function getMovieDate() {
                 try {
                     // we do not want anything to be in the past when doing this
@@ -238,12 +224,13 @@ const command: commandProperties = {
             async function getInstructionEmbed() {
                 try {
                     let movieInformationLink: string | null | undefined
-                    let movieTime:string|null = null
+                    let movieTime: string | null = null
                     const embed = new MessageEmbed().setTitle(`Movie Night`)
 
                     if (movie) {
-                        movieInformationLink = await MovieUtil.getInfoPage(movie.name)    
-                        if (movieInformationLink) movieTime = await MovieUtil.getMovieDuration(movieInformationLink)                    
+                        movieInformationLink = await MovieUtil.getInfoPage(movie.name)
+                        if (movieInformationLink)
+                            movieTime = await MovieUtil.getMovieDuration({ link: movieInformationLink })
 
                         embed.addField(
                             `Movie Name:`,
@@ -270,7 +257,7 @@ const command: commandProperties = {
                         )
                     }
 
-                    if (movie && movieTime){
+                    if (movie && movieTime) {
                         embed.addField('Movie Duration', movieTime)
                     }
                     if (movie && movieInformationLink) {
@@ -291,11 +278,6 @@ const command: commandProperties = {
                             'Editing Options',
                             `To edit the time or movie, use ${editCommandString} and follow the prompts.\nUse ${quitCommandString} if you wish to cancel the movie\nUse ${startCommandString} to start the movie whenever`
                         )
-
-                    if (movieRole)
-                        movieRoleAt = (
-                            await sendToChannel(textChannel, movieRole.toString(), true, 20 * NumberConstants.mins)
-                        ).messages[0]
 
                     return embed
                 } catch (error) {
@@ -430,7 +412,6 @@ const command: commandProperties = {
                 try {
                     // vote array is already sorted
                     movie = votedMovies[0].movie
-                    await manageRole()
 
                     // let the people who voted know that the movie was selected
 
@@ -490,7 +471,8 @@ const command: commandProperties = {
 
                     if (voiceChannel && movieTimeEnabled) {
                         const movie_time = await Link.lookupLink(guildID, movieTimeName)
-                        if (movie_time && movie_time.type == 'clip') playAudio(configDoc,voiceChannel, movie_time, textChannel)
+                        if (movie_time && movie_time.type == 'clip')
+                            playAudio(configDoc, voiceChannel, movie_time, textChannel)
                     }
 
                     await readyCheck(e.message.guild!, textChannel, voiceChannel, 15).catch((err) => console.error(err))
@@ -498,11 +480,9 @@ const command: commandProperties = {
                     if (voiceChannel && startCountDownEnabled) {
                         const start_countdown = await Link.lookupLink(guildID, movieCountdownName)
                         if (start_countdown && start_countdown.type == 'clip')
-                            playAudio(configDoc,voiceChannel, start_countdown, textChannel)
+                            playAudio(configDoc, voiceChannel, start_countdown, textChannel)
                     }
 
-                    if (movieRoleAt) deleteMessage(movieRoleAt, 0)
-                    movieRoleAt.delete({ reason: 'Movie starting' })
                     return deleteMessage(instructionMessage, 0)
                 } catch (error) {
                     throw error
@@ -611,15 +591,12 @@ const command: commandProperties = {
 
             function quitMovie(error: any) {
                 try {
-                    if (movieRole) movieRole.delete('Quitting movie')
-                    if (movieRoleAt) deleteMessage(movieRoleAt, 0)
                 } catch (err) {
                     Prompt.handleGetSameUserInputError(error)
                     Prompt.handleGetSameUserInputError(err)
                 }
             }
         } catch (error) {
-            if (movieRole) movieRole.delete('Quitting movie')
             Prompt.handleGetSameUserInputError(error)
         }
     },

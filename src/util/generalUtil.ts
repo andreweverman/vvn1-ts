@@ -19,6 +19,8 @@ import {
     Collection,
     GuildEmoji,
     Role,
+    Message,
+    MessageEmbed,
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from './constants'
 import { Guild, Link, Movie, Config } from '../db/controllers/guildController'
@@ -325,17 +327,59 @@ export namespace MovieUtil {
         })
     }
 
-    export async function getMovieDuration(letterboxdLink: string): Promise<string | null> {
+    export interface IMovieInfo {
+        message?: MessageEmbed | string
+        duration?: number
+        letterboxdLink?: string
+        rating?: number
+        description?: string
+    }
+    export async function getMovieInfo(movie: IMovieDoc, createMessage: boolean = true) {
+        const link = await getInfoPage(movie.name)
+        const html = await getLetterboxdPageHTML(link)
+
+        const duration = await getMovieDuration({ html })
+        const rating = await getMovieRating({ html })
+        const description = await getMovieDescription({ html })
+
+        let message: MessageEmbed | string | null = null
+        if (createMessage) {
+            message = new MessageEmbed()
+            message.setTitle(movie.name)
+            message.addField('Rating', rating)
+            message.addField('Duration', duration)
+            message.addField('Description', description)
+        }
+
+        return { letterboxdLink: link, message, duration, rating, description }
+    }
+
+    export async function getLetterboxdPageHTML(letterboxdLink: string) {
         let browser = await puppeteer.launch()
         let page = await browser.newPage()
 
         await page.goto(letterboxdLink, { waitUntil: 'networkidle2' })
 
-        const results = await page.evaluate(() => {
-            // const liresults = document.querySelector('ul.results li div[data-film-link]')
+        return await page.evaluate(() => {
             return document.documentElement.innerHTML
         })
-        const $ = cheerio.load(results)
+    }
+
+    interface IScrapeArgs {
+        link?: string
+        html?: string
+    }
+    export async function getMovieDuration(args: IScrapeArgs): Promise<string> {
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
+        }
+
+        const $ = cheerio.load(pageHTML)
 
         const pTag = $('p.text-link')
         //@ts-ignore
@@ -349,30 +393,42 @@ export namespace MovieUtil {
         return `${hours} hours ${minutes} minutes`
     }
 
-    export async function createMovieRole(movie: IMovieDoc, guild: GuildD): Promise<Role> {
-        try {
-            const reason = `vvn1: to watch ${movie.name}`
-            const movieWatchers = movie.want_to_watch
-                .map((x) => guild.member(x))
-                .filter((x) => x != null) as GuildMember[]
-
-            const newRole = await guild.roles.create({
-                data: {
-                    name: movie.name,
-                    color: 'BLUE',
-                    permissions: 0,
-                },
-                reason: reason,
-            })
-
-            movieWatchers.forEach(async (member) => {
-                await member.roles.add(newRole, reason)
-            })
-
-            return newRole
-        } catch (error) {
-            throw error
+    export async function getMovieRating(args: IScrapeArgs) {
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
         }
+
+        const $ = cheerio.load(pageHTML)
+
+        const aTag = $('a.display-rating')
+        //@ts-ignore
+        return aTag[0].children[0].data
+    }
+
+    export async function getMovieDescription(args: IScrapeArgs) {
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
+        }
+
+        const $ = cheerio.load(pageHTML)
+        let desc: string[] = []
+        const divv = $('div.review.body-text')
+        divv.find('div > p').each((index, element) => {
+            //@ts-ignore
+            const z = $(element).valueOf()[0].children[0].data
+            desc.push(z)
+        })
+        return desc.length > 0 ? desc[0] : ''
     }
 
     export namespace Config {
