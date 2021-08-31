@@ -7,11 +7,12 @@
  */
 
 import { CommandParams, commandProperties } from '../../../bot'
-import { sendPaginationOptions, sendToChannel, Prompt } from '../../../util/messageUtil'
+import { sendPaginationOptions, sendToChannel, Prompt, Filter } from '../../../util/messageUtil'
 import { Movie } from '../../../db/controllers/guildController'
 import { NumberConstants } from '../../../util/constants'
 import { IMovieDoc } from '../../../db/models/guildModel'
 import { MovieUtil } from '../../../util/generalUtil'
+import { load } from 'cheerio'
 
 const command: commandProperties = {
     name: 'viewmovie',
@@ -25,26 +26,47 @@ const command: commandProperties = {
         const userID = e.message.author.id
         const guildID = e.message.guild!.id
         const textChannel = e.message.channel
-
+        const back = 'back'
         try {
-            const { movies, message } = await Movie.getMovies(guildID, e.args, false)
-            let options: undefined | sendPaginationOptions
-            if (Array.isArray(message)) {
-                options = { userID: e.message.author.id, embeds: message }
-            }
+            while (true) {
+                const { movies, message } = await Movie.getMovies(guildID, e.args, false)
 
-            const arrSel = await Prompt.arraySelect(
-                userID,
-                textChannel,
-                movies,
-                (movie: IMovieDoc) => `${movie.name}`,
-                'Movie Catalog. Select a movie to get information',
-                { time: 10 * NumberConstants.mins }
-            )
+                let options: undefined | sendPaginationOptions
+                if (Array.isArray(message)) {
+                    options = { userID: e.message.author.id, embeds: message }
+                }
 
-            if (arrSel.arrayElement) {
-                const { message } = await MovieUtil.getMovieInfo(arrSel.arrayElement)
-                if (message) sendToChannel(textChannel, message, true, 10 * NumberConstants.mins)
+                const arrSel = await Prompt.arraySelect(
+                    userID,
+                    textChannel,
+                    movies,
+                    (movie: IMovieDoc) => `${movie.name}`,
+                    'Movie Catalog. Select a movie to get information',
+                    { time: 10 * NumberConstants.mins }
+                )
+
+                if (arrSel.arrayElement) {
+                    const loadingMessage = await sendToChannel(textChannel, 'Loading movie info...',false)
+                    const { message } = await MovieUtil.getMovieInfo(arrSel.arrayElement)
+                    loadingMessage.messages[0].delete()
+                    if (message) {
+                        try {
+                            message.addField('Instructions', `Message ${back} to go back to the catalog` )
+                            const z = await Prompt.getSameUserInput(
+                                userID,
+                                textChannel,
+                                message,
+                                Filter.stringFilter(back, { loose: true }),
+                                { time: 5 * NumberConstants.mins }
+                            )
+                            if (!z) {
+                                return
+                            }
+                        } catch (e) {
+                            return
+                        }
+                    }
+                }
             }
         } catch (error) {
             throw error

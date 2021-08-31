@@ -312,18 +312,7 @@ export namespace MovieUtil {
             } catch (e) {
                 resolve(null)
             }
-            // axios
-            //     .get(searchURL)
-            //     .then((response) => {
-            //         const html = response.data
-            //         const $ = cheerio.load(html)
-
-            //         const liresults = $('ul.results li div[data-film-link]')
-            //         liresults.length < 1 ? resolve(null) : resolve(urlbase + liresults.first().attr('data-film-link'))
-            //     })
-            //     .catch((err) => {
-            //         resolve(null)
-            //     })
+       
         })
     }
 

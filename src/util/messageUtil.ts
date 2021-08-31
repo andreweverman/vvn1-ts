@@ -354,6 +354,7 @@ export namespace Prompt {
                     })
 
                     messageCollector.on('end', (collected, reason) => {
+                        if (!promptMessage.deleted) promptMessage.delete()
                         let rej: gsuiReject
                         const lastMessage = collected.last()
                         if (lastMessage == undefined) {
