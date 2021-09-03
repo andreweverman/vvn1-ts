@@ -154,7 +154,7 @@ export namespace Prompt {
         options?: PromptDateOptions
     ): Promise<PromptDateResponse> {
         const prePrompt = options ? options.prePrompt + '\n' : ''
-        const fullPrompt = prePrompt + 'Enter date in mm/dd/yyyy | mm.dd.yyyy | mm-dd-yyyy format:'
+        const fullPrompt = prePrompt + 'Enter date in mm/dd/yyyy | mm.dd.yyyy | mm-dd-yyyy format (or today/now):'
         const pastAllowed = options?.pastAllowed ? true : false
 
         const everyFilters: AnyCollectorFilter[] = []
@@ -166,11 +166,17 @@ export namespace Prompt {
             every: everyFilters,
         })
 
-        const m = await MPrompt.getSameUserInput(userID, textChanel, fullPrompt, filter)
+        const nowOptions = ['today', 'now']
+
+        const m = await MPrompt.getSameUserInput(userID, textChanel, fullPrompt, filter, {
+            extraStringOptions: nowOptions,
+        })
 
         const dateString = m.content.trim()
 
-        return { dateString: dateString, date: new Date(dateString) }
+        const d = nowOptions.includes(dateString) ? getCurrentTimeForTZ(timeZoneName).toDate() : new Date(dateString)
+
+        return { dateString: dateString, date: d }
     }
 
     export interface PromptTimeOptions extends PromptDateOptions {

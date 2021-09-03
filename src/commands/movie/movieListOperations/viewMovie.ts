@@ -12,7 +12,6 @@ import { Movie } from '../../../db/controllers/guildController'
 import { NumberConstants } from '../../../util/constants'
 import { IMovieDoc } from '../../../db/models/guildModel'
 import { MovieUtil } from '../../../util/generalUtil'
-import { load } from 'cheerio'
 
 const command: commandProperties = {
     name: 'viewmovie',

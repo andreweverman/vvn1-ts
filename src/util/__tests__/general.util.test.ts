@@ -69,7 +69,7 @@ describe('MovieUtil', () => {
         describe('when it errors', () => {
             it('should return null', async () => {
                 // making axios error out
-                puppeteer.launch = jest.fn().mockRejectedValue(new Error('Axios error'))
+                puppeteer.launch = jest.fn().mockRejectedValue(new Error('Puppeteer error'))
 
                 const res = await MovieUtil.getInfoPage('Jimmy Neutron')
                 expect(res).toEqual(null)
