@@ -39,18 +39,18 @@ const command: commandProperties = {
                     userID,
                     textChannel,
                     movies,
-                    (movie: IMovieDoc) => `${movie.name}`,
+                    (movie: IMovieDoc) => `[${movie.name}](${movie.link} 'Download Link')`,
                     'Movie Catalog. Select a movie to get information',
                     { time: 10 * NumberConstants.mins }
                 )
 
                 if (arrSel.arrayElement) {
-                    const loadingMessage = await sendToChannel(textChannel, 'Loading movie info...',false)
+                    const loadingMessage = await sendToChannel(textChannel, 'Loading movie info...', false)
                     const { message } = await MovieUtil.getMovieInfo(arrSel.arrayElement)
                     loadingMessage.messages[0].delete()
                     if (message) {
                         try {
-                            message.addField('Instructions', `Message ${back} to go back to the catalog` )
+                            message.addField('Instructions', `Message ${back} to go back to the catalog`)
                             const z = await Prompt.getSameUserInput(
                                 userID,
                                 textChannel,

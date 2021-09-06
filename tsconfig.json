@@ -8,6 +8,7 @@
         "forceConsistentCasingInFileNames": true,
         "outDir": "./dist",
         "skipLibCheck": true,
-        "sourceMap": true
-    }
+        "sourceMap": true,
+    },
+    "typeAcquisition": { "include": ["jest"] }
 }

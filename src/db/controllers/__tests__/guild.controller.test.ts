@@ -52,7 +52,7 @@ describe('alias', () => {
                     expect(res.response.nModified).toBe(1)
                     expect(res.response.ok).toBe(1)
                     expect(res.approvedAliases).toEqual(names)
-                } catch (error) {
+                } catch (error:any) {
                     throw new Error(error)
                 }
             })

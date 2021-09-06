@@ -49,9 +49,9 @@ export namespace AliasUtil {
     export async function parseChannelsAndMembers(
         guild: GuildD,
         args: string[],
-        options: parseChannelsAndMembersOptions
+        options?: parseChannelsAndMembersOptions
     ): Promise<parseChannelAndMembersResponse> {
-        const member = options.member
+        const member = options?.member
 
         let members: GuildMember[] = []
         const voiceChannels: VoiceChannel[] = []
@@ -125,7 +125,7 @@ export namespace AliasUtil {
             })
         }
 
-        if (options.moveMode) {
+        if (options?.moveMode) {
             if (voiceChannels.length > 0) moveChannel = voiceChannels[voiceChannels.length - 1]
             //if they give multiple voice channels, the last is always the destination
             if (voiceChannels.length > 1) {
@@ -309,10 +309,11 @@ export namespace MovieUtil {
 
                 const liresults = $('ul.results li div[data-film-link]')
                 liresults.length < 1 ? resolve(null) : resolve(urlBase + liresults.first().attr('data-film-link'))
+
+                browser.close()
             } catch (e) {
                 resolve(null)
             }
-       
         })
     }
 
@@ -352,6 +353,7 @@ export namespace MovieUtil {
         await page.goto(letterboxdLink, { waitUntil: 'networkidle2' })
 
         return await page.evaluate(() => {
+            browser.close()
             return document.documentElement.innerHTML
         })
     }
@@ -385,7 +387,7 @@ export namespace MovieUtil {
     }
 
     export async function getMovieYear(args: IScrapeArgs): Promise<string> {
-        const search = '\/films\/year\/(\d)+'
+        const search = '/films/year/(d)+'
         let pageHTML: string
         if (args.link) {
             pageHTML = await getLetterboxdPageHTML(args.link)
