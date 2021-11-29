@@ -96,7 +96,7 @@ function findClip(clip: ILinkDoc): string | undefined {
 
 function justVEquals(ytLink: string) {
     if (ytLink.includes('youtu.be')) {
-        return ytLink.substring(ytLink.lastIndexOf('/'))
+        return ytLink.substring(ytLink.lastIndexOf('/')+1)
     } else {
         let regex = /.*?v=(.*)\?*/
         let res = regex.exec(ytLink)

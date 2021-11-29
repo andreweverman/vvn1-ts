@@ -126,6 +126,7 @@ async function messageEvent(
                             const vc = message.member.voice.channel
 
                             if (vc) {
+
                                 playAudio(configDoc!,vc, link, message.channel).catch((err) => console.log(err))
                             } else {
                                 replyUtil(message, 'You must be connected to a voice channel to use this command')
