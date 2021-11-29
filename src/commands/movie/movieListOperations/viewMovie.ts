@@ -12,6 +12,7 @@ import { Movie } from '../../../db/controllers/guildController'
 import { NumberConstants } from '../../../util/constants'
 import { IMovieDoc } from '../../../db/models/guildModel'
 import { MovieUtil } from '../../../util/generalUtil'
+import { MessageEmbed } from 'discord.js'
 
 const command: commandProperties = {
     name: 'viewmovie',
@@ -50,7 +51,11 @@ const command: commandProperties = {
                     loadingMessage.messages[0].delete()
                     if (message) {
                         try {
-                            message.addField('Instructions', `Message ${back} to go back to the catalog`)
+                            let instrEmbed = new MessageEmbed().addField(
+                                'Instructions',
+                                `Message ${back} to go back to the catalog`
+                            )
+                            message.embeds!.push(instrEmbed)
                             const z = await Prompt.getSameUserInput(
                                 userID,
                                 textChannel,

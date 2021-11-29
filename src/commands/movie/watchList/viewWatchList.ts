@@ -9,7 +9,6 @@
  *
  */
 
-
 import { CommandParams, commandProperties } from '../../../bot'
 import { Prompt, Filter, sendToChannel } from '../../../util/messageUtil'
 import { Link, Movie } from '../../../db/controllers/guildController'

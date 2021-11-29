@@ -21,16 +21,19 @@ import {
     Role,
     Message,
     MessageEmbed,
+    StageChannel,
+    TextChannel,
+    TextBasedChannels,
+    MessageOptions,
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from './constants'
 import { Guild, Link, Movie, Config } from '../db/controllers/guildController'
 import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/models/guildModel'
 import { extractActiveUsers, extractVCMembers } from './discordUtil'
 import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from './stringUtil'
-import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from './messageUtil'
+import { Filter, Prompt as MPrompt, Prompt, sendToChannel } from './messageUtil'
 import { IConfigDoc, ILinkDoc, IAutoDeleteElement, IAutoDeleteSpecified, IMovieDoc } from '../db/models/guildModel'
 import moment from 'moment-timezone'
-import axios from 'axios'
 import cheerio from 'cheerio'
 import emoji from 'node-emoji'
 import puppeteer from 'puppeteer'
@@ -38,9 +41,9 @@ import puppeteer from 'puppeteer'
 export namespace AliasUtil {
     export interface parseChannelAndMembersResponse {
         members: GuildMember[]
-        voiceChannels: VoiceChannel[]
+        voiceChannels: (VoiceChannel | StageChannel)[]
         textChannels: GuildChannel[]
-        moveChannel?: VoiceChannel
+        moveChannel: VoiceChannel | StageChannel | undefined
     }
     export interface parseChannelsAndMembersOptions {
         member?: GuildMember
@@ -54,46 +57,51 @@ export namespace AliasUtil {
         const member = options?.member
 
         let members: GuildMember[] = []
-        const voiceChannels: VoiceChannel[] = []
+        const voiceChannels: (VoiceChannel | StageChannel)[] = []
         const textChannels: GuildChannel[] = []
         let moveChannel
 
         // first lets make everything either a string or the id
         let query: string[] = []
-        args.forEach((x) => {
-            // seeing if gave a resolvable for user
-            const user = guild.member(x)
-            if (user) {
-                members.push(user)
-                return
-            }
-            // seeing if gave a resolvable for channel
-            const channel = guild.channels.resolve(x)
-            if (channel) {
-                channel.type == 'voice' ? voiceChannels.push(channel as VoiceChannel) : textChannels.push(channel)
-                return
-            }
 
-            let found: boolean = true
-            // either pronoun or need to lookup
-            if (member && member.voice.channel) {
-                if (groupPronouns.includes(x)) {
-                    Array.from(member.voice.channel.members.entries())
-                        .map((el) => el[1])
-                        .forEach((y) => members.push(y))
-                } else if (selfPronouns.includes(x)) {
-                    members.push(member)
-                } else if ('here'.includes(x)) {
-                    if (member.voice.channel) voiceChannels.push(member.voice.channel)
+        async function makeQuery() {
+            args.forEach(async (x) => {
+                // seeing if gave a resolvable for user
+                const user = await guild.members.cache.get(x)
+                if (user) {
+                    members.push(user)
+                    return
+                }
+                // seeing if gave a resolvable for channel
+                const channel = guild.channels.resolve(x)
+                if (channel) {
+                    channel.type == 'GUILD_VOICE'
+                        ? voiceChannels.push(channel as VoiceChannel)
+                        : textChannels.push(channel as TextChannel)
+                    return
+                }
+
+                let found: boolean = true
+                // either pronoun or need to lookup
+                if (member && member.voice.channel) {
+                    if (groupPronouns.includes(x)) {
+                        Array.from(member.voice.channel.members.entries())
+                            .map((el) => el[1])
+                            .forEach((y) => members.push(y))
+                    } else if (selfPronouns.includes(x)) {
+                        members.push(member)
+                    } else if ('here'.includes(x)) {
+                        if (member.voice.channel) voiceChannels.push(member.voice.channel)
+                    } else {
+                        found = false
+                    }
                 } else {
                     found = false
                 }
-            } else {
-                found = false
-            }
-            if (!found) query.push(x)
-        })
-
+                if (!found) query.push(x)
+            })
+        }
+        await makeQuery()
         // then we will look them up in the database
         if (query.length > 0) {
             const alias_doc = await Guild.getGuild(guild.id)
@@ -109,10 +117,10 @@ export namespace AliasUtil {
                         obj ? members.push(obj) : (bad_alias = true)
                     } else if (alias.type == 'voice') {
                         const obj = guild.channels.resolve(alias.id)
-                        obj && obj.type == alias.type ? voiceChannels.push(obj as VoiceChannel) : (bad_alias = true)
+                        obj && obj.type == 'GUILD_VOICE' ? voiceChannels.push(obj as VoiceChannel) : (bad_alias = true)
                     } else if (alias.type == 'text') {
                         const obj = guild.channels.resolve(alias.id)
-                        obj && obj.type == alias.type ? textChannels.push(obj) : (bad_alias = true)
+                        obj && obj.type == 'GUILD_TEXT' ? textChannels.push(obj) : (bad_alias = true)
                     } else {
                         bad_alias = true
                     }
@@ -156,7 +164,7 @@ export namespace LinkUtil {
         export interface promptLinkArgs {
             type: Link.LinkTypes
             userID: string
-            textChannel: MessageChannel
+            textChannel: TextBasedChannels
             currentLink?: ILinkDoc
         }
 
@@ -244,7 +252,7 @@ export namespace MovieUtil {
     export async function selectMovie(
         guildID: string,
         userID: string,
-        textChannel: MessageChannel,
+        textChannel: TextBasedChannels,
         multiple = false,
         voteAllowed = false
     ) {
@@ -318,7 +326,7 @@ export namespace MovieUtil {
     }
 
     export interface IMovieInfo {
-        message?: MessageEmbed | string
+        message?: MessageOptions
         duration?: number
         letterboxdLink?: string
         rating?: number
@@ -326,36 +334,51 @@ export namespace MovieUtil {
         year?: string
     }
     export async function getMovieInfo(movie: IMovieDoc, createMessage: boolean = true) {
-        const link = await getInfoPage(movie.name)
-        const html = await getLetterboxdPageHTML(link)
+        try {
+            const link = await getInfoPage(movie.name)
+            const html = await getLetterboxdPageHTML(link)
 
-        const duration = await getMovieDuration({ html })
-        const rating = await getMovieRating({ html })
-        const description = await getMovieDescription({ html })
-        const year = await getMovieYear({ html })
+            const duration = await getMovieDuration({ html })
+            const rating = await getMovieRating({ html })
+            const description = await getMovieDescription({ html })
+            const year = await getMovieYear({ html })
 
-        let message: MessageEmbed | string | null = null
-        if (createMessage) {
-            message = new MessageEmbed()
-            message.setTitle(`${movie.name}, *${year}*`)
-            message.addField('Rating', rating)
-            message.addField('Duration', duration)
-            message.addField('Description', description)
+            let embed: MessageEmbed
+            let message: MessageOptions | undefined
+            if (createMessage) {
+                embed = new MessageEmbed()
+                embed.setTitle(`${movie.name}, *${year}*`)
+                embed.addField('Rating', rating)
+                embed.addField('Duration', duration)
+                embed.addField('Description', description)
+                message = { embeds: [embed] }
+            }
+
+            return { letterboxdLink: link, message: message, duration, rating, description, year }
+        } catch (e) {
+            console.log(e)
+            return { message: undefined }
         }
-
-        return { letterboxdLink: link, message, duration, rating, description, year }
     }
 
     export async function getLetterboxdPageHTML(letterboxdLink: string) {
-        let browser = await puppeteer.launch()
-        let page = await browser.newPage()
+        try {
+            let browser = await puppeteer.launch()
+            let page = await browser.newPage()
 
-        await page.goto(letterboxdLink, { waitUntil: 'networkidle2' })
+            await page.goto(letterboxdLink, { waitUntil: 'networkidle2' })
 
-        return await page.evaluate(() => {
+            const z = await page.evaluate(() => {
+                return document.documentElement.innerHTML
+            })
+
             browser.close()
-            return document.documentElement.innerHTML
-        })
+
+            return z
+        } catch (error) {
+            console.log(error)
+            throw error
+        }
     }
 
     interface IScrapeArgs {
@@ -454,7 +477,7 @@ export namespace MovieUtil {
         export interface MovieConfigArgs {
             guildID: string
             userID: string
-            textChannel: MessageChannel
+            textChannel: TextBasedChannels
             currentMovie: IMovieContainerDoc
             emojiDBName?: string
         }
@@ -463,7 +486,7 @@ export namespace MovieUtil {
     export namespace Prompt {
         export interface promptMovieArgs {
             userID: string
-            textChannel: MessageChannel
+            textChannel: TextBasedChannels
             guildID: string
         }
 
@@ -547,7 +570,7 @@ export namespace ConfigUtil {
         guild: GuildD
         client: Client
         currentConfig: IConfigDoc
-        textChannel: MessageChannel
+        textChannel: TextBasedChannels
         userID: string
         autoDeleteType?: Config.AutoDeleteType
         matchOn?: string
@@ -1205,7 +1228,7 @@ export namespace ConfigUtil {
 
     export async function createArchiveConfig(args: ConfigUtilFunctionArgs) {
         try {
-            const channel = await args.guild.channels.create('Archive', { type: 'text' })
+            const channel = await args.guild.channels.create('Archive', { type: 'GUILD_TEXT' })
             sendToChannel(args.textChannel, 'Please set the channel permissions')
 
             return Config.setMessageArchiveChannel(args.guildID, channel.id, args.textChannel)

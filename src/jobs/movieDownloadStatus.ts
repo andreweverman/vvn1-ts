@@ -13,10 +13,10 @@
 import { BatchJob } from './runner'
 import { Movie } from '../db/controllers/guildController'
 import { Schema } from 'mongoose'
-import { Message } from 'discord.js'
+import { Message,TextBasedChannels} from 'discord.js'
 import { getTimeStrFromSeconds, delay } from '../util/timeUtil'
 import { NumberConstants } from '../util/constants'
-import { sendToChannel, deleteMessage, MessageChannel } from '../util/messageUtil'
+import { sendToChannel, deleteMessage } from '../util/messageUtil'
 import { client } from '../bot'
 import { IMovieStatusUpdateDoc, MovieStatus } from '../db/models/guildModel'
 
@@ -29,14 +29,14 @@ const jobFunction = async function () {
             if (!el.started) {
                 Movie.updateStatusUpdating(x.guildID, el)
 
-                let textChannel = client.channels.resolve(el.textChannelID) as MessageChannel
+                let textChannel = client.channels.resolve(el.textChannelID) as TextBasedChannels
                 updateStatus(x.guildID, textChannel, el._id)
             }
         })
     })
 }
 
-async function updateStatus(guildID: string, textChannel: MessageChannel, movieID: Schema.Types.ObjectId) {
+async function updateStatus(guildID: string, textChannel: TextBasedChannels, movieID: Schema.Types.ObjectId) {
     const stcResponse = await sendToChannel(
         textChannel,
         'Movie Download in progress. Will update download status here...',

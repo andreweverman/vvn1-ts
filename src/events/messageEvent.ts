@@ -160,7 +160,7 @@ async function messageEvent(
                 sendToChannel(message.channel, reply)
                 reject('incorrect usage of command')
             } else {
-                if (command.guildOnly && message.channel.type !== 'text') {
+                if (command.guildOnly && message.channel.type !== 'GUILD_TEXT') {
                     replyUtil(message, "I can't execute that command inside DMs!", false)
                     return
                 }
@@ -204,7 +204,6 @@ async function messageEvent(
                             prefix,
                             commands: commands,
                         })
-
                         resolve('good')
                     } catch (error) {
                         console.error(error)

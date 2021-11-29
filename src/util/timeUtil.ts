@@ -10,8 +10,9 @@
  */
 
 import moment, { Moment } from 'moment-timezone'
-import { Filter, AnyCollectorFilter, Prompt as MPrompt, MessageChannel } from './messageUtil'
+import { Filter, AnyCollectorFilter, Prompt as MPrompt } from './messageUtil'
 import { timeRegex, dateRegex } from './stringUtil'
+import { TextBasedChannels } from 'discord.js'
 
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)
@@ -149,7 +150,7 @@ export namespace Prompt {
     }
     export async function promptDate(
         userID: string,
-        textChanel: MessageChannel,
+        textChanel: TextBasedChannels,
         timeZoneName: string,
         options?: PromptDateOptions
     ): Promise<PromptDateResponse> {
@@ -186,7 +187,7 @@ export namespace Prompt {
 
     export async function promptTime(
         userID: string,
-        textChannel: MessageChannel,
+        textChannel: TextBasedChannels,
         timeZoneName: string,
         options?: PromptTimeOptions
     ) {

@@ -104,7 +104,7 @@ const command: commandProperties = {
                     let voiceChannel: VoiceChannel | undefined
                     if (currentMovieChannel != undefined) {
                         let channel = e.message.guild!.channels.resolve(currentMovieChannel.id)
-                        if (channel?.type == 'voice') {
+                        if (channel?.type == 'GUILD_VOICE') {
                             voiceChannel = channel as VoiceChannel
                         }
                     }

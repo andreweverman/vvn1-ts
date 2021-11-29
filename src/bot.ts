@@ -4,9 +4,9 @@
  *
  * Initializes discord bot
  * Connects to mongo
- * Links the events to their handlers 
+ * Links the events to their handlers
  * Spins up the batch job processor
- * 
+ *
  * @file   Entry point for program
  * @author Andrew Everman.
  * @since  15.10.2020
@@ -21,7 +21,7 @@ import messageEvent from './events/messageEvent'
 import messageDeleteEvent from './events/messageDeleteEvent'
 import guildCreateEvent from './events/guildCreateEvent'
 import connect from './db/connect'
-import {runJobs} from './jobs/runner'
+import { runJobs } from './jobs/runner'
 
 dotenv.config()
 
@@ -52,7 +52,9 @@ export interface commandCooldowns extends Collection<string, Collection<string, 
 
 const dev: boolean = process.env.NODE_ENV == 'dev' ? true : false
 const prod: boolean = process.env.prod == '1' ? true : false
-export const client = new Client(),
+export const client = new Client({
+        intents: ['GUILDS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_VOICE_STATES'],
+    }),
     commands: Collection<string, commandProperties> = new Collection(),
     cooldowns: Collection<string, Collection<string, number>> = new Collection()
 
@@ -71,7 +73,7 @@ if (!commandFiles) {
     }
 }
 
-client.on('message', async (message) => {
+client.on('messageCreate', async (message) => {
     // todo get this from mongo again
     messageEvent(message, client, commands, cooldowns, prod).catch((error) => {
         // todo: use winston to log this
@@ -85,11 +87,12 @@ client.on('messageDelete', async (message) => {
     })
 })
 
-client.on('guildCreate',async(guild) =>{
-    guildCreateEvent(guild).catch((error) =>{
+client.on('guildCreate', async (guild) => {
+    guildCreateEvent(guild).catch((error) => {
         console.log(error)
     })
 })
+
 // discord connect
 client.login(process.env.TOKEN)
 

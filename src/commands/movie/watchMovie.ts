@@ -18,7 +18,15 @@
  * @since  17.7.2020
  */
 
-import { MessageEmbed, MessageCollector, Message, ReactionCollector, GuildEmoji, VoiceChannel } from 'discord.js'
+import {
+    MessageEmbed,
+    MessageCollector,
+    Message,
+    ReactionCollector,
+    GuildEmoji,
+    VoiceChannel,
+    StageChannel,
+} from 'discord.js'
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt, Filter, sendToChannel, replyUtil, deleteMessage } from '../../util/messageUtil'
 import { Link, Movie, Config, Guild } from '../../db/controllers/guildController'
@@ -279,7 +287,7 @@ const command: commandProperties = {
                             `To edit the time or movie, use ${editCommandString} and follow the prompts.\nUse ${quitCommandString} if you wish to cancel the movie\nUse ${startCommandString} to start the movie whenever`
                         )
 
-                    return embed
+                    return { embeds: [embed] }
                 } catch (error) {
                     throw new Error('Something ff in making the message embed')
                 }
@@ -288,7 +296,7 @@ const command: commandProperties = {
             async function updateInstructions() {
                 try {
                     const new_embed = await getInstructionEmbed()
-                    instructionMessage.edit('', new_embed)
+                    instructionMessage.edit(new_embed)
                 } catch (error) {
                     throw error
                 }
@@ -359,7 +367,8 @@ const command: commandProperties = {
                         // going to manually do the message collector for the post instr
                         // need a modified option filter because of the asyncronous nature of this
 
-                        postInstructionMessageCollector = textChannel.createMessageCollector((x) => true, {
+                        postInstructionMessageCollector = textChannel.createMessageCollector({
+                            filter: (x: any) => true,
                             time: 48 * NumberConstants.hours,
                         })
 
@@ -418,7 +427,7 @@ const command: commandProperties = {
                     sendToChannel(
                         textChannel,
                         `${votedUserIDs
-                            .map((x) => e.message.guild!.member(x))
+                            .map((x) => e.message.guild!.members.cache.get(x))
                             .join(', ')}, the movie has been selected`,
                         true,
                         3 * NumberConstants.mins
@@ -448,7 +457,9 @@ const command: commandProperties = {
                         return
                     }
 
-                    voiceChannel = voiceChannelResolveable.moveChannel
+                    if (voiceChannel instanceof VoiceChannel) {
+                        voiceChannel = voiceChannelResolveable.moveChannel as VoiceChannel
+                    }
 
                     // pings will watch people and moves ready people
 
@@ -549,7 +560,10 @@ const command: commandProperties = {
 
                     return false
                 }
-                return instructionMessage.createReactionCollector(reaction_filter, { time: 48 * NumberConstants.hours })
+                return instructionMessage.createReactionCollector({
+                    filter: reaction_filter,
+                    time: 48 * NumberConstants.hours,
+                })
             }
 
             async function getEmojis() {

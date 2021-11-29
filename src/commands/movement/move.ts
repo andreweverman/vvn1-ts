@@ -1,9 +1,9 @@
 /**
  * Moves users between voice channels
- * 
+ *
  * Parses string for user and channel aliases and moves accordingly.
  * Will always use the first voice channel to move (for now).
- * 
+ *
  * @file   Moves users from move command
  * @author Andrew Everman.
  * @since  17.7.2020
@@ -13,6 +13,7 @@ import { CommandParams, commandProperties } from '../../bot'
 import { replyUtil, sendToChannel } from '../../util/messageUtil'
 import { moveMembers } from '../../util/discordUtil'
 import { AliasUtil } from '../../util/generalUtil'
+import { VoiceChannel } from 'discord.js'
 
 const command: commandProperties = {
     name: 'move',
@@ -26,24 +27,26 @@ const command: commandProperties = {
     async execute(e: CommandParams) {
         try {
             if (!e.message.member) return undefined
+            if (!e.message.guild) return undefined
+
             const member = e.message.member
             if (member.voice.channel == null) {
                 replyUtil(e.message, 'Must be connected to voice to use this', true)
                 return
             }
-            let vc_people = Array.from(member.voice.channel.members.entries()).map((x) => x[1])
+            let vcPeople = Array.from(member.voice.channel.members.entries()).map((x) => x[1])
 
-            let { members, voiceChannels } = await AliasUtil.parseChannelsAndMembers(e.message.guild!, e.args, {
+            let { members, moveChannel } = await AliasUtil.parseChannelsAndMembers(
+                e.message.guild, 
+                e.args, 
+                {
                 member: e.message.member,
                 moveMode: true,
             })
 
-            if (voiceChannels.length == 0) {
-                sendToChannel(e.message.channel, "Could't find any voice channels to move to in your message.")
-                return
+            if (moveChannel && moveChannel instanceof VoiceChannel && members) {
+                members.length > 0 ? moveMembers(moveChannel, members) : moveMembers(moveChannel, vcPeople)
             }
-
-            members.length > 0 ? moveMembers(voiceChannels[0], members) : moveMembers(voiceChannels[0], vc_people)
         } catch (error) {
             throw error
         }

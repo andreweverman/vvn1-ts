@@ -11,23 +11,30 @@
  * @since  16.7.2020
  */
 
-import { VoiceChannel } from 'discord.js'
+import { StageChannel, TextBasedChannels, VoiceChannel } from 'discord.js'
 import { ILinkDoc } from '../../db/models/guildModel'
 import { Player } from '../../db/controllers/guildController'
-import { sendToChannel, MessageChannel } from '../../util/messageUtil'
+import { sendToChannel } from '../../util/messageUtil'
 import ytdl from 'ytdl-core'
 import { NumberConstants } from '../../util/constants'
 import { getClipFiles, clipsPath, ensureDirExists } from '../../util/fiileUtil'
 import fs from 'fs'
 import { Readable } from 'stream'
 import { IConfigDoc } from '../../db/models/guildModel'
-
+import {
+    AudioPlayerStatus,
+    StreamType,
+    createAudioPlayer,
+    createAudioResource,
+    joinVoiceChannel,
+} from '@discordjs/voice'
+import { connect } from 'http2'
 
 const execute = async function (
     configDoc: IConfigDoc,
-    voiceChannel: VoiceChannel,
+    voiceChannel: VoiceChannel|StageChannel,
     clip: ILinkDoc,
-    textChannel: MessageChannel
+    textChannel: TextBasedChannels
 ) {
     try {
         const guildID = voiceChannel.guild.id
@@ -36,7 +43,7 @@ const execute = async function (
             return
         }
 
-        const connection = await voiceChannel.join()
+        const connection = joinVoiceChannel({channelId:voiceChannel.id,guildId:voiceChannel.guildId, adapterCreator:voiceChannel.guild.voiceAdapterCreator}) 
 
         let playVal: Readable | string = ''
 
@@ -61,26 +68,17 @@ const execute = async function (
                 piper.pipe(fs.createWriteStream(filePath))
             }
         }
-        const dispatcher = connection.play(playVal, { volume: clip.volume })
+        const resource = createAudioResource(playVal,{inputType:StreamType.Arbitrary})
+        const player = createAudioPlayer();
+        player.play(resource)
+        connection.subscribe(player)
 
-        dispatcher.on('error', (e) => {
+        player.on('error', (e: any) => {
             throw e
         })
 
-        dispatcher.on('speaking', (speaking) => {
-            if (!speaking) {
-                const timestamp = new Date()
-                Player.updateLastVoiceActivity(guildID, textChannel.id, timestamp).catch((err) => {
-                    throw err
-                })
-
-                setTimeout(async () => {
-                    const player = await Player.getPlayer(guildID)
-                    if (player.lastStreamingTime != timestamp) {
-                        connection.disconnect()
-                    }
-                }, 15 * NumberConstants.mins)
-            }
+        player.on(AudioPlayerStatus.Idle, (speaking: any) => {
+            connection.destroy()
         })
     } catch (error) {
         throw error
