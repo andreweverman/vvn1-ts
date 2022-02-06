@@ -10,69 +10,56 @@
  * @since  17.1.2021
  */
 
-import { CommandParams, commandProperties } from '../../../bot'
-import { Message } from 'discord.js'
-import { Movie, Guild } from '../../../db/controllers/guildController'
-import { Prompt, Filter, sendToChannel, sendUtilResponse, deleteMessage } from '../../../util/messageUtil'
+
+
+import { CommandInteraction, MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData } from 'discord.js'
+import { Prompt, Filter } from '../../../util/messageUtil'
+import { SlashCommandBuilder } from '@discordjs/builders'
 import { NumberConstants } from '../../../util/constants'
-import { magnetRegex, validFileRegex } from '../../../util/stringUtil'
-import { MovieUtil } from '../../../util/generalUtil'
-import { Schema } from 'mongoose'
-import { getTimeStrFromSeconds } from '../../../util/timeUtil'
-import { MovieStatus } from '../../../db/models/guildModel'
-
-const command: commandProperties = {
-    name: 'downloadmovie',
-    args: false,
-    description: 'Allows you to have vvn1 download a specified torrent for you and upload it to mega',
-    usage: ', then follow the prompts',
-    cooldown: 1,
-    guildOnly: true,
-    async execute(e: CommandParams) {
+import { Guild, Movie } from '../../../db/controllers/guildController'
+import { magnetRegex } from '../../../util/stringUtil'
+import { GeneralFilter } from '../../../util/promptUtil'
+import { interReplyUtil } from '../../../util/interactionUtil'
+const command = {
+    data: new SlashCommandBuilder()
+        .setName('downloadmovie')
+        .setDescription('Downloads a movie given a magnet link')
+        .addStringOption(option => option.setName('name').setDescription('Movie name').setRequired(true))
+        .addStringOption(option => option.setName('link').setDescription('Magnet link to download').setRequired(true)),
+    async execute(interaction: CommandInteraction) {
         try {
-            const userID = e.message.author.id
-            const textChannel = e.message.channel
-            const guildID = e.message.guild!.id
 
-            const guildDoc = await Guild.getGuild(guildID)
+            const userId = interaction.user.id
+            const textChannel = interaction.channel
+            const guildId = interaction.guildId
+
+            if (!(guildId && textChannel)) {
+                interaction.reply(`Must use this command from a server's text channel to use this command`)
+                return
+            }
+
+            const guildDoc = await Guild.getGuild(guildId)
 
             if (guildDoc.config.premium) {
-                const movieNameMessage = await Prompt.getSameUserInput(
-                    userID,
-                    textChannel,
-                    'Enter the movie name you intend to download:',
-                    Filter.anyFilter()
-                )
 
-                const torrentLinkMessage = await Prompt.getSameUserInput(
-                    userID,
-                    textChannel,
-                    'Enter the torrent link:',
-                    Filter.regexFilter(magnetRegex, true)
-                )
+                const movieName = interaction.options.getString('name')!
+                const torrentLink = interaction.options.getString('link')!
 
-                // const zipNameMessage = await Prompt.getSameUserInput(
-                //     userID,
-                //     textChannel,
-                //     'Enter the name of the zip file to be created:',
-                //     Filter.regexFilter(validFileRegex, true)
-                // )
+                if (movieName.trim() === '') {
+                    interaction.reply({ content: 'Invalid movie name', ephemeral: true })
+                    return
+                }
 
-                // const zipPassword = await MovieUtil.Prompt.promptMoviePassword({
-                //     guildID: guildID,
-                //     userID: userID,
-                //     textChannel: textChannel,
-                // })
+                if (!GeneralFilter.regexFilter(torrentLink, magnetRegex, true)) {
+                    interaction.reply({ content: 'Invalid magnet link', ephemeral: true })
+                    return
+                }
 
-                const zipPassword = await Movie.getMovieDefaultPassword(guildID)
-                const movieName = movieNameMessage.content.trim()
-                const torrentLink = torrentLinkMessage.content.trim()
-                // const zipName = zipNameMessage.content.trim()
-                // const zipPassword = zipPasswordMessage.content.trim()
+                const zipPassword = await Movie.getMovieDefaultPassword(guildId)
 
                 const res = await Movie.createMovieDownloadRequest(
-                    guildID,
-                    userID,
+                    guildId,
+                    userId,
                     movieName,
                     torrentLink,
                     '',
@@ -80,23 +67,19 @@ const command: commandProperties = {
                     textChannel
                 )
                 if (!res.updated) return
+                interReplyUtil(interaction, `Request to download ${movieName} has been created. Progress will be shown soon...`)
 
-                let firstRequestedMovie = await Movie.getFirstDownloadRequest(guildID)
-                if (firstRequestedMovie === null) return
-                if (firstRequestedMovie?.movieName == movieName) {
-                    // this means we will update send a messages about the status of the download
-                }
-
-
-                // more logic for getting the file when done and stuff like that
-                // want to keep as much db stuff in TS as I can to make sure that it works the best
             } else {
-                sendToChannel(textChannel, 'This server does not have vvn1 premium. Message gardenweasel#1114')
             }
         } catch (error) {
             Prompt.handleGetSameUserInputError(error)
         }
-    },
+
+    }
 }
+
+
+
+
 
 export default command

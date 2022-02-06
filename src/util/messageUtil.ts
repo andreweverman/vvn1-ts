@@ -26,6 +26,7 @@ import {
     ThreadChannel,
     TextBasedChannels,
 } from 'discord.js'
+import { client } from '../bot'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
 import { stringMatch, matchOptions, spaceCommaRegex, guildEmojiRegex } from './stringUtil'
 import { timeInPast, TimeInPastOptions, dateInPast } from './timeUtil'
@@ -262,20 +263,23 @@ export interface sendPaginationOptions {
     embeds: MessageEmbed[]
 }
 export function sendToChannel(
-    channel: TextBasedChannels,
+    channel: TextBasedChannels | null,
     statement: string | MessagePayload | MessageOptions,
     autoDelete = true,
     autoDeleteTime = 15 * NumberConstants.secs,
     paginationOptions?: sendPaginationOptions
 ) {
+    if (!channel) { throw null }
+
     const sendRes = sendUtil(channel.send(statement), autoDelete, autoDeleteTime).then((res) => {
         if (paginationOptions) {
-            Prompt.setPaginationReaction(res.messages[0], paginationOptions.embeds, paginationOptions.userID)
+            Prompt.setPaginationButtons(res.messages[0], paginationOptions.embeds, paginationOptions.userID)
         }
         return res
     })
 
     return sendRes
+
 }
 
 export function replyUtil(
@@ -322,9 +326,9 @@ export namespace Prompt {
                         time: time,
                     })
 
-                    // if (options?.pagination && options?.paginationEmbeds) {
-                    //     setPaginationReaction(promptMessage, options.paginationEmbeds, userID)
-                    // }
+                    if (options?.pagination && options?.paginationEmbeds) {
+                        setPaginationButtons(promptMessage, options.paginationEmbeds, userID)
+                    }
 
                     messageCollector.on('collect', async (m: Message) => {
                         // valid response. need to further filter and respond accordingly
@@ -434,9 +438,9 @@ export namespace Prompt {
             const fullFilter = !unique
                 ? filter
                 : Filter.multipleFilters({
-                      every: [filter],
-                      some: [Filter.uniqueInputFilter(inputs)],
-                  })
+                    every: [filter],
+                    some: [Filter.uniqueInputFilter(inputs)],
+                })
 
             for (let i = 0; i < numberOfInputs; i++) {
                 const prompt = `Select your ${i + 1} choice: (quit to stop)`
@@ -593,34 +597,9 @@ export namespace Prompt {
         })
     }
 
-    export async function setPaginationReaction(message: Message, pages: MessageEmbed[], authorID: string) {
-        let page = 0
-        const emojiList = ['⏪', '⏩']
-        message.edit({ embeds: [pages[page].setFooter(`Page ${page + 1} / ${pages.length}`)] })
-        for (const emoji of emojiList) message.react(emoji)
-        const reactionCollector = message.createReactionCollector({
-            filter: (reaction, user) => emojiList.includes(reaction.emoji.name!) && !user.bot,
-            time: 5 * NumberConstants.mins,
-        })
-        reactionCollector.on('collect', (reaction) => {
-            reaction.users.remove(authorID)
-            switch (reaction.emoji.name) {
-                case emojiList[0]:
-                    page = page > 0 ? --page : pages.length - 1
-                    break
-                case emojiList[1]:
-                    page = page + 1 < pages.length ? ++page : 0
-                    break
-                default:
-                    break
-            }
-            message.edit({ embeds: [pages[page].setFooter(`Page ${page + 1} / ${pages.length}`)] })
-        })
-        reactionCollector.on('end', () => {
-            if (!message.deleted) {
-                message.reactions.removeAll()
-            }
-        })
+    export async function setPaginationButtons(message: Message, pages: MessageEmbed[], authorID: string) {
+
+
     }
 
     export interface arrayToPaginatedArrayOptions {

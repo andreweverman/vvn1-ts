@@ -6,30 +6,43 @@
  * @since  27.6.2021
  */
 
-import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, sendToChannel } from '../../../util/messageUtil'
-import { Movie } from '../../../db/controllers/guildController'
-import { MovieUtil } from '../../../util/generalUtil'
+
+
+import { CommandInteraction, MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData } from 'discord.js'
+import { Prompt, Filter } from '../../../util/messageUtil'
+import { validGuildMember, extractChannels } from '../../../util/discordUtil'
+import { SlashCommandBuilder } from '@discordjs/builders'
 import { NumberConstants } from '../../../util/constants'
+import { Guild, Movie } from '../../../db/controllers/guildController'
+import { magnetRegex } from '../../../util/stringUtil'
+import { GeneralFilter } from '../../../util/promptUtil'
+import { interReplyUtil, assertGuildTextCommand, replyWithFlayedArray } from '../../../util/interactionUtil'
+import { IDownloadedMovieDoc } from '../../../db/models/guildModel'
+const command = {
+    data: new SlashCommandBuilder()
+        .setName('allmovies')
+        .setDescription('View all movies on the server, including ones that are not uploaded currently'),
+    async execute(interaction: CommandInteraction) {
+        try {
+            await interaction.deferReply()
 
-const command: commandProperties = {
-    name: 'offline_movies',
-    aliases: ['archived_movies', 'all_movies'],
-    description: 'Add a movie to the catalog. Need a link and the name',
-    usage: '[movie_url] [movie name]. Ex: ?addmovie fight_club_link.com fight club. ',
-    args: false,
-    cooldown: 1,
-    guildOnly: true,
+            const { guildId } = assertGuildTextCommand(interaction)
 
-    async execute(e: CommandParams) {
-        const guildID = e.message.guild!.id
-        const userID = e.message.author.id
-        const textChannel = e.message.channel
+            const guildDoc = await Guild.getGuild(guildId)
+            if (guildDoc.config.premium) {
+                const movies = await Movie.getMovieList(guildId)
+                await replyWithFlayedArray(interaction, 'All Movies', movies, (movie) => movie.name, { deleteAfter: NumberConstants.mins * 15, disableSelection: true })
+            }
 
-       
-        await Movie.getMovieList(guildID,textChannel,userID)
-    },
+
+        } catch (error) {
+            Prompt.handleGetSameUserInputError(error)
+        }
+
+    }
 }
+
+
 
 export default command
 

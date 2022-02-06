@@ -27,12 +27,13 @@ import {
     createAudioPlayer,
     createAudioResource,
     joinVoiceChannel,
+    JoinVoiceChannelOptions,
+    CreateVoiceConnectionOptions
 } from '@discordjs/voice'
-import { connect } from 'http2'
 
 const execute = async function (
     configDoc: IConfigDoc,
-    voiceChannel: VoiceChannel|StageChannel,
+    voiceChannel: VoiceChannel | StageChannel,
     clip: ILinkDoc,
     textChannel: TextBasedChannels
 ) {
@@ -43,7 +44,8 @@ const execute = async function (
             return
         }
 
-        const connection = joinVoiceChannel({channelId:voiceChannel.id,guildId:voiceChannel.guildId, adapterCreator:voiceChannel.guild.voiceAdapterCreator}) 
+        const options: JoinVoiceChannelOptions & CreateVoiceConnectionOptions = { channelId: voiceChannel.id, guildId: guildID, adapterCreator: voiceChannel.guild.voiceAdapterCreator as any }
+        const connection = joinVoiceChannel(options)
 
         let playVal: Readable | string = ''
 
@@ -68,7 +70,7 @@ const execute = async function (
                 piper.pipe(fs.createWriteStream(filePath))
             }
         }
-        const resource = createAudioResource(playVal,{inputType:StreamType.Arbitrary})
+        const resource = createAudioResource(playVal, { inputType: StreamType.Arbitrary })
         const player = createAudioPlayer();
         player.play(resource)
         connection.subscribe(player)
@@ -96,7 +98,7 @@ function findClip(clip: ILinkDoc): string | undefined {
 
 function justVEquals(ytLink: string) {
     if (ytLink.includes('youtu.be')) {
-        return ytLink.substring(ytLink.lastIndexOf('/')+1)
+        return ytLink.substring(ytLink.lastIndexOf('/') + 1)
     } else {
         let regex = /.*?v=(.*)\?*/
         let res = regex.exec(ytLink)

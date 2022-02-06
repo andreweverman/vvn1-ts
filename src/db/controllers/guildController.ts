@@ -518,11 +518,10 @@ export namespace Link {
             }
             const multiple = approved.length > 1
             const updateStrings: updateOneStrings = {
-                success: `Name${multiple ? 's' : ''} ${approved.join(', ')} ${multiple ? 'have' : 'has'} been added. ${
-                    rejected.length > 0
-                        ? `Name${multiple ? 's' : ''} ${rejected.join(', ')} ${multiple ? 'are' : 'is'} already in use.`
-                        : ''
-                }`,
+                success: `Name${multiple ? 's' : ''} ${approved.join(', ')} ${multiple ? 'have' : 'has'} been added. ${rejected.length > 0
+                    ? `Name${multiple ? 's' : ''} ${rejected.join(', ')} ${multiple ? 'are' : 'is'} already in use.`
+                    : ''
+                    }`,
                 failure: 'There was an issue, no names have been added',
             }
 
@@ -1315,7 +1314,7 @@ export namespace Movie {
             }
         )
 
-        return updateOneResponseHandler(response, updateStrings, textChannel)
+        return updateOneResponseHandler(response, updateStrings, undefined)
     }
 
     export async function getDownloadMovieContainer(guildID: string) {
@@ -1360,7 +1359,7 @@ export namespace Movie {
                 const downloadQueue = guildDoc.movie.downloads.uploadQueue
                 return {
                     guildID: guildDoc.guild_id,
-                    downloads: downloadQueue.filter((x) => x.completed),
+                    downloads: downloadQueue.filter((x: any) => x.completed),
                 }
             })
         } else {
@@ -1482,13 +1481,9 @@ export namespace Movie {
 
     export async function getMovieList(
         guildID: string,
-        textChannel: TextBasedChannels,
-        userID: string,
-        number = false
     ) {
         requestMovieListUpdate(guildID)
         const request_time = new Date()
-        let embeds: MessageEmbed[]
 
         let maxTries = 5
         let tries = 0
@@ -1504,15 +1499,7 @@ export namespace Movie {
                     tries++
                     await delay(10 * NumberConstants.secs)
                 } else {
-                    const movies = movieList.movies
-                    return await Prompt.arraySelect(
-                        userID,
-                        textChannel,
-                        movies,
-                        (x: IDownloadedMovieDoc) => `${x.name}`,
-                        'Offline movies',
-                        {}
-                    )
+                    return movieList.movies
                 }
             } else {
                 throw 'Not premium'
@@ -1668,9 +1655,8 @@ export namespace Config {
             return await updateOneResponseHandler(
                 response,
                 {
-                    success: `${
-                        type == Config.AutoDeleteType.prefix ? `Prefix ${matchOn}` : `User id ${matchOn}`
-                    } has been added`,
+                    success: `${type == Config.AutoDeleteType.prefix ? `Prefix ${matchOn}` : `User id ${matchOn}`
+                        } has been added`,
                     failure: 'Failed to add',
                 },
                 textChannel
@@ -1871,9 +1857,8 @@ export namespace Config {
     ) {
         try {
             const updateStrings: updateOneStrings = {
-                success: `${matchOn + specifiedObj.startsWith} will now delete after ${
-                    specifiedObj.timeToDelete
-                } seconds`,
+                success: `${matchOn + specifiedObj.startsWith} will now delete after ${specifiedObj.timeToDelete
+                    } seconds`,
                 failure: 'Error creating this delete rule.',
             }
 
@@ -1908,9 +1893,8 @@ export namespace Config {
         try {
             if (!elementDoc) return undefined
             const updateStrings: updateOneStrings = {
-                success: `${elementDoc.matchOn + specifiedObj.startsWith} now deletes after ${
-                    specifiedObj.timeToDelete
-                } seconds `,
+                success: `${elementDoc.matchOn + specifiedObj.startsWith} now deletes after ${specifiedObj.timeToDelete
+                    } seconds `,
                 failure: 'Error editing the delete time',
             }
 

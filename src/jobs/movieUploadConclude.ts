@@ -20,7 +20,7 @@ const jobFunction = async function () {
     const downloadedMoviesArr = await Movie.getDownloadedMovies()
 
     downloadedMoviesArr.forEach((guild) => {
-        guild.downloads.forEach(async (movie) => {
+        guild.downloads.forEach(async (movie:any) => {
             // being weird Idk
             // movie = movie as IMovieDownloadElementDoc
             if (movie.uploadLink) {

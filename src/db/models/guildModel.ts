@@ -22,7 +22,7 @@ export interface ILink {
     volume?: number
 }
 
-export interface ILinkDoc extends ILink, Document {}
+export interface ILinkDoc extends ILink, Document { }
 
 const LinkSchema: Schema = new Schema({
     names: { type: Array, default: [] },
@@ -52,7 +52,7 @@ export interface IAutoDeleteSpecified {
     startsWith: string
     timeToDelete: number
 }
-export interface IAutoDeleteSpecifiedDoc extends IAutoDeleteSpecified, Document {}
+export interface IAutoDeleteSpecifiedDoc extends IAutoDeleteSpecified, Document { }
 
 // for the allowlist, if starts with that string then we don't autodelete it
 export interface IAutoDeleteElement {
@@ -64,7 +64,7 @@ export interface IAutoDeleteElement {
     defaultDeleteTime: number
 }
 
-export interface IAutoDeleteElementDoc extends IAutoDeleteElement, Document {}
+export interface IAutoDeleteElementDoc extends IAutoDeleteElement, Document { }
 
 const AutoDeleteSchema = new mongoose.Schema({
     matchOn: { type: String, required: true },
@@ -80,7 +80,7 @@ export interface IArchive {
     channel: string
     save_bot_commands: boolean
 }
-export interface IArchiveDoc extends IArchive, Document {}
+export interface IArchiveDoc extends IArchive, Document { }
 
 export interface IConfig {
     prefix: string
@@ -122,7 +122,7 @@ export interface IMovie {
     megaID?: ObjectId
 }
 
-export interface IMovieDoc extends IMovie, Document {}
+export interface IMovieDoc extends IMovie, Document { }
 
 const IndividualMovieSchema = new mongoose.Schema({
     name: { type: String, unique: false, index: true, required: true },
@@ -138,7 +138,7 @@ export interface IMovieRequest {
     name: string
     users: string[]
 }
-export interface IMovieRequestDoc extends IMovieRequest, Document {}
+export interface IMovieRequestDoc extends IMovieRequest, Document { }
 
 const MovieRequestSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -150,7 +150,7 @@ export interface ISound {
     enabled: boolean
 }
 
-export interface ISoundDoc extends ISound, Document {}
+export interface ISoundDoc extends ISound, Document { }
 
 export interface IReactionEmoji {
     name: string
@@ -158,7 +158,7 @@ export interface IReactionEmoji {
     backup: string
 }
 
-export interface IReactionEmojiDoc extends IReactionEmoji, Document {}
+export interface IReactionEmojiDoc extends IReactionEmoji, Document { }
 
 export interface IMovieDownloadElement {
     inProgress: boolean
@@ -170,12 +170,12 @@ export interface IMovieDownloadElement {
     zipPassword: string
     torrentLink: string
     percent: number
-    time:number
-    statusUpdateID?:ObjectId
-    path?:string
+    time: number
+    statusUpdateID?: ObjectId
+    path?: string
 }
 
-export interface IMovieDownloadElementDoc extends IMovieDownloadElement, Document {}
+export interface IMovieDownloadElementDoc extends IMovieDownloadElement, Document { }
 
 const MovieDownloadElementSchema = new mongoose.Schema({
     inProgress: { type: Boolean, required: true, default: false },
@@ -188,7 +188,7 @@ const MovieDownloadElementSchema = new mongoose.Schema({
     zipPassword: { type: String, required: true },
     time: { type: Number, required: true, default: 0 },
     percent: { type: Number, required: true, default: 0 },
-    statusUpdateID: { type:mongoose.Schema.Types.ObjectId},
+    statusUpdateID: { type: mongoose.Schema.Types.ObjectId },
     path: { type: String, required: false },
 })
 
@@ -197,48 +197,48 @@ export interface IMovieUploadElement {
     completed: boolean
     userID: string
     textChannelID?: string
-    movieName: string, 
-    moviePath?:string
+    movieName: string,
+    moviePath?: string
     zipPassword: string
     zipPath?: string
     uploadPath?: string
     uploadLink?: string
-    time:number
+    time: number
     percent: number
-    statusUpdateID?:ObjectId
+    statusUpdateID?: ObjectId
 }
-export interface IMovieUploadElementDoc extends IMovieUploadElement, Document {}
+export interface IMovieUploadElementDoc extends IMovieUploadElement, Document { }
 const MovieUploadElementSchema = new mongoose.Schema({
     inProgress: { type: Boolean, required: true, default: false },
     completed: { type: Boolean, required: true, default: false },
     userID: { type: String, required: true },
     textChannelID: { type: String, required: false },
     movieName: { type: String, required: true },
-    moviePath:{type:String,required: false},
+    moviePath: { type: String, required: false },
     zipPath: { type: String, required: false },
     zipPassword: { type: String, required: true },
     uploadPath: { type: String, required: false },
     uploadLink: { type: String, required: false },
     time: { type: Number, required: true, default: 0 },
     percent: { type: Number, required: true, default: 0 },
-    statusUpdateID: { type:mongoose.Schema.Types.ObjectId}
+    statusUpdateID: { type: mongoose.Schema.Types.ObjectId }
 })
 
 
 export interface IMovieUploadedElement {
-    _id?:any
+    _id?: any
     movieID: ObjectId
     uploadLink: string
-    uploadPath:string
+    uploadPath: string
     removeElement: boolean
 }
 
-export interface IMovieUploadedElementDoc extends IMovieUploadedElement, Document {}
+export interface IMovieUploadedElementDoc extends IMovieUploadedElement, Document { }
 
 const MovieUploadedElementSchema = new mongoose.Schema({
     movieID: { type: mongoose.Schema.Types.ObjectId },
     uploadLink: { type: String, required: true },
-    uploadPath: { type: String, required:true},
+    uploadPath: { type: String, required: true },
     removeElement: { type: Boolean, required: true, default: false },
 })
 
@@ -250,12 +250,12 @@ export enum MovieStatus {
 }
 
 interface MovieStatusMap {
-    [key:string]:string
+    [key: string]: string
 }
-export const MovieStatusMap:MovieStatusMap= {}
+export const MovieStatusMap: MovieStatusMap = {}
 MovieStatusMap[MovieStatus.DOWNLOADING] = 'downloadQueue'
-MovieStatusMap[MovieStatus.UPLOADING] ='uploadQueue'
-MovieStatusMap[MovieStatus.UPLOADED]='uploadedQueue'
+MovieStatusMap[MovieStatus.UPLOADING] = 'uploadQueue'
+MovieStatusMap[MovieStatus.UPLOADED] = 'uploadedQueue'
 MovieStatusMap[MovieStatus.ERROR] = 'errorQueue'
 
 export interface IMovieStatusUpdate {
@@ -267,21 +267,21 @@ export interface IMovieStatusUpdate {
 
 export interface IMovieErrorQueue {
     textChannelID?: string
-    userID?:string
-    movieName?:string
-    error:string
+    userID?: string
+    movieName?: string
+    error: string
 }
-export interface IMovieErrorQueueDoc extends IMovieErrorQueue, Document{
+export interface IMovieErrorQueueDoc extends IMovieErrorQueue, Document {
 }
 
-const MovieErrorQueueSchema  = new mongoose.Schema({
-    error: { type:String, required: true},
-    movieName: { type:String, required: false},
-    userID: {type: String,required: false},
-    textChannelID: { type:String, required: false}
+const MovieErrorQueueSchema = new mongoose.Schema({
+    error: { type: String, required: true },
+    movieName: { type: String, required: false },
+    userID: { type: String, required: false },
+    textChannelID: { type: String, required: false }
 })
 
-export interface IMovieStatusUpdateDoc extends IMovieStatusUpdate, Document {}
+export interface IMovieStatusUpdateDoc extends IMovieStatusUpdate, Document { }
 const MovieStatusUpdateSchema = new mongoose.Schema({
     started: { type: Boolean, required: true, default: false },
     userID: { type: String, required: true },
@@ -293,7 +293,7 @@ export interface IMovieDownloadContainer {
     downloadQueue: IMovieDownloadElement[]
     uploadQueue: IMovieUploadElement[]
     uploadedQueue: IMovieUploadedElement[]
-    errorQueue:IMovieErrorQueue[]
+    errorQueue: IMovieErrorQueue[]
     statusUpdate: IMovieStatusUpdate[]
 }
 
@@ -310,7 +310,7 @@ const MovieDownloadContainerSchema = new mongoose.Schema({
     downloadQueue: { type: [MovieDownloadElementSchema], required: true, default: [] },
     uploadQueue: { type: [MovieUploadElementSchema], required: true, default: [] },
     uploadedQueue: { type: [MovieUploadedElementSchema], required: true, default: [] },
-    errorQueue: { type: [MovieErrorQueueSchema], required: true, default: []},
+    errorQueue: { type: [MovieErrorQueueSchema], required: true, default: [] },
     statusUpdate: { type: [MovieStatusUpdateSchema], required: true, default: [] },
 })
 
@@ -319,7 +319,7 @@ export interface IDownloadedMovie {
     name: string
 }
 
-export interface IDownloadedMovieDoc extends IDownloadedMovie, Document {}
+export interface IDownloadedMovieDoc extends IDownloadedMovie, Document { }
 
 const DownloadedMovieSchema = new mongoose.Schema({
     path: { type: String, required: true },
@@ -400,8 +400,8 @@ const MovieSchema = new mongoose.Schema({
     },
     movies: [IndividualMovieSchema],
     requests: [MovieRequestSchema],
-    downloads: {type:MovieDownloadContainerSchema,default:{}},
-    serverList: {type:MovieListSchema,default:{}}
+    downloads: { type: MovieDownloadContainerSchema, default: {} },
+    serverList: { type: MovieListSchema, default: {} }
 })
 
 interface IPlayer {
@@ -409,7 +409,7 @@ interface IPlayer {
     lastChannelID: string
 }
 
-interface IPlayerDoc extends IPlayer, Document {}
+interface IPlayerDoc extends IPlayer, Document { }
 
 const PlayerSchema = new mongoose.Schema({
     lastStreamingTime: { type: Date, required: true, default: new Date() },
@@ -425,7 +425,7 @@ export interface IGuild {
     player: IPlayerDoc
 }
 
-export interface IGuildDoc extends IGuild, Document {}
+export interface IGuildDoc extends IGuild, Document { }
 
 const GuildSchema = new mongoose.Schema({
     guild_id: { type: String, unique: true, index: true },
@@ -433,7 +433,8 @@ const GuildSchema = new mongoose.Schema({
     aliases: [AliasSchema],
     movie: { type: MovieSchema, default: {} },
     links: [LinkSchema],
-    player: { type:PlayerSchema,default: {}}
+    player: { type: PlayerSchema, default: {} }
 })
 
-export default mongoose.model<IGuildDoc>('Guild', GuildSchema)
+export default mongoose.models.Guild || mongoose.model<IGuildDoc>('Guild', GuildSchema)
+

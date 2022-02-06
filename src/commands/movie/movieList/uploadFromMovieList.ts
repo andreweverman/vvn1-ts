@@ -6,35 +6,44 @@
  * @since  27.6.2021
  */
 
-import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt, sendToChannel } from '../../../util/messageUtil'
-import { Movie } from '../../../db/controllers/guildController'
-import { MovieUtil } from '../../../util/generalUtil'
+
+import { CommandInteraction, MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData } from 'discord.js'
+import { Prompt, Filter } from '../../../util/messageUtil'
+import { validGuildMember, extractChannels } from '../../../util/discordUtil'
+import { SlashCommandBuilder } from '@discordjs/builders'
 import { NumberConstants } from '../../../util/constants'
+import { Guild, Movie } from '../../../db/controllers/guildController'
+import { magnetRegex } from '../../../util/stringUtil'
+import { GeneralFilter } from '../../../util/promptUtil'
+import { interReplyUtil, assertGuildTextCommand, replyWithFlayedArray } from '../../../util/interactionUtil'
+import { IDownloadedMovieDoc } from '../../../db/models/guildModel'
+const command = {
+    data: new SlashCommandBuilder()
+        .setName('uploadfromarchive')
+        .setDescription('Creates mega link from movie on the server.'),
+    async execute(interaction: CommandInteraction) {
+        try {
+            const userId = interaction.user.id
+            await interaction.deferReply()
 
-const command: commandProperties = {
-    name: 'upload',
-    aliases: ['upload_offline','upload_offline','uploadmovie','upload_movie'],
-    description: 'Add a movie to the catalog. Need a link and the name',
-    usage: '[movie_url] [movie name]. Ex: ?addmovie fight_club_link.com fight club. ',
-    args: false,
-    cooldown: 1,
-    guildOnly: true,
+            const { guildId, textChannel } = assertGuildTextCommand(interaction)
 
-    async execute(e: CommandParams) {
-        const guildID = e.message.guild!.id
-        const userID = e.message.author.id
-        const textChannel = e.message.channel
+            const guildDoc = await Guild.getGuild(guildId)
+            if (guildDoc.config.premium) {
+                const movies = await Movie.getMovieList(guildId)
+                const movie = await replyWithFlayedArray(interaction, 'All Movies', movies, (movie) => movie.name, { deleteAfter: NumberConstants.mins * 15, })
+                if (movie) {
 
-        const selection = await Movie.getMovieList(guildID, textChannel, userID)
-        if (selection.arrayElements) {
-            selection.arrayElements.forEach((movie) => {
-                Movie.createMovieUploadRequest(guildID, userID, movie, textChannel.id)
-            })
-        } else if (selection.arrayElement) {
-            Movie.createMovieUploadRequest(guildID, userID, selection.arrayElement, textChannel.id)
+                    Movie.createMovieUploadRequest(guildId, userId, movie, textChannel.id)
+                }
+            }
+
+        } catch (error) {
+            Prompt.handleGetSameUserInputError(error)
         }
-    },
+
+    }
 }
+
 
 export default command

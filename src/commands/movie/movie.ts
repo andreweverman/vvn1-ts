@@ -14,13 +14,8 @@ import addMovie from './movieListOperations/addMovie'
 import deleteMovie from './movieListOperations/deleteMovie'
 import movieConfig from './movieConfig'
 import viewMovie from './movieListOperations/viewMovie'
-import addMovieRequest from './request/addMovieRequest'
-import deleteMovieRequest from './request/deleteMovieRequest'
-import viewMovieRequest from './request/viewMovieRequest'
 import watchMovie from './watchMovie'
 import downloadMovie from './download/downloadMovie'
-import deleteDownloadRequest from './download/removeDownloadRequest'
-import deleteDownload from './download/deleteMovieDownload'
 
 const command: commandProperties = {
     name: 'movie',
@@ -45,16 +40,9 @@ const command: commandProperties = {
 
             Prompt.optionSelect(userID, textChannel, options)
 
-          
 
-            async function movieRequestOperations() {
-                const newOptions: Prompt.optionSelectElement[] = [
-                    { name: 'View requests', function: viewMovieRequest.execute, args: e },
-                    { name: 'Add movie request', function: addMovieRequest.execute, args: e },
-                    { name: 'Delete movie request', function: deleteMovieRequest.execute, args: e },
-                ]
-                Prompt.optionSelect(userID, textChannel, newOptions)
-            }
+
+
             async function movieLinkOperations() {
                 const newOptions: Prompt.optionSelectElement[] = [
                     { name: 'View current movie links', function: viewMovie.execute, args: e },
@@ -67,8 +55,6 @@ const command: commandProperties = {
             async function downloadOperations() {
                 const newOptions: Prompt.optionSelectElement[] = [
                     { name: 'Create download request', function: downloadMovie.execute, args: e },
-                    { name: 'Delete download request', function: deleteDownloadRequest.execute, args: e },
-                    { name: 'Delete download', function: deleteDownload.execute, args: e },
                 ]
                 Prompt.optionSelect(userID, textChannel, newOptions)
             }
