@@ -344,6 +344,9 @@ export namespace MovieUtil {
 
             let embed: MessageEmbed
             let embeds: MessageEmbed[] = []
+            if (!(duration || rating || description||year)){
+                throw 'Nothing found'
+            }
             if (createMessage) {
                 embed = new MessageEmbed()
                 embed.setTitle(`${movie.name}, *${year}*`)
@@ -355,7 +358,6 @@ export namespace MovieUtil {
 
             return { letterboxdLink: link, embeds, duration, rating, description, year }
         } catch (e) {
-            console.log(e)
             return { embeds: undefined }
         }
     }
