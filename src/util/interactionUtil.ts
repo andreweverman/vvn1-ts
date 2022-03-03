@@ -1,26 +1,65 @@
-import { MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData, SelectMenuInteraction, CommandInteraction, TextBasedChannels, Guild, EmbedFieldData, InteractionResponseType, User, CommandInteraction } from 'discord.js'
+import { MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData, SelectMenuInteraction, TextBasedChannels, Guild, EmbedFieldData, InteractionReplyOptions, User, CommandInteraction, TextChannel, } from 'discord.js'
 import { NumberConstants } from '../util/constants'
+import { GeneralFilter } from './promptUtil'
 
-export function interReplyUtil(interaction: CommandInteraction, content: string, timeout?: number) {
 
-	interaction.reply({ content })
-	setTimeout(() => {
-		interaction.deleteReply()
-	},
-		timeout || 15 * NumberConstants.secs)
+export namespace InteractionFilters {
 
+	export function regexFilter(regex: RegExp, trimInput?: boolean): (input: string) => boolean {
+		return (input: string) => { return GeneralFilter.regexFilter(input, regex, trimInput) }
+	}
+}
+
+export interface InterReplyUtilOptions {
+	timeout?: number;
+	delete?: boolean
+}
+export function interReplyUtil(interaction: CommandInteraction, payload: InteractionReplyOptions, options?: InterEditReplyUtilOptions) {
+
+	if (!payload.embeds) payload.embeds = []
+	if (!payload.components) payload.components = []
+	if (!payload.content) payload.content = ' '
+
+	interaction.reply(payload).catch((err) => { })
+
+	if (options?.delete != false) {
+		setTimeout(() => {
+			interaction.deleteReply()
+		},
+			options?.timeout || 15 * NumberConstants.secs)
+	}
+
+}
+export interface InterEditReplyUtilOptions {
+	timeout?: number;
+	delete?: boolean
+}
+export function interEditReplyUtil(interaction: CommandInteraction, payload: InteractionReplyOptions, options?: InterEditReplyUtilOptions) {
+
+	if (!payload.embeds) payload.embeds = []
+	if (!payload.components) payload.components = []
+	if (!payload.content) payload.content = ' '
+
+	interaction.editReply(payload).catch((err) => { })
+
+	if (options?.delete != false) {
+		setTimeout(() => {
+			interaction.deleteReply()
+		},
+			options?.timeout || 15 * NumberConstants.secs)
+	}
 
 }
 
 export interface AssertGuildTextCommandResponse {
 	guildId: string,
-	textChannel: TextBasedChannels
+	textChannel: TextChannel
 	guild: Guild
 	user: User
 	userId: string
 }
 export function assertGuildTextCommand(interaction: CommandInteraction): AssertGuildTextCommandResponse {
-	const textChannel = interaction.channel
+	const textChannel = interaction.channel as TextChannel
 	const guildId = interaction.guildId
 	const guild = interaction.guild
 	const user = interaction.user
@@ -38,6 +77,7 @@ export interface ReplyWithArrayOptions<T> {
 	describeFunction?: (t: T) => string,
 	deleteAfter?: number,
 	chunkSize?: number,
+	deleteWhenDone?: boolean
 }
 export async function replyWithFlayedArray<T>(interaction: CommandInteraction, title: string, arr: T[], mapFunction: (t: T) => string, options?: ReplyWithArrayOptions<T>): Promise<T | undefined> {
 	const embeds: MessageEmbed[] = []
@@ -46,6 +86,7 @@ export async function replyWithFlayedArray<T>(interaction: CommandInteraction, t
 	const selectValueOptions: InteractionPrompt.SelectValueOptions = {}
 	selectValueOptions.disableSelection = options?.disableSelection
 	selectValueOptions.time = options?.deleteAfter
+	selectValueOptions.deleteWhenDone = options?.deleteWhenDone
 
 	const maxLength = 1000
 
@@ -93,7 +134,7 @@ export async function replyWithFlayedArray<T>(interaction: CommandInteraction, t
 	}
 	try {
 		const idx = await InteractionPrompt.selectValue(interaction, embeds, allOptions, selectValueOptions)
-		return idx > 0 ? arr[idx] : undefined
+		return idx >= 0 ? arr[idx] : undefined
 	} catch (error) {
 
 		console.log(error)
@@ -101,11 +142,34 @@ export async function replyWithFlayedArray<T>(interaction: CommandInteraction, t
 
 }
 
-export interface GetFilteredInputOptions{
-	allowError?:boolean
+export enum FilterInputTypes {
+	STRING = 'STRING',
+	BOOLEAN = 'BOOLEAN',
+	NUMBER = 'NUMBER',
 }
-export function getFilteredInput(interaction: CommandInteraction, filter: (x: string) => boolean,errorMessage?:string,options?:GetFilteredInputOptions):string {
-	return ''
+export interface GetFilteredInputOptions {
+	allowError?: boolean
+}
+export function getFilteredInput(interaction: CommandInteraction, inputName: string, inputType: FilterInputTypes, filter: (x: any) => boolean, errorMessage: string, options?: GetFilteredInputOptions): any {
+	let valid = false
+	if (inputType == FilterInputTypes.STRING) {
+		const inputString = interaction.options.getString(inputName)
+		valid = filter(inputString)
+		if (valid && inputString) {
+			return inputString.trim()
+		}
+	}
+	if (!valid) {
+		interEditReplyUtil(interaction, { content: errorMessage })
+		throw new FilteredInputError('Failed filtered input')
+	}
+}
+
+class FilteredInputError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "FilteredInputError";
+	}
 }
 
 export namespace InteractionPrompt {
@@ -113,12 +177,15 @@ export namespace InteractionPrompt {
 	export interface SelectValueOptions {
 		disableSelection?: boolean
 		time?: number;
-		allowOtherUsersToInteract?: boolean
+		allowOtherUsersToInteract?: boolean,
+		deleteWhenDone?: boolean
 	}
 	export async function selectValue(interaction: CommandInteraction, embeds: MessageEmbed[], allOptions: MessageSelectOptionData[][], options?: SelectValueOptions): Promise<number> {
 		return new Promise(async (resolve: any, reject: any) => {
 			async function done(num: number) {
-				await interaction.deleteReply().catch(err => { })
+				if (options?.deleteWhenDone) {
+					await interaction.deleteReply().catch(err => { })
+				}
 				resolve(num)
 			}
 			let i = 0
@@ -131,7 +198,7 @@ export namespace InteractionPrompt {
 				return comps
 			}
 
-			const message = await interaction.editReply({ content: ' ', embeds: [embeds[i]], components: getComponents(true, false) }) as Message
+			const message = await interaction.editReply({ content: ' ', embeds: [embeds[i]], components: getComponents(true, embeds.length <= 1) }) as Message
 			const paginationCollector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: time });
 
 
@@ -163,7 +230,6 @@ export namespace InteractionPrompt {
 
 			paginationCollector.on('end', collected => {
 				done(-1)
-
 			});
 
 			if (allowOptions) {
@@ -176,6 +242,7 @@ export namespace InteractionPrompt {
 						return;
 					}
 
+					collected.update({ content: ' ' })
 					setTimeout(() => {
 						// collected.deleteReply()
 					}, 10 * NumberConstants.secs)

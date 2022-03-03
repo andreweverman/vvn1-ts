@@ -9,12 +9,72 @@
  * @since  17.7.2020
  */
 
+
+import { CommandInteraction } from 'discord.js'
+import { SlashCommandBuilder } from '@discordjs/builders'
+import { interReplyUtil, assertGuildTextCommand } from '../../util/interactionUtil'
 import { CommandParams, commandProperties } from '../../bot'
 import { replyUtil } from '../../util/messageUtil'
 import { moveMembers } from '../../util/discordUtil'
 import { Alias } from '../../db/controllers/guildController'
+import { ChannelType } from 'discord-api-types'
 
-const command: commandProperties = {
+const command = {
+    data: new SlashCommandBuilder()
+        .setName('po')
+        .setDescription(`Brings everyone in the user's current voice channel to the designated main channel`),
+    async execute(interaction: CommandInteraction) {
+        try {
+            await interaction.deferReply()
+
+
+            const { userId, guild, guildId } = assertGuildTextCommand(interaction)
+
+            const member = guild.members.cache.get(userId);
+            if (member) {
+
+                const voiceChannel = member.voice.channel;
+
+                if (!voiceChannel) {
+                    interReplyUtil(interaction, { content: 'Must be connected to voice to use this' }, { delete: true })
+                    return
+                }
+
+
+                const channelAlias = 'main'
+                const vcUsers = Array.from(member.voice.channel.members.entries()).map((x: any) => x[1])
+
+                let aliasObj = await Alias.lookupAlias(guildId, channelAlias)
+                let channelId
+                if (aliasObj && aliasObj.type == 'voice') channelId = aliasObj.id
+                else {
+                    interReplyUtil(interaction, {
+                        content:
+                            `No channel aliased to "main". Use the createalias command to set a voice channel to main first to use this command. `
+                    }, { delete: true })
+                    return
+                }
+                moveMembers(channelId, vcUsers)
+
+                interReplyUtil(interaction, { content: 'Party is over' })
+            }
+            else {
+
+                interReplyUtil(interaction, { content: 'Error....' })
+            }
+
+        } catch (error: any) {
+            if (error.name != "FilteredInputError") {
+                throw error
+            }
+
+        }
+
+    }
+}
+
+
+const commands: commandProperties = {
     name: 'partyover',
     aliases: ['po'],
     description: 'Move all users in your active voice channel to main. Make sure you hava a channel aliased as "main".',

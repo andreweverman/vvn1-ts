@@ -34,6 +34,8 @@ export const validFileRegex = /^[0-9a-zA-Z ... ]+$/
 
 export const youtubeRegex = /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/
 
+export const somethingRegex = /\w+/i
+
 export const spaceCommaRegex = /[ ,]+/
 
 export const discordUserAtRegex = /^<@!\d+>$/

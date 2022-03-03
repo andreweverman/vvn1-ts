@@ -7,39 +7,34 @@
  */
 
 
-import { CommandInteraction, MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData } from 'discord.js'
-import { Prompt, Filter } from '../../../util/messageUtil'
-import { validGuildMember, extractChannels } from '../../../util/discordUtil'
+import { CommandInteraction } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { NumberConstants } from '../../../util/constants'
 import { Guild, Movie } from '../../../db/controllers/guildController'
-import { magnetRegex } from '../../../util/stringUtil'
-import { GeneralFilter } from '../../../util/promptUtil'
-import { interReplyUtil, assertGuildTextCommand, replyWithFlayedArray } from '../../../util/interactionUtil'
-import { IDownloadedMovieDoc } from '../../../db/models/guildModel'
+import { assertGuildTextCommand, replyWithFlayedArray } from '../../../util/interactionUtil'
 const command = {
     data: new SlashCommandBuilder()
-        .setName('uploadfromarchive')
+        .setName('uploadfromlist')
         .setDescription('Creates mega link from movie on the server.'),
     async execute(interaction: CommandInteraction) {
         try {
-            const userId = interaction.user.id
             await interaction.deferReply()
 
-            const { guildId, textChannel } = assertGuildTextCommand(interaction)
+            const { guildId, textChannel, userId } = assertGuildTextCommand(interaction)
 
             const guildDoc = await Guild.getGuild(guildId)
             if (guildDoc.config.premium) {
                 const movies = await Movie.getMovieList(guildId)
-                const movie = await replyWithFlayedArray(interaction, 'All Movies', movies, (movie) => movie.name, { deleteAfter: NumberConstants.mins * 15, })
+                const movie = await replyWithFlayedArray(interaction, 'All Movies. Select one to upload to mega', movies, (movie) => movie.name, { deleteAfter: NumberConstants.mins * 15, })
                 if (movie) {
-
                     Movie.createMovieUploadRequest(guildId, userId, movie, textChannel.id)
                 }
             }
 
-        } catch (error) {
-            Prompt.handleGetSameUserInputError(error)
+        } catch (error: any) {
+            if (error.name != "FilteredInputError") {
+                throw error
+            }
         }
 
     }

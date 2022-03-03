@@ -234,8 +234,7 @@ export namespace LinkUtil {
                 const m = await MPrompt.getSameUserInput(
                     args.userID,
                     args.textChannel,
-                    `Enter the volume (0 to 1, ${
-                        args.currentLink ? `currently: ${args.currentLink.volume}` : `default is .5)`
+                    `Enter the volume (0 to 1, ${args.currentLink ? `currently: ${args.currentLink.volume}` : `default is .5)`
                     })`,
                     Filter.numberRangeFilter(0, 1, { integerOnly: false })
                 )
@@ -344,20 +343,20 @@ export namespace MovieUtil {
             const year = await getMovieYear({ html })
 
             let embed: MessageEmbed
-            let message: MessageOptions | undefined
+            let embeds: MessageEmbed[] = []
             if (createMessage) {
                 embed = new MessageEmbed()
                 embed.setTitle(`${movie.name}, *${year}*`)
                 embed.addField('Rating', rating)
                 embed.addField('Duration', duration)
                 embed.addField('Description', description)
-                message = { embeds: [embed] }
+                embeds = [embed]
             }
 
-            return { letterboxdLink: link, message: message, duration, rating, description, year }
+            return { letterboxdLink: link, embeds, duration, rating, description, year }
         } catch (e) {
             console.log(e)
-            return { message: undefined }
+            return { embeds: undefined }
         }
     }
 
@@ -741,10 +740,9 @@ export namespace ConfigUtil {
             const prompt = `Select a ${args.autoDeleteType} to edit:\n ${typedAutoDeleteArr
                 .map(
                     (x, i) =>
-                        `${i + offset}. ${
-                            args.autoDeleteType == Config.AutoDeleteType.user
-                                ? args.guild.members.resolve(x.matchOn)?.displayName
-                                : x.matchOn
+                        `${i + offset}. ${args.autoDeleteType == Config.AutoDeleteType.user
+                            ? args.guild.members.resolve(x.matchOn)?.displayName
+                            : x.matchOn
                         }`
                 )
                 .join('\n')}`
@@ -753,10 +751,9 @@ export namespace ConfigUtil {
                 args.textChannel,
                 typedAutoDeleteArr,
                 (x, i) =>
-                    `${i + offset}. ${
-                        args.autoDeleteType == Config.AutoDeleteType.user
-                            ? args.guild.members.resolve(x.matchOn)?.displayName
-                            : x.matchOn
+                    `${i + offset}. ${args.autoDeleteType == Config.AutoDeleteType.user
+                        ? args.guild.members.resolve(x.matchOn)?.displayName
+                        : x.matchOn
                     }`,
                 'Select auto delete member',
                 {
@@ -816,11 +813,10 @@ export namespace ConfigUtil {
                     args: args,
                 },
                 {
-                    name: `Edit specified command delete times (ex. ${
-                        Config.AutoDeleteType.prefix == args.autoDeleteType
-                            ? '!play deletes after 300 seconds'
-                            : 'when user Gerald says play delete it'
-                    })`,
+                    name: `Edit specified command delete times (ex. ${Config.AutoDeleteType.prefix == args.autoDeleteType
+                        ? '!play deletes after 300 seconds'
+                        : 'when user Gerald says play delete it'
+                        })`,
                     function: editSpecifiedDelete,
                     args: args,
                 },
@@ -830,9 +826,8 @@ export namespace ConfigUtil {
                     args: args,
                 },
                 {
-                    name: `Edit default delete time (currently ${
-                        elementDoc.defaultDeleteTime / NumberConstants.secs
-                    } seconds)`,
+                    name: `Edit default delete time (currently ${elementDoc.defaultDeleteTime / NumberConstants.secs
+                        } seconds)`,
                     function: editDefaultDeleteTime,
                     args: args,
                 },
@@ -1210,9 +1205,8 @@ export namespace ConfigUtil {
                         args: args,
                     },
                     {
-                        name: `Save bot messages: Curently ${
-                            messageArchive.save_bot_commands ? 'enabled' : 'disabled'
-                        }`,
+                        name: `Save bot messages: Curently ${messageArchive.save_bot_commands ? 'enabled' : 'disabled'
+                            }`,
                         function: toggleArchiveSaveBotMessages,
                         args: args,
                     },

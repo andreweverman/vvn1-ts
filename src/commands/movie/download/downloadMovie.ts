@@ -67,7 +67,7 @@ const command = {
                     textChannel
                 )
                 if (!res.updated) return
-                interReplyUtil(interaction, `Request to download ${movieName} has been created. Progress will be shown soon...`)
+                interReplyUtil(interaction, { content: `Request to download ${movieName} has been created. Progress will be shown soon...` })
 
             } else {
             }

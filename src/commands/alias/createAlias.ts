@@ -13,10 +13,11 @@ import { CommandParams, commandProperties } from '../../bot'
 import { CommandInteraction, MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData } from 'discord.js'
 import { Alias } from '../../db/controllers/guildController'
 import { validGuildMember, extractChannels } from '../../util/discordUtil'
-import { SlashCommandBuilder } from '@discordjs/builders'
+import { SlashCommandBuilder,SlashCommandSubcommandBuilder } from '@discordjs/builders'
 import { NumberConstants } from '../../util/constants'
 import { InteractionPrompt } from '../../util/interactionUtil'
 
+new SlashCommandSubcommandBuilder()
 const command = {
     data: new SlashCommandBuilder()
         .setName('alias')

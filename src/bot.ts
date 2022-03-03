@@ -20,11 +20,11 @@ import { Routes } from 'discord-api-types/v9';
 
 import { NumberConstants } from './util/constants'
 import { getCommandFiles } from './util/fiileUtil'
-import messageDeleteEvent from './events/messageDeleteEvent'
+import messageEvent from './events/messageEvent'
 import guildCreateEvent from './events/guildCreateEvent'
 import connect from './db/connect'
 import { runJobs } from './jobs/runner'
-import {Guild} from './db/controllers/guildController'
+import { Guild } from './db/controllers/guildController'
 
 import mongoose from 'mongoose'
 //@ts-ignore
@@ -94,6 +94,14 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
 });
+
+client.on('message', async (message) => {
+    // todo get this from mongo again
+    messageEvent(message, client).catch((error) => {
+        // todo: use winston to log this
+        console.log(error)
+    })
+})
 
 
 
