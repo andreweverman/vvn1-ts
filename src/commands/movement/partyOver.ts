@@ -12,7 +12,7 @@
 
 import { CommandInteraction } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
-import { interEditReplyUtil, assertGuildTextCommand } from '../../util/interactionUtil'
+import { interReplyUtil, assertGuildTextCommand } from '../../util/interactionUtil'
 import { CommandParams, commandProperties } from '../../bot'
 import { replyUtil } from '../../util/messageUtil'
 import { moveMembers } from '../../util/discordUtil'
@@ -25,7 +25,6 @@ const command = {
         .setDescription(`Brings everyone in the user's current voice channel to the designated main channel`),
     async execute(interaction: CommandInteraction) {
         try {
-            await interaction.deferReply()
 
 
             const { userId, guild, guildId } = assertGuildTextCommand(interaction)
@@ -36,7 +35,7 @@ const command = {
                 const voiceChannel = member.voice.channel;
 
                 if (!voiceChannel) {
-                    interEditReplyUtil(interaction, { content: 'Must be connected to voice to use this' }, { delete: true })
+                    interReplyUtil(interaction, { content: 'Must be connected to voice to use this' }, { delete: true })
                     return
                 }
 
@@ -48,7 +47,7 @@ const command = {
                 let channelId
                 if (aliasObj && aliasObj.type == 'voice') channelId = aliasObj.id
                 else {
-                    interEditReplyUtil(interaction, {
+                    interReplyUtil(interaction, {
                         content:
                             `No channel aliased to "main". Use the createalias command to set a voice channel to main first to use this command. `
                     }, { delete: true })
@@ -56,11 +55,11 @@ const command = {
                 }
                 moveMembers(channelId, vcUsers)
 
-                interEditReplyUtil(interaction, { content: 'Party is over' })
+                interReplyUtil(interaction, { content: 'Party is over' })
             }
             else {
 
-                interEditReplyUtil(interaction, { content: 'Error....' })
+                interReplyUtil(interaction, { content: 'Error....' })
             }
 
         } catch (error: any) {
