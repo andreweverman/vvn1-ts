@@ -12,7 +12,7 @@
 
 import { CommandInteraction } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
-import { interReplyUtil, assertGuildTextCommand } from '../../util/interactionUtil'
+import { interEditReplyUtil, assertGuildTextCommand } from '../../util/interactionUtil'
 import { CommandParams, commandProperties } from '../../bot'
 import { replyUtil } from '../../util/messageUtil'
 import { moveMembers } from '../../util/discordUtil'
@@ -36,7 +36,7 @@ const command = {
                 const voiceChannel = member.voice.channel;
 
                 if (!voiceChannel) {
-                    interReplyUtil(interaction, { content: 'Must be connected to voice to use this' }, { delete: true })
+                    interEditReplyUtil(interaction, { content: 'Must be connected to voice to use this' }, { delete: true })
                     return
                 }
 
@@ -48,7 +48,7 @@ const command = {
                 let channelId
                 if (aliasObj && aliasObj.type == 'voice') channelId = aliasObj.id
                 else {
-                    interReplyUtil(interaction, {
+                    interEditReplyUtil(interaction, {
                         content:
                             `No channel aliased to "main". Use the createalias command to set a voice channel to main first to use this command. `
                     }, { delete: true })
@@ -56,11 +56,11 @@ const command = {
                 }
                 moveMembers(channelId, vcUsers)
 
-                interReplyUtil(interaction, { content: 'Party is over' })
+                interEditReplyUtil(interaction, { content: 'Party is over' })
             }
             else {
 
-                interReplyUtil(interaction, { content: 'Error....' })
+                interEditReplyUtil(interaction, { content: 'Error....' })
             }
 
         } catch (error: any) {
