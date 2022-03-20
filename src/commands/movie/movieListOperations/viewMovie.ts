@@ -14,7 +14,7 @@ import { Movie } from '../../../db/controllers/guildController'
 import { linkRegex, somethingRegex } from '../../../util/stringUtil'
 import { interEditReplyUtil, assertGuildTextCommand, replyWithFlayedArray, getFilteredInput, InteractionFilters, FilterInputTypes } from '../../../util/interactionUtil'
 import { MovieUtil } from '../../../util/generalUtil'
-import { NumberConstants } from '../../../util/constants'
+import {NumberConstants} from '../../../util/constants'
 
 const command = {
     data: new SlashCommandBuilder()
@@ -32,10 +32,10 @@ const command = {
 
 
             if (selectedMovie) {
-                interEditReplyUtil(interaction, { content: `Loading movie info for *${selectedMovie.name}*...` }, { delete: false })
+                interEditReplyUtil(interaction, { content: `Loading movie info for *${selectedMovie.name}*...` }, {  delete: false })
                 const { embeds } = await MovieUtil.getMovieInfo(selectedMovie)
                 if (embeds) {
-                    interEditReplyUtil(interaction, { embeds, components: [] }, { timeout: 5 * NumberConstants.mins })
+                    interEditReplyUtil(interaction, { embeds, components:[] },{timeout: 5*NumberConstants.mins})
                 } else {
                     interEditReplyUtil(interaction, { content: 'Movie information not found' }, { delete: true })
 

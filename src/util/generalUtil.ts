@@ -350,7 +350,7 @@ export namespace MovieUtil {
             if (createMessage) {
                 embed = new MessageEmbed()
                 embed.setTitle(`${movie.name}, *${year}*`)
-                embed.addField('Rating', rating)
+                embed.addField('Rating (out of 5)', rating)
                 embed.addField('Duration', duration)
                 embed.addField('Description', description)
                 embeds = [embed]

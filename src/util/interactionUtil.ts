@@ -101,7 +101,7 @@ export async function replyWithFlayedArray<T>(interaction: CommandInteraction, t
 			const entry = `${mapFunction(x)}`
 
 			const description = `${options?.describeFunction ? options.describeFunction(x) : ''}`
-			option.push({ label: entry, value: (i * chunk + k).toString() })
+			option.push({ label: entry, value: (i + k).toString() })
 			if (description) option[option.length - 1].description = description
 			const isUnder = curLength + entry.length < maxLength
 			if (isUnder) {
