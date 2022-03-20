@@ -122,7 +122,7 @@ if (!db) {
 }
 connect({ db })
 
-// runJobs()
+runJobs()
 
 function deployCommands(commands: any) {
     const rest = new REST({ version: '9' }).setToken(process.env.TOKEN!);
