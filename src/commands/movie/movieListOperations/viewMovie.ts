@@ -28,7 +28,7 @@ const command = {
 
             const { movies } = await Movie.getMovies(guildId, [], true)
 
-            const selectedMovie = await replyWithFlayedArray(interaction, 'Select movie for more information', movies, (movie) => movie.name, { deleteWhenDone: false })
+            const selectedMovie = await replyWithFlayedArray(interaction, 'Select movie for more information', movies, (movie) => `[${movie.name}](${movie.link})`, { deleteWhenDone: false })
 
 
             if (selectedMovie) {
