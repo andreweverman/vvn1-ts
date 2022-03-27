@@ -75,6 +75,7 @@ export function assertGuildTextCommand(interaction: CommandInteraction): AssertG
 export interface ReplyWithArrayOptions<T> {
 	disableSelection?: boolean
 	describeFunction?: (t: T) => string,
+	optionFunction?: (t: T) => string,
 	deleteAfter?: number,
 	chunkSize?: number,
 	deleteWhenDone?: boolean
@@ -100,8 +101,10 @@ export async function replyWithFlayedArray<T>(interaction: CommandInteraction, t
 		linkChunk.forEach((x, k) => {
 			const entry = `${mapFunction(x)}`
 
+			const optionLabel = `${options?.optionFunction ? options.optionFunction(x) : entry}`
 			const description = `${options?.describeFunction ? options.describeFunction(x) : ''}`
-			option.push({ label: entry, value: (i + k).toString() })
+
+			option.push({ label: optionLabel, value: (i + k).toString() })
 			if (description) option[option.length - 1].description = description
 			const isUnder = curLength + entry.length < maxLength
 			if (isUnder) {

@@ -353,6 +353,7 @@ export namespace MovieUtil {
                 embed.addField('Rating (out of 5)', rating)
                 embed.addField('Duration', duration)
                 embed.addField('Description', description)
+                embed.addField('Download', `[Download Link](${movie.link})`)
                 embeds = [embed]
             }
 
