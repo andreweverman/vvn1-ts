@@ -19,7 +19,6 @@ import playAudio from '../commands/indirect/playAudio'
 import { IConfigDoc } from '../db/models/guildModel'
 async function messageEvent(
 	message: Message,
-	client: Client,
 ): Promise<string> {
 	return new Promise(async (resolve, reject) => {
 		// getting the guild prefix if it is a guild message
@@ -34,6 +33,14 @@ async function messageEvent(
 				console.error(error)
 			}
 		}
+		if (!configDoc) { return }
+		const prefix = guildPrefix || process.env.PROD_PREFIX!
+
+		const args = message.content.slice(prefix.length).split(/ +/)
+		const commandName = args.shift()?.toLowerCase()
+
+		const escape_regex = new RegExp(/[-\/\\^$*+?.()|[\]{}]/g)
+		const is_command = new RegExp('^[/s]*' + prefix.replace(escape_regex, '\\$&') + '[/w]*').test(message.content)
 
 		// TODO: autodelete message flow here
 		if (configDoc) {
@@ -77,7 +84,44 @@ async function messageEvent(
 			}
 		}
 
+		if (!is_command || message.author.bot) return
 
+		if (commandName) {
+			try {
+				// TODO : the links stuff
+				if (message.guild) {
+					const guild_id = message.guild.id
+					const link = await Link.lookupLink(guild_id, commandName)
+
+					if (link && link.type == 'clip') {
+						// voice clip
+						if (message.member && message.member.voice) {
+							const vc = message.member.voice.channel
+
+							if (vc) {
+								playAudio(configDoc, vc, link, message.channel).catch((err) => console.log(err))
+							} else {
+								replyUtil(message, 'You must be connected to a voice channel to use this command')
+							}
+						}
+					} else if (link && link.type == 'link') {
+						// static link
+						// just sending them the link
+						sendToChannel(message.channel, link.link, true, 10 * NumberConstants.mins)
+					} else {
+						sendToChannel(message.channel, 'This is not a command I know of.')
+					}
+					deleteMessage(message, 15 * NumberConstants.secs)
+
+					return
+				} else {
+					sendToChannel(message.channel, 'This is not a command I know of.')
+					deleteMessage(message, 15 * NumberConstants.secs)
+				}
+			} catch (error) {
+				console.error('Error in link messageEvent: ' + error)
+			}
+		}
 	})
 }
 

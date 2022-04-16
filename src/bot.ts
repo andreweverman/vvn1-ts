@@ -97,7 +97,7 @@ client.on('interactionCreate', async interaction => {
 
 client.on('messageCreate', async (message) => {
     // todo get this from mongo again
-    messageEvent(message, client).catch((error) => {
+    messageEvent(message).catch((error) => {
         // todo: use winston to log this
         console.log(error)
     })
