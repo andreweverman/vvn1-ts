@@ -28,7 +28,8 @@ const command = {
         .addStringOption(option => option.setName('link').setDescription('Magnet link to download').setRequired(true)),
     async execute(interaction: CommandInteraction) {
         try {
-
+            
+            await interaction.deferReply()
             const userId = interaction.user.id
             const textChannel = interaction.channel
             const guildId = interaction.guildId
