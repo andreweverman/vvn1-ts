@@ -90,14 +90,8 @@ const command: commandProperties = {
         async function promptType(): Promise<linkType> {
             return new Promise((resolve, reject) => {
                 try {
-                    const msg = new MessageEmbed()
 
-                    msg.addField(
-                        'Select type',
-                        options.map((x, i) => `${i + 1}. ${x.name}, ${x.description}`)
-                    )
-
-                    Prompt.arraySelect(userID, textChannel, options, msg)
+                    Prompt.arraySelect(userID, textChannel, options, (x) => `${x.name}, ${x.description}`, 'Select a type')
                         .then((option) => {
                             if (!option.arrayElement) {
                                 reject(null)

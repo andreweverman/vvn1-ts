@@ -12,29 +12,30 @@
 
 import { BatchJob } from './runner'
 import { Movie } from '../db/controllers/guildController'
+import { IMovieDownloadElementDoc } from '../db/models/guildModel'
+import { Types } from 'mongoose'
 
 const rule = '* * * * *'
 const jobFunction = async function () {
     const downloadedMoviesArr = await Movie.getDownloadedMovies()
 
     downloadedMoviesArr.forEach((guild) => {
-        guild.downloads.forEach(async (movie) => {
+        guild.downloads.forEach(async (movie:any) => {
+            // being weird Idk
+            // movie = movie as IMovieDownloadElementDoc
             if (movie.uploadLink) {
-                await Movie.addMovie(
+                const movieID = new Types.ObjectId() as any
+                const movieObj = await Movie.addMovie(
                     guild.guildID,
                     movie.userID,
                     movie.uploadLink,
                     movie.movieName,
                     movie.zipPassword,
-                    movie.zipName,
                     true,
-                    movie._id
+                    movieID
                 )
-                const movies = await Movie.getMovies(guild.guildID, [movie.movieName])
 
-                const movieDoc = movies.movies[0]
-
-                Movie.moveToUploaded(guild.guildID, movie, movieDoc)
+                Movie.moveToUploaded(guild.guildID, movie,movieID)
             }
         })
     })

@@ -18,7 +18,7 @@ import viewLink from './viewLink'
 const command: commandProperties = {
     name: 'link',
     args: false,
-    description: 'Launcpad for the link related commands',
+    description: 'Launchpad for the link related commands',
     usage: ``,
     cooldown: 1,
     guildOnly: true,

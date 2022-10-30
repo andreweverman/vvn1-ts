@@ -9,7 +9,7 @@
  * @since  16.7.2020
  */
 import { CommandParams, commandProperties } from '../../bot'
-import {  Message, MessageEmbed } from 'discord.js'
+import { Message, MessageEmbed } from 'discord.js'
 import { Alias } from '../../db/controllers/guildController'
 import { Filter, Prompt, sendToChannel } from '../../util/messageUtil'
 import { IAliasDoc } from '../../db/models/guildModel'
@@ -71,20 +71,13 @@ const command: commandProperties = {
                     .then((aliasesResponse) => {
                         const aliases = aliasesResponse.aliases
                         const offset = 1
-                        if (aliases == undefined) {
+                        if (!aliases || aliases.length==0) {
                             sendToChannel(textChannel, 'There are no aliases for this id. Quitting...', true)
-
                             resolve(true)
                             return
                         }
-                        let content: string = aliases.map((x, i) => `${i + offset}: ${x.name}`).join('\n')
-                        const msg = new MessageEmbed().addField(
-                            `Aliases for id: ${id}\nYou can select multiple numbers with spaces between.`,
-                            content,
-                            true
-                        )
 
-                        Prompt.arraySelect(userID, textChannel, aliases, msg, {
+                        Prompt.arraySelect(userID, textChannel, aliases, (x) => `${x.name}`,'Select aliases to delete', {
                             customOffset: offset,
                             multiple: true,
                         })

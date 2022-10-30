@@ -19,31 +19,31 @@ import {
     Collection,
     GuildEmoji,
     Role,
+    Message,
+    MessageEmbed,
+    StageChannel,
+    TextChannel,
+    TextBasedChannels,
+    MessageOptions,
 } from 'discord.js'
 import { selfPronouns, groupPronouns, NumberConstants, vote } from './constants'
 import { Guild, Link, Movie, Config } from '../db/controllers/guildController'
 import { IMovieContainerDoc, IMovieRequestDoc, IReactionEmojiDoc } from '../db/models/guildModel'
 import { extractActiveUsers, extractVCMembers } from './discordUtil'
 import { linkRegex, spaceCommaRegex, youtubeRegex, guildEmojiRegex } from './stringUtil'
-import { Filter, Prompt as MPrompt, MessageChannel, Prompt, sendToChannel } from './messageUtil'
-import {
-    IConfigDoc,
-    ILinkDoc,
-    IAutoDeleteElement,
-    IAutoDeleteSpecified,
-    IMovieDoc,
-} from '../db/models/guildModel'
+import { Filter, Prompt as MPrompt, Prompt, sendToChannel } from './messageUtil'
+import { IConfigDoc, ILinkDoc, IAutoDeleteElement, IAutoDeleteSpecified, IMovieDoc } from '../db/models/guildModel'
 import moment from 'moment-timezone'
-import axios from 'axios'
 import cheerio from 'cheerio'
 import emoji from 'node-emoji'
+import puppeteer from 'puppeteer'
 
 export namespace AliasUtil {
     export interface parseChannelAndMembersResponse {
         members: GuildMember[]
-        voiceChannels: VoiceChannel[]
+        voiceChannels: (VoiceChannel | StageChannel)[]
         textChannels: GuildChannel[]
-        moveChannel?: VoiceChannel
+        moveChannel: VoiceChannel | StageChannel | undefined
     }
     export interface parseChannelsAndMembersOptions {
         member?: GuildMember
@@ -52,51 +52,56 @@ export namespace AliasUtil {
     export async function parseChannelsAndMembers(
         guild: GuildD,
         args: string[],
-        options: parseChannelsAndMembersOptions
+        options?: parseChannelsAndMembersOptions
     ): Promise<parseChannelAndMembersResponse> {
-        const member = options.member
+        const member = options?.member
 
         let members: GuildMember[] = []
-        const voiceChannels: VoiceChannel[] = []
+        const voiceChannels: (VoiceChannel | StageChannel)[] = []
         const textChannels: GuildChannel[] = []
         let moveChannel
 
         // first lets make everything either a string or the id
         let query: string[] = []
-        args.forEach((x) => {
-            // seeing if gave a resolvable for user
-            const user = guild.member(x)
-            if (user) {
-                members.push(user)
-                return
-            }
-            // seeing if gave a resolvable for channel
-            const channel = guild.channels.resolve(x)
-            if (channel) {
-                channel.type == 'voice' ? voiceChannels.push(channel as VoiceChannel) : textChannels.push(channel)
-                return
-            }
 
-            let found: boolean = true
-            // either pronoun or need to lookup
-            if (member && member.voice.channel) {
-                if (groupPronouns.includes(x)) {
-                    Array.from(member.voice.channel.members.entries())
-                        .map((el) => el[1])
-                        .forEach((y) => members.push(y))
-                } else if (selfPronouns.includes(x)) {
-                    members.push(member)
-                } else if ('here'.includes(x)) {
-                    if (member.voice.channel) voiceChannels.push(member.voice.channel)
+        async function makeQuery() {
+            args.forEach(async (x) => {
+                // seeing if gave a resolvable for user
+                const user = await guild.members.cache.get(x)
+                if (user) {
+                    members.push(user)
+                    return
+                }
+                // seeing if gave a resolvable for channel
+                const channel = guild.channels.resolve(x)
+                if (channel) {
+                    channel.type == 'GUILD_VOICE'
+                        ? voiceChannels.push(channel as VoiceChannel)
+                        : textChannels.push(channel as TextChannel)
+                    return
+                }
+
+                let found: boolean = true
+                // either pronoun or need to lookup
+                if (member && member.voice.channel) {
+                    if (groupPronouns.includes(x)) {
+                        Array.from(member.voice.channel.members.entries())
+                            .map((el) => el[1])
+                            .forEach((y) => members.push(y))
+                    } else if (selfPronouns.includes(x)) {
+                        members.push(member)
+                    } else if ('here'.includes(x)) {
+                        if (member.voice.channel) voiceChannels.push(member.voice.channel)
+                    } else {
+                        found = false
+                    }
                 } else {
                     found = false
                 }
-            } else {
-                found = false
-            }
-            if (!found) query.push(x)
-        })
-
+                if (!found) query.push(x)
+            })
+        }
+        await makeQuery()
         // then we will look them up in the database
         if (query.length > 0) {
             const alias_doc = await Guild.getGuild(guild.id)
@@ -112,10 +117,10 @@ export namespace AliasUtil {
                         obj ? members.push(obj) : (bad_alias = true)
                     } else if (alias.type == 'voice') {
                         const obj = guild.channels.resolve(alias.id)
-                        obj && obj.type == alias.type ? voiceChannels.push(obj as VoiceChannel) : (bad_alias = true)
+                        obj && obj.type == 'GUILD_VOICE' ? voiceChannels.push(obj as VoiceChannel) : (bad_alias = true)
                     } else if (alias.type == 'text') {
                         const obj = guild.channels.resolve(alias.id)
-                        obj && obj.type == alias.type ? textChannels.push(obj) : (bad_alias = true)
+                        obj && obj.type == 'GUILD_TEXT' ? textChannels.push(obj) : (bad_alias = true)
                     } else {
                         bad_alias = true
                     }
@@ -128,7 +133,7 @@ export namespace AliasUtil {
             })
         }
 
-        if (options.moveMode) {
+        if (options?.moveMode) {
             if (voiceChannels.length > 0) moveChannel = voiceChannels[voiceChannels.length - 1]
             //if they give multiple voice channels, the last is always the destination
             if (voiceChannels.length > 1) {
@@ -159,7 +164,7 @@ export namespace LinkUtil {
         export interface promptLinkArgs {
             type: Link.LinkTypes
             userID: string
-            textChannel: MessageChannel
+            textChannel: TextBasedChannels
             currentLink?: ILinkDoc
         }
 
@@ -203,11 +208,17 @@ export namespace LinkUtil {
 
                 const offset = 1
                 const currentNames = args.currentLink.names
-                const prompt = `Current names are: ${currentNames.map((x, i) => `\n${offset + i}: ${x}`)}`
-                const names = await MPrompt.arraySelect(args.userID, args.textChannel, args.currentLink.names, prompt, {
-                    multiple: true,
-                    customOffset: offset,
-                })
+                const names = await MPrompt.arraySelect(
+                    args.userID,
+                    args.textChannel,
+                    args.currentLink.names,
+                    (x, i) => `\n${offset + i}: ${x}`,
+                    'Select a name to delete',
+                    {
+                        multiple: true,
+                        customOffset: offset,
+                    }
+                )
                 if (!Array.isArray(names)) {
                     throw new Error('Expected an array')
                 } else {
@@ -223,8 +234,7 @@ export namespace LinkUtil {
                 const m = await MPrompt.getSameUserInput(
                     args.userID,
                     args.textChannel,
-                    `Enter the volume (0 to 1, ${
-                        args.currentLink ? `currently: ${args.currentLink.volume}` : `default is .5)`
+                    `Enter the volume (0 to 1, ${args.currentLink ? `currently: ${args.currentLink.volume}` : `default is .5)`
                     })`,
                     Filter.numberRangeFilter(0, 1, { integerOnly: false })
                 )
@@ -241,7 +251,7 @@ export namespace MovieUtil {
     export async function selectMovie(
         guildID: string,
         userID: string,
-        textChannel: MessageChannel,
+        textChannel: TextBasedChannels,
         multiple = false,
         voteAllowed = false
     ) {
@@ -249,11 +259,21 @@ export namespace MovieUtil {
             let extraStringOptions = []
             if (voteAllowed) extraStringOptions.push(vote)
             const { movies, message } = await Movie.getMovies(guildID, [], true)
-            const movie = await MPrompt.arraySelect(userID, textChannel, movies, message, {
-                multiple: multiple,
-                customOffset: 1,
-                extraStringOptions: extraStringOptions,
-            })
+            if (movies.length == 0) {
+                return null
+            }
+            const movie = await MPrompt.arraySelect(
+                userID,
+                textChannel,
+                movies,
+                (x: IMovieDoc) => `${x.name}`,
+                'Select a movie',
+                {
+                    multiple: multiple,
+                    customOffset: 1,
+                    extraStringOptions: extraStringOptions,
+                }
+            )
 
             return movie
         } catch (error) {
@@ -273,34 +293,111 @@ export namespace MovieUtil {
         })
     }
 
-    export async function getInfoPage(movieName: string): Promise<string | null> {
-        const urlBase = 'https://letterboxd.com'
-        const searchBase = '/search/'
+    export async function getInfoPage(movieName: string): Promise<any | null> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const urlBase = 'https://letterboxd.com'
+                const searchBase = '/search/'
 
-        const searchURL = encodeURI(urlBase + searchBase + movieName)
+                const searchURL = encodeURI(urlBase + searchBase + movieName)
 
-        return new Promise((resolve, reject) => {
-            axios
-                .get(searchURL)
-                .then((response) => {
-                    const html = response.data
-                    const $ = cheerio.load(html)
+                let browser = await puppeteer.launch()
+                let page = await browser.newPage()
 
-                    const liResults = $('ul.results li div[data-film-link]')
-                    liResults.length < 1
-                        ? resolve(null)
-                        : resolve(urlBase + liResults.first().attr('data-film-link'))
+                await page.goto(searchURL, { waitUntil: 'networkidle2' })
+
+                const results = await page.evaluate(() => {
+                    // const liresults = document.querySelector('ul.results li div[data-film-link]')
+                    return document.documentElement.innerHTML
                 })
-                .catch((err) => {
-                    resolve(null)
-                })
+
+                const html = results
+                const $ = cheerio.load(html)
+
+                const liresults = $('ul.results li div[data-film-link]')
+                liresults.length < 1 ? resolve(null) : resolve(urlBase + liresults.first().attr('data-film-link'))
+
+                browser.close()
+            } catch (e) {
+                resolve(null)
+            }
         })
     }
 
-    export async function getMovieDuration(letterboxdLink: string): Promise<string | null> {
-        const listResponse = await axios.get(letterboxdLink)
-        const html = listResponse.data
-        const $ = cheerio.load(html)
+    export interface IMovieInfo {
+        message?: MessageOptions
+        duration?: number
+        letterboxdLink?: string
+        rating?: number
+        description?: string
+        year?: string
+    }
+    export async function getMovieInfo(movie: IMovieDoc, createMessage: boolean = true) {
+        try {
+            const link = await getInfoPage(movie.name)
+            const html = await getLetterboxdPageHTML(link)
+
+            const duration = await getMovieDuration({ html })
+            const rating = await getMovieRating({ html })
+            const description = await getMovieDescription({ html })
+            const year = await getMovieYear({ html })
+
+            let embed: MessageEmbed
+            let embeds: MessageEmbed[] = []
+            if (!(duration || rating || description||year)){
+                throw 'Nothing found'
+            }
+            if (createMessage) {
+                embed = new MessageEmbed()
+                embed.setTitle(`${movie.name}, *${year}*`)
+                embed.addField('Rating (out of 5)', rating)
+                embed.addField('Duration', duration)
+                embed.addField('Description', description)
+                embed.addField('Download', `[Download Link](${movie.link})`)
+                embeds = [embed]
+            }
+
+            return { letterboxdLink: link, embeds, duration, rating, description, year }
+        } catch (e) {
+            return { embeds: undefined }
+        }
+    }
+
+    export async function getLetterboxdPageHTML(letterboxdLink: string) {
+        try {
+            let browser = await puppeteer.launch()
+            let page = await browser.newPage()
+
+            await page.goto(letterboxdLink, { waitUntil: 'networkidle2' })
+
+            const z = await page.evaluate(() => {
+                return document.documentElement.innerHTML
+            })
+
+            browser.close()
+
+            return z
+        } catch (error) {
+            console.log(error)
+            throw error
+        }
+    }
+
+    interface IScrapeArgs {
+        link?: string
+        html?: string
+    }
+    export async function getMovieDuration(args: IScrapeArgs): Promise<string> {
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
+        }
+
+        const $ = cheerio.load(pageHTML)
 
         const pTag = $('p.text-link')
         //@ts-ignore
@@ -314,37 +411,75 @@ export namespace MovieUtil {
         return `${hours} hours ${minutes} minutes`
     }
 
-    export async function createMovieRole(movie: IMovieDoc, guild: GuildD): Promise<Role> {
-        try {
-            const reason = `vvn1: to watch ${movie.name}`
-            const movieWatchers = movie.want_to_watch
-                .map((x) => guild.member(x))
-                .filter((x) => x != null) as GuildMember[]
-
-            const newRole = await guild.roles.create({
-                data: {
-                    name: movie.name,
-                    color: 'BLUE',
-                    permissions: 0,
-                },
-                reason: reason,
-            })
-
-            movieWatchers.forEach(async (member) => {
-                await member.roles.add(newRole, reason)
-            })
-
-            return newRole
-        } catch (error) {
-            throw error
+    export async function getMovieYear(args: IScrapeArgs): Promise<string> {
+        const search = '/films/year/(d)+'
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
         }
+        const $ = cheerio.load(pageHTML)
+        const aTags = Array.from(
+            $('a').map((i, a) => {
+                return { tag: $(a).attr('href'), value: $(a).text() }
+            })
+        )
+        const regex = new RegExp(search)
+
+        const res = aTags.filter((x: any) => x.tag && x.tag.includes('films/year'))
+        if (res.length > 0) {
+            //@ts-ignore
+            return res[0].value
+        }
+        return 'No year found'
+    }
+
+    export async function getMovieRating(args: IScrapeArgs) {
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
+        }
+
+        const $ = cheerio.load(pageHTML)
+
+        const aTag = $('a.display-rating')
+        //@ts-ignore
+        return aTag[0].children[0].data
+    }
+
+    export async function getMovieDescription(args: IScrapeArgs) {
+        let pageHTML: string
+        if (args.link) {
+            pageHTML = await getLetterboxdPageHTML(args.link)
+        } else if (args.html) {
+            pageHTML = args.html
+        } else {
+            throw 'Invalid: Need to pass in one param'
+        }
+
+        const $ = cheerio.load(pageHTML)
+        let desc: string[] = []
+        const divv = $('div.review.body-text')
+        divv.find('div > p').each((index, element) => {
+            //@ts-ignore
+            const z = $(element).valueOf()[0].children[0].data
+            desc.push(z)
+        })
+        return desc.length > 0 ? desc[0] : ''
     }
 
     export namespace Config {
         export interface MovieConfigArgs {
             guildID: string
             userID: string
-            textChannel: MessageChannel
+            textChannel: TextBasedChannels
             currentMovie: IMovieContainerDoc
             emojiDBName?: string
         }
@@ -353,7 +488,7 @@ export namespace MovieUtil {
     export namespace Prompt {
         export interface promptMovieArgs {
             userID: string
-            textChannel: MessageChannel
+            textChannel: TextBasedChannels
             guildID: string
         }
 
@@ -437,7 +572,7 @@ export namespace ConfigUtil {
         guild: GuildD
         client: Client
         currentConfig: IConfigDoc
-        textChannel: MessageChannel
+        textChannel: TextBasedChannels
         userID: string
         autoDeleteType?: Config.AutoDeleteType
         matchOn?: string
@@ -465,10 +600,17 @@ export namespace ConfigUtil {
 
             const countryPrompt = `Select a country code:\n${countries.map((x, i) => `${i + offset}. ${x}`).join('\n')}`
 
-            const countryMessage = await MPrompt.arraySelect(args.userID, args.textChannel, countries, countryPrompt, {
-                multiple: false,
-                customOffset: offset,
-            })
+            const countryMessage = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                countries,
+                (x, i) => `${i + offset}. ${x}`,
+                'Select a new time zone',
+                {
+                    multiple: false,
+                    customOffset: offset,
+                }
+            )
 
             if (!countryMessage.arrayElement) {
                 throw new Error('Got an array when I should not have from arraySelect')
@@ -477,14 +619,18 @@ export namespace ConfigUtil {
             const country = countryMessage.arrayElement
 
             const arr = moment.tz.zonesForCountry(country, true)
-            const message = `Select a timezone:\n${arr
-                .map((x, i) => `${i + offset}: ${x.name}, ${x.offset}`)
-                .join('\n')}`
 
-            const m = await MPrompt.arraySelect(args.userID, args.textChannel, arr, message, {
-                multiple: false,
-                customOffset: offset,
-            })
+            const m = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                arr,
+                (x, i) => `${i + offset}: ${x.name}, ${x.offset}`,
+                'Select a new time zone',
+                {
+                    multiple: false,
+                    customOffset: offset,
+                }
+            )
 
             if (!m.arrayElement) {
                 throw new Error('Got an array when I should not have from arraySelect')
@@ -597,17 +743,27 @@ export namespace ConfigUtil {
             const prompt = `Select a ${args.autoDeleteType} to edit:\n ${typedAutoDeleteArr
                 .map(
                     (x, i) =>
-                        `${i + offset}. ${
-                            args.autoDeleteType == Config.AutoDeleteType.user
-                                ? args.guild.members.resolve(x.matchOn)?.displayName
-                                : x.matchOn
+                        `${i + offset}. ${args.autoDeleteType == Config.AutoDeleteType.user
+                            ? args.guild.members.resolve(x.matchOn)?.displayName
+                            : x.matchOn
                         }`
                 )
                 .join('\n')}`
-            const element = await MPrompt.arraySelect(args.userID, args.textChannel, typedAutoDeleteArr, prompt, {
-                multiple: false,
-                customOffset: offset,
-            })
+            const element = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                typedAutoDeleteArr,
+                (x, i) =>
+                    `${i + offset}. ${args.autoDeleteType == Config.AutoDeleteType.user
+                        ? args.guild.members.resolve(x.matchOn)?.displayName
+                        : x.matchOn
+                    }`,
+                'Select auto delete member',
+                {
+                    multiple: false,
+                    customOffset: offset,
+                }
+            )
 
             if (element.arrayElement) {
                 return element.arrayElement
@@ -660,11 +816,10 @@ export namespace ConfigUtil {
                     args: args,
                 },
                 {
-                    name: `Edit specified command delete times (ex. ${
-                        Config.AutoDeleteType.prefix == args.autoDeleteType
-                            ? '!play deletes after 300 seconds'
-                            : 'when user Gerald says play delete it'
-                    })`,
+                    name: `Edit specified command delete times (ex. ${Config.AutoDeleteType.prefix == args.autoDeleteType
+                        ? '!play deletes after 300 seconds'
+                        : 'when user Gerald says play delete it'
+                        })`,
                     function: editSpecifiedDelete,
                     args: args,
                 },
@@ -674,9 +829,8 @@ export namespace ConfigUtil {
                     args: args,
                 },
                 {
-                    name: `Edit default delete time (currently ${
-                        elementDoc.defaultDeleteTime / NumberConstants.secs
-                    } seconds)`,
+                    name: `Edit default delete time (currently ${elementDoc.defaultDeleteTime / NumberConstants.secs
+                        } seconds)`,
                     function: editDefaultDeleteTime,
                     args: args,
                 },
@@ -822,14 +976,18 @@ export namespace ConfigUtil {
             const arr = elementDoc.specified
 
             const offset = 1
-            const prompt = arr
-                .map((x, i) => `${i + offset}. ${x.startsWith} after ${x.timeToDelete} seconds`)
-                .join('\n')
 
-            const specifiedObj = await MPrompt.arraySelect(args.userID, args.textChannel, arr, prompt, {
-                customOffset: 1,
-                multiple: false,
-            })
+            const specifiedObj = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                arr,
+                (x, i) => `${i + offset}. ${x.startsWith} after ${x.timeToDelete} seconds`,
+                'Select element to delete',
+                {
+                    customOffset: 1,
+                    multiple: false,
+                }
+            )
 
             if (!specifiedObj.arrayElement) {
                 return undefined
@@ -997,14 +1155,18 @@ export namespace ConfigUtil {
 
             const allowList = elementDoc.allowList
             const offset = 1
-            const prompt =
-                'Enter the ones you want to remove from the list (can enter multiple):\n' +
-                allowList.map((x, i) => `${i + offset}. ${x}\n`)
 
-            const deleteNames = await MPrompt.arraySelect(args.userID, args.textChannel, allowList, prompt, {
-                multiple: true,
-                customOffset: 1,
-            })
+            const deleteNames = await MPrompt.arraySelect(
+                args.userID,
+                args.textChannel,
+                allowList,
+                (x, i) => `${i + offset}. ${x}\n`,
+                'Select element to remove',
+                {
+                    multiple: true,
+                    customOffset: 1,
+                }
+            )
 
             if (!Array.isArray(deleteNames)) {
                 return undefined
@@ -1046,9 +1208,8 @@ export namespace ConfigUtil {
                         args: args,
                     },
                     {
-                        name: `Save bot messages: Curently ${
-                            messageArchive.save_bot_commands ? 'enabled' : 'disabled'
-                        }`,
+                        name: `Save bot messages: Curently ${messageArchive.save_bot_commands ? 'enabled' : 'disabled'
+                            }`,
                         function: toggleArchiveSaveBotMessages,
                         args: args,
                     },
@@ -1064,7 +1225,7 @@ export namespace ConfigUtil {
 
     export async function createArchiveConfig(args: ConfigUtilFunctionArgs) {
         try {
-            const channel = await args.guild.channels.create('Archive', { type: 'text' })
+            const channel = await args.guild.channels.create('Archive', { type: 'GUILD_TEXT' })
             sendToChannel(args.textChannel, 'Please set the channel permissions')
 
             return Config.setMessageArchiveChannel(args.guildID, channel.id, args.textChannel)

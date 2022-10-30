@@ -3,15 +3,16 @@
  * Utility for functions pertain to time zones
  *
  * Contains functions for dealing with time and all its issues
- * 
+ *
  * @file   Utility for time and time zones
  * @author Andrew Everman.
  * @since  15.10.2020
  */
 
 import moment, { Moment } from 'moment-timezone'
-import { Filter, AnyCollectorFilter, Prompt as MPrompt, MessageChannel } from './messageUtil'
+import { Filter, AnyCollectorFilter, Prompt as MPrompt } from './messageUtil'
 import { timeRegex, dateRegex } from './stringUtil'
+import { TextBasedChannels } from 'discord.js'
 
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)
@@ -124,9 +125,8 @@ export function getCurrentTimeForTZ(timeZoneName: string): Moment {
 }
 
 export function getTimeStrFromSeconds(inputSeconds: number): string {
-
     const days = Math.floor(inputSeconds / (3600 * 24))
-    const hours= Math.floor((inputSeconds % (3600 * 24)) / 3600)
+    const hours = Math.floor((inputSeconds % (3600 * 24)) / 3600)
     const minutes = Math.floor((inputSeconds % 3600) / 60)
     const seconds = Math.floor(inputSeconds % 60)
     const stringArr: string[] = []
@@ -150,12 +150,12 @@ export namespace Prompt {
     }
     export async function promptDate(
         userID: string,
-        textChanel: MessageChannel,
+        textChanel: TextBasedChannels,
         timeZoneName: string,
         options?: PromptDateOptions
     ): Promise<PromptDateResponse> {
         const prePrompt = options ? options.prePrompt + '\n' : ''
-        const fullPrompt = prePrompt + 'Enter date in mm/dd/yyyy | mm.dd.yyyy | mm-dd-yyyy format:'
+        const fullPrompt = prePrompt + 'Enter date in mm/dd/yyyy | mm.dd.yyyy | mm-dd-yyyy format (or today/now):'
         const pastAllowed = options?.pastAllowed ? true : false
 
         const everyFilters: AnyCollectorFilter[] = []
@@ -167,11 +167,17 @@ export namespace Prompt {
             every: everyFilters,
         })
 
-        const m = await MPrompt.getSameUserInput(userID, textChanel, fullPrompt, filter)
+        const nowOptions = ['today', 'now']
+
+        const m = await MPrompt.getSameUserInput(userID, textChanel, fullPrompt, filter, {
+            extraStringOptions: nowOptions,
+        })
 
         const dateString = m.content.trim()
 
-        return { dateString: dateString, date: new Date(dateString) }
+        const d = nowOptions.includes(dateString) ? getCurrentTimeForTZ(timeZoneName).toDate() : new Date(dateString)
+
+        return { dateString: dateString, date: d }
     }
 
     export interface PromptTimeOptions extends PromptDateOptions {
@@ -181,7 +187,7 @@ export namespace Prompt {
 
     export async function promptTime(
         userID: string,
-        textChannel: MessageChannel,
+        textChannel: TextBasedChannels,
         timeZoneName: string,
         options?: PromptTimeOptions
     ) {
@@ -207,4 +213,8 @@ export namespace Prompt {
             MPrompt.handleGetSameUserInputError(error)
         }
     }
+}
+
+export function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
 }

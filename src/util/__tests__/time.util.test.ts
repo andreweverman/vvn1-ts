@@ -5,7 +5,6 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Mocks } from '../testUtil'
 import { AnyCollectorFilter, Filter, Prompt } from '../messageUtil'
 import { mocked } from 'ts-jest/utils'
-import { MessageChannel } from '../messageUtil'
 import { TextChannel } from 'discord.js'
 import { dateInPast, parseDate, timeInPast, getTimeStrFromSeconds } from '../timeUtil'
 import moment from 'moment-timezone'
@@ -42,37 +41,6 @@ afterAll(async () => {
     Mongo.mongoDisconnect(mongod)
 })
 
-// describe('timeInPast', () => {
-//     const tz = 'America/New_York'
-//     describe('when not in past', () => {
-//         it.each([
-//             [1, '11:30'],
-//             [2, '2:30'],
-//         ])('specify delete. %p days in future, %p as the time', (input, expected) => {
-//             const specifiedDate = moment()
-//             specifiedDate.add(input, 'day')
-//             const dateString = parseDate(specifiedDate.format('L'))
-//             if (dateString == undefined) throw new Error(' ')
-
-//             const past = timeInPast(tz, expected, { date: dateString })
-//             expect(past).toBe(false)
-//         })
-//     })
-
-//     describe('when in the past', () => {
-//         it.each([
-//             [1, '11:30'],
-//             [2, '2:30'],
-//         ])('specify delete. %p days in past, %p as the time', (input, expected) => {
-//             const specifiedDate = moment().tz(tz)
-//             specifiedDate.subtract(input, 'day')
-//             const dateString = specifiedDate.startOf('day').format()
-//             if (dateString == undefined) throw new Error(' ')
-//             const past = timeInPast(tz, expected, { date: dateString })
-//             expect(past).toBe(true)
-//         })
-//     })
-// })
 
 describe('dateInPast', () => {
     const tz = 'America/New_York'
@@ -90,6 +58,11 @@ describe('dateInPast', () => {
         })
     })
 })
+
+describe('timeInPast', () => {
+    
+})
+
 
 describe('getTimeStrFromSeconds', () => {
     it.each([

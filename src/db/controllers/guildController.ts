@@ -28,8 +28,18 @@ import Guilds, {
     IMovieRequestDoc,
     IMovieDownloadElement,
     IMovieDownloadElementDoc,
+    IDownloadedMovie,
+    IDownloadedMovieDoc,
+    IMovieListDoc,
+    IMovieUploadedElementDoc,
+    IMovieUploadElementDoc,
+    IMovieStatusUpdateDoc,
+    MovieStatusMap,
+    IMovieUploadedElement,
+    MovieStatus,
+    IMovieUploadElement,
 } from '../models/guildModel'
-import { MongooseUpdateQuery, UpdateQuery } from 'mongoose'
+import { MongooseUpdateQuery, ObjectId, UpdateQuery } from 'mongoose'
 import {
     findOrCreateResponse,
     uniqueArrayObject,
@@ -40,12 +50,14 @@ import {
 } from '../db.util'
 import _ from 'lodash'
 import { NumberConstants } from '../../util/constants'
-import { MessageEmbed, Guild as GuildD } from 'discord.js'
-import { sendToChannel, MessageChannel, Prompt } from '../../util/messageUtil'
+import { MessageEmbed, Guild as GuildD, MessagePayload, MessageOptions, TextBasedChannels, Message } from 'discord.js'
+import { sendToChannel, Prompt } from '../../util/messageUtil'
 import { stringMatch } from '../../util/stringUtil'
 import moment from 'moment-timezone'
 import { EmojiUtil, MovieUtil } from '../../util/generalUtil'
 import { Schema } from 'mongoose'
+import downloadMovie from '../../commands/movie/download/downloadMovie'
+import { delay } from '../../util/timeUtil'
 export namespace Guild {
     export async function initializeGuild(guildID: string): Promise<findOrCreateResponse> {
         // making my own findorcreate here as
@@ -134,7 +146,7 @@ export namespace Alias {
         guildID: string,
         { id, type }: IAliasNoName,
         names: string[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<createAliasResponse> {
         return new Promise((resolve, reject) => {
             let resolveObj: createAliasResponse
@@ -155,7 +167,7 @@ export namespace Alias {
                         if (approved.length > 0) msg.addField('Approved Aliases', approved.join('\n'), false)
                         if (rejected.length > 0) msg.addField('Rejected Aliases', rejected.join('\n'), false)
 
-                        sendToChannel(textChannel, msg, true, 30 * NumberConstants.secs)
+                        sendToChannel(textChannel, { embeds: [msg] }, true, 30 * NumberConstants.secs)
                     }
 
                     if (approved.length == 0) {
@@ -235,7 +247,7 @@ export namespace Alias {
     export async function getAliasesByID(
         guildID: string,
         id: string,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<getAliasesByIDResponse> {
         try {
             const guildDoc = await Guild.getGuild(guildID)
@@ -244,17 +256,19 @@ export namespace Alias {
             let idAliases: IAliasDoc[] = []
             let messageSent: boolean = false
             let msg: string | MessageEmbed
-
-            if (aliases.length > 0) {
-                idAliases = aliases.filter((x) => x.id == id)
+            let payload: MessageOptions
+            if (aliases.length < 1) {
+                msg = 'There are no aliases for this id'
+                payload = { content: msg }
             } else {
+                idAliases = aliases.filter((x) => x.id == id)
                 let content: string = idAliases.map((x) => x.name).join('\n')
                 msg = new MessageEmbed().addField(`Aliases for id: ${id}`, content, true)
+                payload = { embeds: [msg] }
             }
-            msg = 'There are no aliases for this id'
 
             if (textChannel) {
-                await sendToChannel(textChannel, msg, true, 1 * NumberConstants.mins)
+                await sendToChannel(textChannel, payload, true, 1 * NumberConstants.mins)
                 messageSent = true
             }
 
@@ -267,7 +281,7 @@ export namespace Alias {
     export function deleteAliases(
         guildID: string,
         aliases: IAliasDoc | IAliasDoc[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponse> {
         return new Promise((resolve, reject) => {
             let deleteIDs: any[] = []
@@ -282,7 +296,7 @@ export namespace Alias {
                 deleteNames.push(aliases.name)
             }
             const updateStrings: updateOneStrings = {
-                success: `The following ids have been deleted: ${deleteNames.join(', ')}`,
+                success: `The following aliases have been deleted: ${deleteNames.join(', ')}`,
                 failure: 'There was an error deleting the aliases. Please try again or contact the administrator',
             }
 
@@ -307,7 +321,7 @@ export namespace Alias {
         aliasName: string,
         newAliasID: string,
         newAliasType: Alias.Types,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         const updateStrings: updateOneStrings = {
             success: 'Movie channel updated successfully',
@@ -334,7 +348,7 @@ export namespace Link {
         goodNames: string[]
         rejectedNames: string[]
     }
-    export function createLink(guildID: string, linkObj: ILink, textChannel?: MessageChannel) {
+    export function createLink(guildID: string, linkObj: ILink, textChannel?: TextBasedChannels) {
         const strings: updateOneStrings = {
             success: 'Link created successfully',
             failure: 'Error creating link',
@@ -363,7 +377,7 @@ export namespace Link {
                         if (approved.length > 0) msg.addField('Approved Names', approved.join('\n'), false)
                         if (rejected.length > 0) msg.addField('Rejected Names', rejected.join('\n'), false)
 
-                        sendToChannel(textChannel, msg, true)
+                        sendToChannel(textChannel, { embeds: [msg] }, true)
                     }
                     if (approved.length == 0) {
                         if (textChannel) sendToChannel(textChannel, 'No approved aliases. Nothing will be added.', true)
@@ -402,11 +416,11 @@ export namespace Link {
 
     export interface viewLinksResponse {
         links: ILinkDoc[]
-        message: MessageEmbed | string
-        offset: number
+        message: MessageEmbed[] | string
     }
-    export async function viewLinks(guildID: string, textChannel?: MessageChannel): Promise<viewLinksResponse> {
+    export async function viewLinks(guildID: string): Promise<viewLinksResponse> {
         try {
+            let message: string | MessageEmbed[]
             const guildDoc = await Guild.getGuild(guildID)
             let embed: MessageEmbed | string
             const allLinks = guildDoc.links
@@ -417,52 +431,17 @@ export namespace Link {
             const linksSorted = clips.concat(links)
 
             if (linksSorted.length > 0) {
-                const types = [
-                    { array: clips, header: 'Clips' },
-                    { array: links, header: 'Links' },
-                ]
+                const linkMap = (x: ILinkDoc) => {
+                    let movie_str = `[${x.names.join(', ')}](${x.link})`
 
-                const fields: any = []
-                let overallCount = 0
-                let typeCount = 0
-                types.forEach((type) => {
-                    const arr = type.array
-                    let i: number,
-                        j: number,
-                        chunk = 5
-                    for (i = 0, j = arr.length; i < j; i += chunk) {
-                        let startCount = overallCount
-                        const linkChunk = arr.slice(i, i + chunk)
-                        const linkMessage = linkChunk.map((x, k) => {
-                            return `${'**' + (i + k + offset + typeCount) + '**. '}[${x.names.join(', ')}](${
-                                x.link
-                            } 'Link')`
-                        })
-                        overallCount += linkChunk.length
-                        fields.push({
-                            name: `${type.header} ${startCount + offset} - ${overallCount}`,
-                            value: linkMessage,
-                            inline: true,
-                        })
-                    }
-                    typeCount += overallCount
-                })
-
-                embed = new MessageEmbed().setTitle('Link Catalog').addFields(fields)
+                    return movie_str
+                }
+                message = Prompt.arrayToPaginatedArray(allLinks, `All Links`, linkMap, {})
             } else {
-                embed = 'No links found'
-                linksFound = false
+                message = 'No links found'
             }
 
-            if (textChannel)
-                sendToChannel(
-                    textChannel,
-                    embed,
-                    true,
-                    linksFound ? 1 * NumberConstants.mins : 15 * NumberConstants.secs
-                )
-
-            return { links: linksSorted, message: embed, offset: offset }
+            return { links: allLinks, message: message }
         } catch (error) {
             throw error
         }
@@ -471,24 +450,21 @@ export namespace Link {
     export async function selectLink(
         guildID: string,
         userID: string,
-        textChannel: MessageChannel,
+        textChannel: TextBasedChannels,
         multiple: boolean
     ): Promise<ILinkDoc | ILinkDoc[] | undefined> {
         try {
-            const { links, message, offset } = await viewLinks(guildID)
-
-            if (typeof message !== 'string') {
-                message.title = 'Select a link:'
-            }
+            const { links, message } = await viewLinks(guildID)
 
             if (links.length < 1) {
                 sendToChannel(textChannel, message + '. Quitting...', true, 15 * NumberConstants.secs)
                 return undefined
             }
 
-            const link = await Prompt.arraySelect(userID, textChannel, links, message, {
+            const mapFunction = (x: ILinkDoc) => `[${x.names.join(', ')}](${x.link} 'Link')`
+            const link = await Prompt.arraySelect(userID, textChannel, links, mapFunction, 'Select a link', {
                 multiple: multiple,
-                customOffset: offset,
+                customOffset: 1,
             })
 
             let res: ILinkDoc | ILinkDoc[] | undefined
@@ -505,7 +481,7 @@ export namespace Link {
         guildID: string,
         link: ILinkDoc,
         newLink: string,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
@@ -528,7 +504,7 @@ export namespace Link {
         guildID: string,
         link: ILinkDoc,
         names: string[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<undefined | updateOneResponseHandlerResponse> {
         try {
             const guildDoc = await Guild.getGuild(guildID)
@@ -542,11 +518,10 @@ export namespace Link {
             }
             const multiple = approved.length > 1
             const updateStrings: updateOneStrings = {
-                success: `Name${multiple ? 's' : ''} ${approved.join(', ')} ${multiple ? 'have' : 'has'} been added. ${
-                    rejected.length > 0
-                        ? `Name${multiple ? 's' : ''} ${rejected.join(', ')} ${multiple ? 'are' : 'is'} already in use.`
-                        : ''
-                }`,
+                success: `Name${multiple ? 's' : ''} ${approved.join(', ')} ${multiple ? 'have' : 'has'} been added. ${rejected.length > 0
+                    ? `Name${multiple ? 's' : ''} ${rejected.join(', ')} ${multiple ? 'are' : 'is'} already in use.`
+                    : ''
+                    }`,
                 failure: 'There was an issue, no names have been added',
             }
 
@@ -565,7 +540,7 @@ export namespace Link {
         guildID: string,
         link: ILinkDoc,
         names: string[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             if (names.length == link.names.length) {
@@ -593,7 +568,7 @@ export namespace Link {
         guildID: string,
         link: ILinkDoc,
         volume: number,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             const updateStrings: updateOneStrings = {
@@ -614,7 +589,7 @@ export namespace Link {
     export async function deleteLink(
         guildID: string,
         link: ILinkDoc | ILinkDoc[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             let allIDs: any
@@ -673,6 +648,17 @@ export namespace Movie {
         }
     }
 
+    export async function getMovieByID(guildID: string, id: Schema.Types.ObjectId) {
+        const guildDoc = await Guild.getGuild(guildID)
+        return guildDoc.movie.movies.find((x) => x._id.equals(id))
+    }
+
+    export async function getMovieByUploadID(guildID: string, id: Schema.Types.ObjectId) {
+        const guildDoc = await Guild.getGuild(guildID)
+        //@ts-ignore
+        return guildDoc.movie.movies.find((x) => x.megaID && id.equals(x.megaID))
+    }
+
     export interface viewMovieParamsResponse {
         matcher: any
         regex: RegExp
@@ -697,14 +683,13 @@ export namespace Movie {
 
     export interface getMoviesResponse {
         movies: IMovieDoc[]
-        message: MessageEmbed | string
+        message: MessageOptions
     }
     export async function getMovies(guildID: string, args: string[], number = false): Promise<getMoviesResponse> {
         try {
-            const offset = 1
-            const movieName = args.join(' ')
+            const movieName = args.join(' ').toLowerCase()
 
-            let message: string | MessageEmbed
+            let message: MessageOptions
             let movies: IMovieDoc[]
 
             let movieRegex: RegExp
@@ -723,8 +708,9 @@ export namespace Movie {
             const movieDoc = await getMovie(guildID)
 
             if (!movieDoc || movieDoc.movies.length < 1) {
-                message = `Couldn't find any movies. Add some with the addmovie command.`
-                if (movieName != '') message += ` with search parameters "${movieName}"`
+                let content = `Couldn't find any movies. Add some with the addmovie command.`
+                if (movieName != '') content += ` with search parameters "${movieName}"`
+                message = { content: content }
                 movies = []
             } else {
                 const defaultPassword = movieDoc.default_password
@@ -733,38 +719,18 @@ export namespace Movie {
                 if (regexDefined) {
                     movies = movies.filter((x) => movieRegex.test(x.name))
                 }
-
-                // need to chunk the fields so discord doesnt error us out
-                const fields = []
-                let i: number,
-                    j: number,
-                    chunk = 5
-                for (i = 0, j = movies.length; i < j; i += chunk) {
-                    const movie_chunk = movies.slice(i, i + chunk)
-                    let movies_message = movie_chunk
-                        .map((x, k) => {
-                            let movie_str = `${number ? '**' + (i + k + offset) + '**. ' : ''}[${x.name}](${
-                                x.link
-                            } 'Download Link')`
-                            if (x.password != 'none' && x.password != defaultPassword)
-                                movie_str += `, ||${x.password}||`
-                            return movie_str
-                        })
-                        .join('\n')
-                    fields.push({
-                        name: `${i + 1} to ${i + chunk}`,
-                        value: movies_message,
-                        inline: true,
-                    })
+                const movieMap = (x: IMovieDoc) => {
+                    let movie_str = `[${x.name}](${x.link} 'Download Link')`
+                    if (x.password != 'none' && x.password != defaultPassword) movie_str += `, ||${x.password}||`
+                    return movie_str
                 }
-
-                message = new MessageEmbed()
-                    .setTitle(
-                        `Movie Catalog ${
-                            movieDoc.default_password != '' ? `\nDefault Password: ${defaultPassword}` : ''
-                        }`
-                    )
-                    .addFields(fields)
+                let embed = Prompt.arrayToPaginatedArray(
+                    movies,
+                    `Movie Catalog ${movieDoc.default_password != '' ? `\nDefault Password: ${defaultPassword}` : ''}`,
+                    movieMap,
+                    { chunk: 20 }
+                )
+                message = { embeds: embed }
             }
 
             return { movies: movies, message: message }
@@ -795,11 +761,10 @@ export namespace Movie {
         movieLink: string,
         movieName: string,
         moviePassword: string,
-        zipName?: string,
         mega = false,
         megaID?: Schema.Types.ObjectId,
         guild?: GuildD,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             const nameMatch = stringMatch(movieName, {
@@ -815,7 +780,6 @@ export namespace Movie {
                 want_to_watch: [],
                 mega: mega,
                 megaID: megaID,
-                zipName: zipName,
             }
 
             let update: boolean = false
@@ -892,21 +856,15 @@ export namespace Movie {
     export async function deleteMovie(
         guildID: string,
         movie: IMovieDoc | IMovieDoc[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             let deleteIDs: any[] = []
             let deleteNames: string[] = []
-            let deleteMegaIDs: any[] = []
-            let deleteZipNames: string[] = []
             if (Array.isArray(movie)) {
                 movie.forEach((x) => {
                     deleteIDs.push(x._id)
                     deleteNames.push(x.name)
-                    if (x.mega) {
-                        deleteMegaIDs.push(x.megaID)
-                        if (x.zipName) deleteZipNames.push(x.zipName)
-                    }
                 })
             } else {
                 deleteIDs.push(movie._id)
@@ -924,11 +882,12 @@ export namespace Movie {
                     $pull: {
                         //@ts-ignore
                         'movie.movies': { _id: { $in: deleteIDs } },
-                        'movie.downloads.uploadedQueue': { _id: { $in: deleteMegaIDs } },
                     },
-                    $addToSet: { 'movie.downloads.deleteQueue': deleteZipNames },
+                    $set: {
+                        'movie.downloads.uploadedQueue.$[elem].removeElement': true,
+                    },
                 },
-                { multi: true }
+                { arrayFilters: [{ 'elem.movieID': { $in: deleteIDs } }], multi: true }
             )
 
             return await updateOneResponseHandler(response, updateStrings, textChannel)
@@ -950,7 +909,7 @@ export namespace Movie {
         }
     }
 
-    export async function toggleSoundDoc(guildID: string, soundName: string, textChannel?: MessageChannel) {
+    export async function toggleSoundDoc(guildID: string, soundName: string, textChannel?: TextBasedChannels) {
         try {
             const soundDoc = await getSoundDoc(guildID, soundName)
 
@@ -977,7 +936,7 @@ export namespace Movie {
         guild: GuildD,
         emojiName: string,
         newEmoji: string,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
@@ -997,7 +956,7 @@ export namespace Movie {
         }
     }
 
-    export async function editDefaultPassword(guildID: string, newPassword: string, textChannel?: MessageChannel) {
+    export async function editDefaultPassword(guildID: string, newPassword: string, textChannel?: TextBasedChannels) {
         try {
             const updateStrings: updateOneStrings = {
                 success: `Default movie password is now ${newPassword}`,
@@ -1017,7 +976,12 @@ export namespace Movie {
         }
     }
 
-    export async function addRequest(guildID: string, userID: string, movieName: string, textChannel?: MessageChannel) {
+    export async function addRequest(
+        guildID: string,
+        userID: string,
+        movieName: string,
+        textChannel?: TextBasedChannels
+    ) {
         try {
             const updateStrings: updateOneStrings = {
                 success: `${movieName} has been requested.`,
@@ -1078,7 +1042,7 @@ export namespace Movie {
 
     export interface GetRequestedMoviesResponse {
         requestedMovies: IMovieRequestDoc[]
-        message: MessageEmbed | string
+        message: MessageOptions
     }
     export async function getRequestedMovies(guildID: string, number = true) {
         try {
@@ -1086,7 +1050,7 @@ export namespace Movie {
             const guildDoc = await Guild.getGuild(guildID)
             const requestedMovieArr = guildDoc.movie.requests
 
-            let message: MessageEmbed | string
+            let message: MessageOptions
 
             if (requestedMovieArr.length > 0) {
                 const fields = []
@@ -1107,9 +1071,9 @@ export namespace Movie {
                     })
                 }
 
-                message = new MessageEmbed().setTitle(`Requested Movies`).addFields(fields)
+                message = { embeds: [new MessageEmbed().setTitle(`Requested Movies`).addFields(fields)] }
             } else {
-                message = 'No movies requested currently. Use command requestmovie to add some'
+                message = { content: 'No movies requested currently. Use command requestmovie to add some' }
             }
 
             return { requestedMovies: requestedMovieArr, message: message }
@@ -1165,7 +1129,7 @@ export namespace Movie {
         guildID: string,
         userID: string,
         requestDoc: IMovieRequestDoc,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             let response: updateOneResponse
@@ -1206,7 +1170,7 @@ export namespace Movie {
         guildID: string,
         userID: string,
         movies: IMovieDoc[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings = {
@@ -1230,8 +1194,8 @@ export namespace Movie {
 
     export interface GetWatchListForMemberResponse {
         watchListArray: IMovieDoc[]
-        message?: MessageEmbed
-        stringMessage?: string
+        message?: MessageOptions
+        stringMessage?: MessageOptions
     }
     export async function getWatchListForMember(
         guildID: string,
@@ -1240,7 +1204,7 @@ export namespace Movie {
         number = true
     ): Promise<GetWatchListForMemberResponse> {
         try {
-            let message: MessageEmbed | undefined
+            let message: MessageOptions | undefined
             let stringMessage: string | undefined
             const movieContainerDoc = await getMovie(guildID)
 
@@ -1269,13 +1233,15 @@ export namespace Movie {
                     })
                 }
 
-                message = new MessageEmbed()
+                let embed = new MessageEmbed()
                     .setTitle(`Watchlist for ${guild.members.resolve(userID)?.displayName}`)
                     .addFields(fields)
+
+                message = { embeds: [embed] }
             } else {
                 stringMessage = 'No movies on this users watch list'
             }
-            return { watchListArray: watchList, message: message, stringMessage: stringMessage }
+            return { watchListArray: watchList, message: message, stringMessage: { content: stringMessage } }
         } catch (error) {
             throw error
         }
@@ -1285,7 +1251,7 @@ export namespace Movie {
         guildID: string,
         userID: string,
         deleteElements: IMovieDoc[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
@@ -1316,7 +1282,7 @@ export namespace Movie {
         torrentLink: string,
         zipName: string,
         zipPassword: string,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         const updateStrings: updateOneStrings = {
             success: 'Download request has been created. ',
@@ -1324,23 +1290,19 @@ export namespace Movie {
         }
 
         let validZipName = zipName
-        if (!zipName.endsWith('.zip')) validZipName += '.zip'
+        if (!zipName.endsWith('.zip') && zipName != '') validZipName += '.zip'
 
         const downloadObj: IMovieDownloadElement = {
+            inProgress: false,
+            completed: false,
+            textChannelID: textChannel?.id,
             userID: userID,
             movieName: movieName,
             torrentLink: torrentLink,
             zipName: validZipName,
             zipPassword: zipPassword,
-            downloaded: false,
-            downloading: false,
-            secondsDownloading: 0,
-            downloadPercent: 0,
-            uploaded: false,
-            uploading: false,
-            secondsUploading: 0,
-            uploadPercent: 0,
-            error: false,
+            percent: 0,
+            time: 0,
         }
 
         const response = await Guilds.updateOne(
@@ -1352,7 +1314,7 @@ export namespace Movie {
             }
         )
 
-        return updateOneResponseHandler(response, updateStrings, textChannel)
+        return updateOneResponseHandler(response, updateStrings, undefined)
     }
 
     export async function getDownloadMovieContainer(guildID: string) {
@@ -1365,6 +1327,17 @@ export namespace Movie {
         const movie = movieContainer.downloadQueue.find((x) => x._id.equals(movieID))
         return movie
     }
+    export async function lookupStatusUpdateByID(guildID: string, id: Schema.Types.ObjectId) {
+        const movieContainer = await getDownloadMovieContainer(guildID)
+        const movie = movieContainer.statusUpdate.find((x) => x._id.equals(id))
+        let operationDoc: any
+        if (movie) {
+            operationDoc = movieContainer
+                .get(MovieStatusMap[movie.status])
+                .find((x: any) => movie._id.equals(x.statusUpdateID))
+        }
+        return { statusUpdate: movie, doc: operationDoc }
+    }
 
     export async function getFirstDownloadRequest(guildID: string) {
         const downloadsDoc = await getDownloadMovieContainer(guildID)
@@ -1372,17 +1345,21 @@ export namespace Movie {
         return null
     }
 
+    interface downloadMovieJob {
+        guildID: string
+        downloads: IMovieDownloadElementDoc
+    }
     export async function getDownloadedMovies() {
         const guildDocs = await Guilds.find({
-            $and: [{ premium: true }, { 'movie.downloads.downloadQueue': { $not: { $size: 0 } } }],
+            $and: [{ 'config.premium': true }, { 'movie.downloads.uploadQueue': { $not: { $size: 0 } } }],
         })
 
         if (guildDocs.length > 0) {
             return guildDocs.map((guildDoc) => {
-                const downloadQueue = guildDoc.movie.downloads.downloadQueue
+                const downloadQueue = guildDoc.movie.downloads.uploadQueue
                 return {
                     guildID: guildDoc.guild_id,
-                    downloads: downloadQueue.filter((x) => x.uploaded == true),
+                    downloads: downloadQueue.filter((x: any) => x.completed),
                 }
             })
         } else {
@@ -1390,18 +1367,34 @@ export namespace Movie {
         }
     }
 
-    export async function moveToUploaded(guildID: string, movie: IMovieDownloadElementDoc, movieDoc: IMovieDoc) {
-        // movie.movieID = movieDoc._id
+    export interface statusUpdateJob {
+        guildID: string
+        arr: IMovieStatusUpdateDoc[]
+    }
+    export async function getStatusUpdaters() {
+        const guildDocs = await Guilds.find({
+            $and: [{ 'config.premium': true }, { 'movie.downloads.statusUpdate': { $not: { $size: 0 } } }],
+        })
+        let resArr: statusUpdateJob[] = []
+        if (guildDocs.length > 0) {
+            guildDocs.forEach((guildDoc) => {
+                const downloadQueue = guildDoc.movie.downloads.statusUpdate
+                resArr.push({
+                    guildID: guildDoc.guild_id,
+                    arr: downloadQueue,
+                })
+            })
+        }
+        return resArr
+    }
+
+    export async function updateStatusUpdating(guildID: string, movie: IMovieStatusUpdateDoc, newVal = true) {
         const response = await Guilds.updateOne(
-            { guild_id: guildID },
+            { guild_id: guildID, 'movie.downloads.statusUpdate._id': movie._id },
             {
-                $pull: {
+                $set: {
                     //@ts-ignore
-                    'movie.downloads.downloadQueue': { _id: movie._id },
-                },
-                $push: {
-                    //@ts-ignore
-                    'movie.downloads.uploadedQueue': movie,
+                    'movie.downloads.statusUpdate.$.started': newVal,
                 },
             }
         )
@@ -1409,17 +1402,54 @@ export namespace Movie {
         updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 
-    export async function deleteMegaMovie(guildID: string, movie: IMovieDownloadElementDoc) {
+    export async function moveToUploaded(guildID: string, movie: IMovieUploadElementDoc, id: Schema.Types.ObjectId) {
+        const zz = await Movie.getMovieByUploadID(guildID, id)
+        if (!zz?._id) return
+        const movieID = zz!._id
+
+        const uploaded: IMovieUploadedElement = {
+            _id: id,
+            movieID: movieID,
+            removeElement: false,
+            uploadLink: movie.uploadLink!,
+            uploadPath: movie.uploadPath!,
+        }
+
+        const query: any = { guild_id: guildID }
+
+        const updater: any = {
+            $pull: {
+                //@ts-ignore
+                'movie.downloads.uploadQueue': { _id: movie._id },
+            },
+            $push: {
+                //@ts-ignore
+                'movie.downloads.uploadedQueue': uploaded,
+            },
+        }
+
+        const response = await Guilds.updateOne(query, updater)
+
+        if (movie.statusUpdateID) {
+            const response2 = await Guilds.updateOne(
+                { guild_id: guildID },
+                { $set: { 'movie.downloads.statusUpdate.$.status': MovieStatus.UPLOADED } }
+            )
+        }
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
+    }
+
+    export async function deleteMegaMovie(guildID: string, movie: IMovieUploadedElementDoc) {
         const response = await Guilds.updateOne(
-            { guild_id: guildID },
+            { guild_id: guildID, 'movie.movies.uploadedQueue._id': movie._id },
             {
+                $set: {
+                    'movie.movies.uploadedQueue.$.removeElement': true,
+                },
                 $pull: {
-                    //@ts-ignore
-                    'movie.download.uploadedQueue': { _id: movie._id },
                     'movie.movies': { _id: movie.movieID },
                 },
-
-                $push: { 'movie.download.deleteQueue': movie.zipName },
             }
         )
 
@@ -1429,6 +1459,96 @@ export namespace Movie {
     export async function getUploadedMovies(guildID: string) {
         const downloadDoc = await getDownloadMovieContainer(guildID)
         return downloadDoc.uploadedQueue
+    }
+
+    export async function selectMovieListUpload(guildID: string, uploadedMovie: IDownloadedMovieDoc) {
+        const guildDoc = await Guild.getGuild(guildID)
+        if (guildDoc.config.premium) {
+            const movieList = guildDoc.movie.serverList
+            movieList.uploadQueue.push(uploadedMovie)
+            movieList.save()
+        } else {
+            throw 'Not premium'
+        }
+    }
+
+    export async function requestMovieListUpdate(guildID: string) {
+        const guildDoc = await Guild.getGuild(guildID)
+        guildDoc.movie.serverList.movies = []
+        guildDoc.movie.serverList.awaitingUpdate = true
+        guildDoc.save()
+    }
+
+    export async function getMovieList(
+        guildID: string,
+    ) {
+        requestMovieListUpdate(guildID)
+        const request_time = new Date()
+
+        let maxTries = 5
+        let tries = 0
+
+        while (tries < maxTries) {
+            const guildDoc = await Guild.getGuild(guildID)
+            if (guildDoc.config.premium) {
+                let movieList = guildDoc.movie.serverList
+                if (!movieList) {
+                    throw 'No movie list found'
+                }
+                if (movieList.lastUpdated < request_time) {
+                    tries++
+                    await delay(10 * NumberConstants.secs)
+                } else {
+                    return movieList.movies
+                }
+            } else {
+                throw 'Not premium'
+            }
+        }
+        throw 'Nothing found'
+    }
+
+    export async function deleteStatusUpdateObj(guildID: string, statUpdateObj: IMovieStatusUpdateDoc) {
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $pull: {
+                    'movie.downloads.statusUpdate': { _id: statUpdateObj._id },
+                },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
+    }
+
+    export async function createMovieUploadRequest(
+        guildID: string,
+        userID: string,
+        movie: IDownloadedMovieDoc,
+        textChannelID?: string
+    ) {
+        const zipPassword = await getMovieDefaultPassword(guildID)
+        const obj: IMovieUploadElement = {
+            inProgress: false,
+            completed: false,
+            userID: userID,
+            textChannelID: textChannelID,
+            movieName: movie.name,
+            zipPassword: zipPassword,
+            moviePath: movie.path,
+            time: 0,
+            percent: 0,
+        }
+        const response = await Guilds.updateOne(
+            { guild_id: guildID },
+            {
+                $push: {
+                    'movie.downloads.uploadQueue': obj,
+                },
+            }
+        )
+
+        updateOneResponseHandler(response, { success: 'Success', failure: 'Failure' })
     }
 }
 
@@ -1473,7 +1593,7 @@ export namespace Config {
     export async function setPrefix(
         guildID: string,
         newPrefix: string,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             const updateStrings: updateOneStrings = {
@@ -1491,7 +1611,7 @@ export namespace Config {
     export async function setTimeZone(
         guildID: string,
         timeZone: moment.MomentZoneOffset,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             const updateStrings: updateOneStrings = {
@@ -1514,7 +1634,7 @@ export namespace Config {
         guildID: string,
         matchOn: string,
         type: Config.AutoDeleteType,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ): Promise<updateOneResponseHandlerResponse> {
         try {
             // already known that this is a new prefix, no need to check
@@ -1535,9 +1655,8 @@ export namespace Config {
             return await updateOneResponseHandler(
                 response,
                 {
-                    success: `${
-                        type == Config.AutoDeleteType.prefix ? `Prefix ${matchOn}` : `User id ${matchOn}`
-                    } has been added`,
+                    success: `${type == Config.AutoDeleteType.prefix ? `Prefix ${matchOn}` : `User id ${matchOn}`
+                        } has been added`,
                     failure: 'Failed to add',
                 },
                 textChannel
@@ -1567,7 +1686,7 @@ export namespace Config {
         guildID: string,
         elementDoc: IAutoDeleteElementDoc,
         time: number,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         // getting the latest
 
@@ -1602,7 +1721,7 @@ export namespace Config {
     export async function changeAutoDeleteElementMode(
         guildID: string,
         elementDoc: IAutoDeleteElementDoc,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         // getting the latest
 
@@ -1638,7 +1757,7 @@ export namespace Config {
         guildID: string,
         matchOn: string,
         type: AutoDeleteType,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const elementDoc = await Config.getAutoDeleteElement(guildID, matchOn, type)
@@ -1672,7 +1791,7 @@ export namespace Config {
         guildID: string,
         elementDoc: IAutoDeleteElementDoc,
         whitelist: string[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
@@ -1702,7 +1821,7 @@ export namespace Config {
         guildID: string,
         elementDoc: IAutoDeleteElementDoc,
         deleteNames: string[],
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
@@ -1734,13 +1853,12 @@ export namespace Config {
         matchOn: string,
         type: AutoDeleteType,
         specifiedObj: IAutoDeleteSpecified,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
-                success: `${matchOn + specifiedObj.startsWith} will now delete after ${
-                    specifiedObj.timeToDelete
-                } seconds`,
+                success: `${matchOn + specifiedObj.startsWith} will now delete after ${specifiedObj.timeToDelete
+                    } seconds`,
                 failure: 'Error creating this delete rule.',
             }
 
@@ -1770,14 +1888,13 @@ export namespace Config {
         guildID: string,
         elementDoc: IAutoDeleteElementDoc,
         specifiedObj: IAutoDeleteSpecified,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             if (!elementDoc) return undefined
             const updateStrings: updateOneStrings = {
-                success: `${elementDoc.matchOn + specifiedObj.startsWith} now deletes after ${
-                    specifiedObj.timeToDelete
-                } seconds `,
+                success: `${elementDoc.matchOn + specifiedObj.startsWith} now deletes after ${specifiedObj.timeToDelete
+                    } seconds `,
                 failure: 'Error editing the delete time',
             }
 
@@ -1801,7 +1918,7 @@ export namespace Config {
         guildID: string,
         elementDoc: IAutoDeleteElementDoc,
         specifiedObj: IAutoDeleteSpecified,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             if (!elementDoc) return undefined
@@ -1839,7 +1956,7 @@ export namespace Config {
     export async function setMessageArchiveChannel(
         guildID: string,
         newChannelID: string,
-        textChannel?: MessageChannel
+        textChannel?: TextBasedChannels
     ) {
         try {
             const updateStrings: updateOneStrings = {
@@ -1858,7 +1975,7 @@ export namespace Config {
         }
     }
 
-    export async function toggleMessageArchiveMode(guildID: string, textChannel?: MessageChannel) {
+    export async function toggleMessageArchiveMode(guildID: string, textChannel?: TextBasedChannels) {
         try {
             const config = await getGuildConfig(guildID)
             const enabled = config.archive.enabled
@@ -1879,7 +1996,7 @@ export namespace Config {
         }
     }
 
-    export async function toggleArchiveSaveBotMessages(guildID: string, textChannel?: MessageChannel) {
+    export async function toggleArchiveSaveBotMessages(guildID: string, textChannel?: TextBasedChannels) {
         const config = await getGuildConfig(guildID)
         const enabled = config.archive.save_bot_commands
         const status = !enabled ? 'enabled' : 'disabled'

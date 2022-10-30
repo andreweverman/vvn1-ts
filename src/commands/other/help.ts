@@ -35,7 +35,7 @@ const command: commandProperties = {
             data.push(commands.map((command) => command.name).join(', '))
             data.push(`\nYou can send \`${prefix}help [command name]\` to get info on a specific command!`)
 
-            sendUtil(e.message.channel.send(data, { split: true }),true, 2 * NumberConstants.mins)
+            sendUtil(e.message.channel.send({content:data.join('\n')}),true, 2 * NumberConstants.mins)
 
             return
         }
@@ -54,7 +54,7 @@ const command: commandProperties = {
         if (command.usage) data.push(`**Usage:** ${prefix}${command.name} ${command.usage}`)
 
         data.push(`**Cooldown:** ${command.cooldown || 3} second(s)`)
-        sendToChannel(e.message.channel, data, true,1 * NumberConstants.mins)
+        sendToChannel(e.message.channel, {content: data.join('\n')}, true,1 * NumberConstants.mins)
     },
 }
 

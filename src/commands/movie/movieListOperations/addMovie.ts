@@ -12,52 +12,56 @@
  * @since  17.7.2020
  */
 
-import { CommandParams, commandProperties } from '../../../bot'
-import { Prompt } from '../../../util/messageUtil'
+
+import { CommandInteraction, MessageActionRow, MessageButton, Message, MessageEmbed, MessageSelectMenu, MessageSelectOptionData } from 'discord.js'
+import { SlashCommandBuilder } from '@discordjs/builders'
 import { Movie } from '../../../db/controllers/guildController'
-import { MovieUtil } from '../../../util/generalUtil'
-
-const command: commandProperties = {
-    name: 'addmovie',
-    aliases: ['add_movie', 'createmovie'],
-    description: 'Add a movie to the catalog. Need a link and the name',
-    usage: '[movie_url] [movie name]. Ex: ?addmovie fight_club_link.com fight club. ',
-    args: false,
-    cooldown: 1,
-    guildOnly: true,
-
-    async execute(e: CommandParams) {
-        const guildID = e.message.guild!.id
-        const userID = e.message.author.id
-        const textChannel = e.message.channel
-
-        const args = {
-            userID: userID,
-            guildID: guildID,
-            textChannel: textChannel,
-        }
-
+import { linkRegex, somethingRegex } from '../../../util/stringUtil'
+import { interEditReplyUtil, assertGuildTextCommand, replyWithFlayedArray, getFilteredInput, InteractionFilters, FilterInputTypes } from '../../../util/interactionUtil'
+const command = {
+    data: new SlashCommandBuilder()
+        .setName('addmovie')
+        .setDescription('Adds a movie given to the list given the access link and the name')
+        .addStringOption(option => option.setName('name').setDescription('Movie name').setRequired(true))
+        .addStringOption(option => option.setName('link').setDescription('Magnet link to download').setRequired(true))
+        .addStringOption(option => option.setName('password').setDescription('Zip password if applicable').addChoices([['default', 'default']]).setRequired(false)),
+    async execute(interaction: CommandInteraction) {
         try {
-            const movieLink = await MovieUtil.Prompt.promptMovieLink(args)
-            const movieName = await MovieUtil.Prompt.promptMovieName(args)
-            const moviePassword = await MovieUtil.Prompt.promptMoviePassword(args)
+            await interaction.deferReply()
 
-            return await Movie.addMovie(
-                guildID,
-                userID,
+            const { guildId, userId, guild } = assertGuildTextCommand(interaction)
+
+            const movieName = getFilteredInput(interaction, 'name', FilterInputTypes.STRING, InteractionFilters.regexFilter(somethingRegex), 'Not a valid movie name')
+            const movieLink = getFilteredInput(interaction, 'link', FilterInputTypes.STRING, InteractionFilters.regexFilter(linkRegex), 'Not a valid movie link')
+            let moviePassword = interaction.options.getString('password') || ''
+            if (moviePassword == 'default') {
+                moviePassword = await Movie.getMovieDefaultPassword(guildId)
+            }
+
+            const resp = await Movie.addMovie(
+                guildId,
+                userId,
                 movieLink,
                 movieName,
                 moviePassword,
-                undefined,
                 false,
                 undefined,
-                e.message.guild!,
-                textChannel
+                guild
             )
-        } catch (error) {
-            Prompt.handleGetSameUserInputError(error)
+
+            if (resp.updated) {
+                interEditReplyUtil(interaction, { content: `${movieName} has been added to the list` })
+            }
+
+        } catch (error: any) {
+            if (error.name != "FilteredInputError") {
+                throw error
+            }
+
         }
-    },
+
+    }
 }
+
 
 export default command

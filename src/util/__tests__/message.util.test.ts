@@ -5,8 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Mocks } from '../testUtil'
 import { AnyCollectorFilter, Filter, Prompt } from '../messageUtil'
 import { mocked } from 'ts-jest/utils'
-import { MessageChannel } from '../messageUtil'
-import { TextChannel } from 'discord.js'
+import { TextChannel,TextBasedChannels } from 'discord.js'
 
 dotenv.config()
 
@@ -297,8 +296,8 @@ describe('Prompt', () => {
                 async (messageContent: string[], desiredMessageIndex: number, filter: AnyCollectorFilter) => {
                     const messages = messageContent.map((x) => Mocks.mockMessage(x, userID, 'text'))
 
-                    const textChannel = mocked((Mocks.textChannel(messages, 'text') as unknown) as MessageChannel)
-                    // const mc = TextChannel as jest.Mock<MessageChannel>
+                    const textChannel = mocked((Mocks.textChannel(messages, 'text') as unknown) as TextBasedChannels)
+                    // const mc = TextChannel as jest.Mock<TextBasedChannels>
                     const res = await Prompt.getSameUserInput(userID, textChannel, 'Prompt', filter)
 
                     expect(res.content).toEqual(messageContent[desiredMessageIndex])

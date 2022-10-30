@@ -10,9 +10,10 @@
  */
 
 import { Document } from 'mongoose'
-import { sendToChannel, MessageChannel } from '../util/messageUtil'
+import { sendToChannel } from '../util/messageUtil'
 import { keywords } from '../util/constants'
 import _ from 'lodash'
+import { TextBasedChannels } from 'discord.js'
 export interface findOrCreateResponse {
     created: boolean
     message: string
@@ -48,7 +49,7 @@ function responsesEqual(response: updateOneResponse, expected: updateOneResponse
 export function updateOneResponseHandler(
     response: updateOneResponse,
     strings: updateOneStrings,
-    textChannel?: MessageChannel,
+    textChannel?: TextBasedChannels,
     expectedResponseInput?: updateOneResponse
 ): Promise<updateOneResponseHandlerResponse> {
     return new Promise<updateOneResponseHandlerResponse>((resolve, reject) => {

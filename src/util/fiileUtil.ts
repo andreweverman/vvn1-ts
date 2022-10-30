@@ -9,12 +9,14 @@
  * @since  15.10.2020
  */
 
-import * as path from 'path'
-import * as walk from 'walk'
+import path from 'path'
+import walk from 'walk'
+import fs from 'fs'
 
 const dev = process.env.NODE_ENV == 'dev' ? true : false
-const commands_path = `./${!dev ? 'dist' : 'src'}/commands`
-const jobs_path = `./${!dev ? 'dist' : 'src'}/jobs`
+const commandsPath = `./${!dev ? 'dist' : 'src'}/commands`
+const jobsPath = `./${!dev ? 'dist' : 'src'}/jobs`
+export const clipsPath = path.resolve('clips')
 
 export function getCommandFiles(): Array<string> | null {
     let files: Array<string> = []
@@ -27,7 +29,7 @@ export function getCommandFiles(): Array<string> | null {
             },
         },
     }
-    walk.walkSync(path.resolve(commands_path), options)
+    walk.walkSync(path.resolve(commandsPath), options)
     const res: Array<string> = files.filter((file) => file.endsWith('.js') || file.endsWith('.ts'))
 
     if (res.length > 0) return res
@@ -45,9 +47,37 @@ export function getJobFiles(): Array<string> | null {
             },
         },
     }
-    walk.walkSync(path.resolve(jobs_path), options)
+    walk.walkSync(path.resolve(jobsPath), options)
     const res: Array<string> = files.filter((file) => file.endsWith('.js') || file.endsWith('.ts'))
 
     if (res.length > 0) return res
     return null
+}
+
+interface findFile {
+    path: string
+    end: string
+}
+export function getClipFiles(): Array<findFile> {
+    ensureDirExists(clipsPath)
+    let files: Array<findFile> = []
+    let options = {
+        listeners: {
+            file: function (root: string, stat: any, next: Function) {
+                // Add this file to the list of files
+                files.push({ path: root + '/' + stat.name, end: stat.name })
+                next()
+            },
+        },
+    }
+    walk.walkSync(path.resolve(clipsPath), options)
+    const res: Array<findFile> = files.filter((file) => file.end.endsWith('.mp3'))
+
+    return res
+}
+
+export function ensureDirExists(dirPath:string) {
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath)
+    }
 }
