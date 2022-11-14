@@ -14,7 +14,7 @@
 
 import { CommandParams, commandProperties } from '../../bot'
 import { Prompt, sendToChannel } from '../../util/messageUtil'
-import { TextChannel } from 'discord.js'
+import { ChatInputCommandInteraction, TextChannel } from 'discord.js'
 import { NumberConstants } from '../../util/constants'
 import { CommandInteraction } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
@@ -25,7 +25,7 @@ const command = {
     data: new SlashCommandBuilder()
         .setName('rando')
         .setDescription(`Creates temporary invite for a random person`),
-    async execute(interaction: CommandInteraction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         try {
 
 

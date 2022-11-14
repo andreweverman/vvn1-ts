@@ -9,14 +9,14 @@
  * @since  16.7.2020
  */
 
-import { CommandInteraction, VoiceChannel } from 'discord.js'
+import { ChatInputCommandInteraction,  VoiceChannel } from 'discord.js'
 import { assertGuildTextCommand } from '../../util/interactionUtil'
 import {} from '../../bot'
 
 const command = {
     type: 2,
     name: 'Shake',
-    async execute(interaction: CommandInteraction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         try {
             const { guild } = assertGuildTextCommand(interaction)
 

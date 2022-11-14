@@ -9,7 +9,7 @@
  * @since  17.7.2020
  */
 
-import { CommandInteraction } from 'discord.js'
+import { ChatInputCommandInteraction} from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { interReplyUtil, assertGuildTextCommand } from '../../util/interactionUtil'
 import { moveMembers } from '../../util/discordUtil'
@@ -20,7 +20,7 @@ const command = {
     data: new SlashCommandBuilder()
         .setName('po')
         .setDescription(`Brings everyone in the user's current voice channel to the designated main channel`),
-    async execute(interaction: CommandInteraction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         try {
             const { userId, guild, guildId } = assertGuildTextCommand(interaction)
 
