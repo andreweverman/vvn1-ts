@@ -10,9 +10,7 @@
  */
 
 import moment, { Moment } from 'moment-timezone'
-import { Filter, AnyCollectorFilter, Prompt as MPrompt } from './messageUtil'
 import { timeRegex, dateRegex } from './stringUtil'
-import { TextBasedChannels } from 'discord.js'
 
 export function dateInPast(timeZoneName: string, dateString: string, compareDate?: Moment) {
     const parsedDate = parseDate(dateString)
@@ -137,82 +135,6 @@ export function getTimeStrFromSeconds(inputSeconds: number): string {
     if (seconds > 0) stringArr.push(`${seconds} Second${seconds > 1 ? 's' : ''}`)
 
     return stringArr.join(', ')
-}
-
-export namespace Prompt {
-    export interface PromptDateResponse {
-        date: Date
-        dateString: string
-    }
-    export interface PromptDateOptions {
-        prePrompt?: string
-        pastAllowed?: boolean
-    }
-    export async function promptDate(
-        userID: string,
-        textChanel: TextBasedChannels,
-        timeZoneName: string,
-        options?: PromptDateOptions
-    ): Promise<PromptDateResponse> {
-        const prePrompt = options ? options.prePrompt + '\n' : ''
-        const fullPrompt = prePrompt + 'Enter date in mm/dd/yyyy | mm.dd.yyyy | mm-dd-yyyy format (or today/now):'
-        const pastAllowed = options?.pastAllowed ? true : false
-
-        const everyFilters: AnyCollectorFilter[] = []
-        everyFilters.push(Filter.regexFilter(dateRegex))
-
-        if (!pastAllowed) everyFilters.push(Filter.dateNotInPastFilter(timeZoneName))
-
-        const filter = Filter.multipleFilters({
-            every: everyFilters,
-        })
-
-        const nowOptions = ['today', 'now']
-
-        const m = await MPrompt.getSameUserInput(userID, textChanel, fullPrompt, filter, {
-            extraStringOptions: nowOptions,
-        })
-
-        const dateString = m.content.trim()
-
-        const d = nowOptions.includes(dateString) ? getCurrentTimeForTZ(timeZoneName).toDate() : new Date(dateString)
-
-        return { dateString: dateString, date: d }
-    }
-
-    export interface PromptTimeOptions extends PromptDateOptions {
-        date?: Date
-        interpolate?: boolean
-    }
-
-    export async function promptTime(
-        userID: string,
-        textChannel: TextBasedChannels,
-        timeZoneName: string,
-        options?: PromptTimeOptions
-    ) {
-        try {
-            const pastAllowed = options?.pastAllowed ? true : false
-            const prompt = options?.prePrompt + '\nEnter a time in HH:MM AM/PM format (Ex. 11:30 PM)'
-
-            const filter = pastAllowed
-                ? Filter.regexFilter(timeRegex)
-                : Filter.multipleFilters({
-                      every: [
-                          Filter.regexFilter(timeRegex),
-                          Filter.notInPastFilter(timeZoneName, { date: options?.date }),
-                      ],
-                  })
-
-            const m = await MPrompt.getSameUserInput(userID, textChannel, prompt, filter)
-
-            const timeString = m.content.trim()
-
-            return parseTime(timeZoneName, timeString, options?.interpolate)
-        } catch (error) {
-            MPrompt.handleGetSameUserInputError(error)
-        }
-    }
 }
 
 export function delay(ms: number) {

@@ -12,15 +12,15 @@
  */
 
 import { Guild as GuildD } from 'discord.js'
-import { Guild } from '../db/controllers/guildController'
+// import { Guild } from '../db/controllers/guildController'
 
 async function guildCreate(guild: GuildD) {
     try {
-        await Guild.getGuild(guild.id).catch((err) => {
-            if (err == undefined) {
-                Guild.initializeGuild(guild.id)
-            }
-        })
+        // await Guild.getGuild(guild.id).catch((err) => {
+        //     if (err == undefined) {
+        //         Guild.initializeGuild(guild.id)
+        //     }
+        // })
     } catch (error) {
         throw error
     }

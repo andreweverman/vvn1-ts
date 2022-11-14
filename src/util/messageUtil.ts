@@ -12,7 +12,6 @@
 
 import {
     Message,
-    MessageEmbed,
     TextChannel,
     CollectorFilter,
     DMChannel,
@@ -20,13 +19,14 @@ import {
     Guild,
     GuildEmoji,
     EmbedField,
-    EmbedFieldData,
     MessagePayload,
-    MessageOptions,
     ThreadChannel,
-    TextBasedChannels,
+    ChannelType,
+    EmbedBuilder,
+    Channel,
+    MessageEditOptions,
+    MessageCreateOptions,
 } from 'discord.js'
-import { client } from '../bot'
 import { NumberConstants, quit, valid, messageCollectorTimeout, extraStringOption } from './constants'
 import { stringMatch, matchOptions, spaceCommaRegex, guildEmojiRegex } from './stringUtil'
 import { timeInPast, TimeInPastOptions, dateInPast } from './timeUtil'
@@ -95,35 +95,7 @@ export namespace Filter {
         }
     }
 
-    export function quitFilter(): CollectorFilter<any> {
-        return (m: Message) => m.content.trim().toLowerCase() == 'quit'
-    }
 
-    export function sameUserFilter(userID: string): CollectorFilter<any> {
-        return (m: Message) => m.author.id === userID
-    }
-
-    export function uniqueInputFilter(inputs: string[]): CollectorFilter<any> {
-        return (response: Message) => !inputs.includes(response.content.trim())
-    }
-
-    export function validUserFilter(guild: Guild): CollectorFilter<any> {
-        return (response: Message) => {
-            return response.mentions.users.first() != undefined
-        }
-    }
-
-    export function validChannelFilter(guild: Guild, specificType?: string): CollectorFilter<any> {
-        return (response: Message) =>
-            response.content
-                .trim()
-                .split(' ')
-                .some((x) => {
-                    const channel = guild.channels.resolve(x)
-                    let specificOk = specificType != undefined ? specificType == channel?.type : true
-                    return channel && specificOk
-                })
-    }
 
     export function stringFilter(str: string, options: matchOptions): CollectorFilter<any> {
         const regex = stringMatch(str, options)
@@ -198,7 +170,7 @@ export namespace Filter {
 export type DeleteResponse = Message | boolean
 export function deleteMessage(message: Message, time: number): Promise<DeleteResponse> {
     return new Promise((resolve, reject) => {
-        if (message.channel.type != 'GUILD_TEXT') resolve(true)
+        if (message.channel.type == ChannelType.GuildText) resolve(true)
 
         setTimeout(() => {
             message
@@ -260,17 +232,18 @@ export function sendUtil(
 
 export interface sendPaginationOptions {
     userID: string
-    embeds: MessageEmbed[]
+    embeds: EmbedBuilder[]
 }
 export function sendToChannel(
-    channel: TextBasedChannels | null,
-    statement: string | MessagePayload | MessageOptions,
+    channel: Channel | null,
+    statement: string | MessagePayload | MessageCreateOptions,
     autoDelete = true,
     autoDeleteTime = 15 * NumberConstants.secs,
     paginationOptions?: sendPaginationOptions
 ) {
-    if (!channel) { throw null }
-
+    if (!channel || !channel.isTextBased()) {
+        throw null
+    }
     const sendRes = sendUtil(channel.send(statement), autoDelete, autoDeleteTime).then((res) => {
         if (paginationOptions) {
             Prompt.setPaginationButtons(res.messages[0], paginationOptions.embeds, paginationOptions.userID)
@@ -279,12 +252,11 @@ export function sendToChannel(
     })
 
     return sendRes
-
 }
 
 export function replyUtil(
     message: Message,
-    statement: string | MessagePayload | MessageOptions,
+    statement: string | MessagePayload | MessageCreateOptions,
     autoDelete = true,
     time = 15 * NumberConstants.secs
 ): Promise<sendUtilResponse> {
@@ -302,119 +274,8 @@ export namespace Prompt {
         extraStringOptions?: string[]
         time?: number
         pagination?: boolean
-        paginationEmbeds?: MessageEmbed[]
+        paginationEmbeds?: EmbedBuilder[]
     }
-    // want to return the message
-    //todo make the userID an optional arry
-    export async function getSameUserInput(
-        userID: string,
-        textChannel: TextBasedChannels,
-        messagePrompt: string | MessagePayload | MessageOptions,
-        filter: AnyCollectorFilter,
-        options?: GSUIOptions
-    ): Promise<Message> {
-        return new Promise((resolve, reject) => {
-            const time = options?.time ? options.time : 2 * NumberConstants.mins
-
-            textChannel
-                .send(messagePrompt)
-                .then((promptMessage: Message) => {
-                    // this first filter is just to make sure the message is from the user.
-                    // the collected messages are then further filtered
-                    const messageCollector = textChannel.createMessageCollector({
-                        filter: Filter.sameUserFilter(userID),
-                        time: time,
-                    })
-
-                    if (options?.pagination && options?.paginationEmbeds) {
-                        setPaginationButtons(promptMessage, options.paginationEmbeds, userID)
-                    }
-
-                    messageCollector.on('collect', async (m: Message) => {
-                        // valid response. need to further filter and respond accordingly
-                        let completed: Boolean = true
-
-                        const filterResult = await filter(m)
-                        if (filterResult) {
-                            resolve(m)
-                            messageCollector.stop(valid)
-                        } else if (Filter.quitFilter()(m)) {
-                            messageCollector.stop(quit)
-                        } else if (options?.extraStringOptions) {
-                            if (options?.extraStringOptions.includes(m.content.trim())) {
-                                resolve(m)
-                                messageCollector.stop(extraStringOption)
-                            } else {
-                                completed = false
-                            }
-                        } else {
-                            completed = false
-                        }
-
-                        if (completed == false) {
-                            sendToChannel(
-                                textChannel,
-                                'Invalid response. Please try again.',
-                                true,
-                                10 * NumberConstants.secs
-                            )
-                        }
-
-                        if (completed)
-                            deleteMessage(promptMessage, 10 * NumberConstants.secs).catch((error) => {
-                                console.error(error)
-                            })
-                        deleteMessage(m, 10 * NumberConstants.secs).catch((error) => console.error(error))
-                    })
-
-                    messageCollector.on('end', (collected, reason) => {
-                        if (!promptMessage.deleted) promptMessage.delete()
-                        let rej: gsuiReject
-                        const lastMessage = collected.last()
-                        if (lastMessage == undefined) {
-                            rej = {
-                                reason: 'Timeout',
-                                throwError: false,
-                                lastMessage: lastMessage,
-                            }
-                            reject(rej)
-                            return
-                        }
-
-                        if ([quit, messageCollectorTimeout].includes(reason)) {
-                            const msg: string =
-                                reason == messageCollectorTimeout ? 'No reponse. Quitting...' : 'Quitting...'
-                            sendToChannel(textChannel, msg, true, 10 * NumberConstants.secs)
-                                .then(() => {
-                                    rej = {
-                                        reason: reason,
-                                        throwError: false,
-                                        lastMessage: lastMessage,
-                                    }
-                                    reject(rej)
-                                })
-                                .catch((err) => {
-                                    let rej: gsuiReject = {
-                                        reason: 'Error sending sending response message',
-                                        throwError: true,
-                                        error: err,
-                                    }
-                                    reject(rej)
-                                })
-                        }
-                    })
-                })
-                .catch((err) => {
-                    let rej: gsuiReject = {
-                        reason: 'Error sending prompt message',
-                        throwError: true,
-                        error: err,
-                    }
-                    reject(rej)
-                })
-        })
-    }
-
     export function handleGetSameUserInputError(errorResponse: any, reject?: Function) {
         if (errorResponse.throwError) {
             if (!reject) {
@@ -425,182 +286,9 @@ export namespace Prompt {
         }
     }
 
-    export function getMultipleInput(
-        userID: string,
-        textChannel: TextBasedChannels,
-        filter: AsyncCollectorFilter | CollectorFilter<any>,
-        numberOfInputs: number,
-        unique = true
-    ): Promise<string[]> {
-        return new Promise(async (resolve, reject) => {
-            const inputs: string[] = []
 
-            const fullFilter = !unique
-                ? filter
-                : Filter.multipleFilters({
-                    every: [filter],
-                    some: [Filter.uniqueInputFilter(inputs)],
-                })
-
-            for (let i = 0; i < numberOfInputs; i++) {
-                const prompt = `Select your ${i + 1} choice: (quit to stop)`
-
-                try {
-                    const receivedMessage = await getSameUserInput(userID, textChannel, prompt, fullFilter)
-
-                    if (!receivedMessage) {
-                        reject(null)
-                    } else {
-                        inputs.push(receivedMessage.content.trim())
-                    }
-                } catch (error) {
-                    console.error(error)
-                    reject(error)
-                }
-            }
-            resolve(inputs)
-        })
-    }
-
-    export interface optionSelectOptions {
-        customOffset?: number
-        time?: number
-        extraPrompt?: string
-    }
-    export interface optionSelectElement {
-        name: string
-        function: Function
-        args?: any
-    }
-    /*
-    TODO: configure this so that you can do a value instead, and have it select multiple values;
-    ex, for delete selection, send in array of those documents. option select selects the array values
-    and the filtered array gets passed back to caller
-     */
-    export function optionSelect(
-        userID: string,
-        textChannel: TextBasedChannels,
-        functionArray: optionSelectElement[],
-        options?: optionSelectOptions
-    ): Promise<any> {
-        const time = options?.time ? options.time : 15 * NumberConstants.mins
-        const offset = options?.customOffset ? options.customOffset : 1
-        const extraPrompt = options?.extraPrompt ? options.extraPrompt : ''
-        return new Promise(async (resolve, reject) => {
-            const optionsString =
-                extraPrompt +
-                `${extraPrompt != '' ? '\n' : ''}` +
-                'Reply with the number of the option you would like to select:\n' +
-                functionArray.map((option, i) => `${i + offset}. ${option.name}`).join('\n') +
-                `\n(or "quit" to exit)`
-
-            const optionFilter = Filter.numberRangeFilter(offset, functionArray.length)
-
-            try {
-                const userSelectionMsg = await getSameUserInput(userID, textChannel, optionsString, optionFilter, {
-                    time: time,
-                })
-
-                const optionObj = functionArray[parseInt(userSelectionMsg.content.trim()) - offset]
-                optionObj
-                    .function(optionObj.args)
-                    .then((x: any) => {
-                        resolve(x)
-                    })
-                    .catch((error: any) => {
-                        reject(error)
-                    })
-
-                // todo add the multiple functionality from below
-            } catch (error) {
-                handleGetSameUserInputError(error, reject)
-            }
-        })
-    }
-
-    export interface arraySelectOptions {
-        justShow?: boolean
-        customOffset?: number
-        time?: number
-        multiple?: boolean
-        extraStringOptions?: string[]
-        paginationOptions?: arrayToPaginatedArrayOptions
-    }
-    export interface ArraySelectResponse<T> {
-        arrayElement?: T
-        arrayElements?: T[]
-        stringCommand?: string
-    }
-    export async function arraySelect<T>(
-        userID: string,
-        textChannel: TextBasedChannels,
-        array: Array<T>,
-        mapFunction: (t: any, i?: any) => string,
-        title: string,
-        options?: arraySelectOptions
-    ): Promise<ArraySelectResponse<T>> {
-        const time = options?.time ? options.time : 15 * NumberConstants.mins
-        const offset = options?.customOffset ? options.customOffset : 1
-        const multiple = options?.multiple ? options.multiple : false
-        const justShow = options?.justShow ? options.justShow : false
-
-        return new Promise(async (resolve, reject) => {
-            try {
-                const arraySelectResponse: ArraySelectResponse<T> = {}
-                const embeds = arrayToPaginatedArray(array, title, mapFunction, options?.paginationOptions)
-                const userSelectionMsg = await getSameUserInput(
-                    userID,
-                    textChannel,
-                    { embeds: [embeds[0]] },
-                    Filter.numberRangeFilter(offset, array.length, {
-                        multipleInputAllowed: multiple,
-                    }),
-                    {
-                        time: time,
-                        extraStringOptions: options?.extraStringOptions,
-                        pagination: true,
-                        paginationEmbeds: embeds,
-                    }
-                )
-
-                if (multiple) {
-                    const elementNumbers: number[] = userSelectionMsg.content
-                        .trim()
-                        .split(spaceCommaRegex)
-                        .map((x) => parseInt(x) - offset)
-                    const arrayElements = elementNumbers.map((el) => array[el])
-                    arraySelectResponse.arrayElements = arrayElements
-                } else {
-                    arraySelectResponse.arrayElement = array[parseInt(userSelectionMsg.content.trim()) - offset]
-                }
-
-                if (!arraySelectResponse.arrayElement && !arraySelectResponse.arrayElements) {
-                    // must be string command
-                    if (options?.extraStringOptions) {
-                        const stringOption = options.extraStringOptions.find(
-                            (x) => userSelectionMsg.content.trim() == x
-                        )
-                        if (!stringOption) {
-                            throw { reason: 'Array select nothing selected', throwError: false }
-                        }
-
-                        arraySelectResponse.stringCommand = stringOption
-                    } else {
-                        throw { reason: 'Array select nothing selected', throwError: false }
-                    }
-                }
-
-                resolve(arraySelectResponse)
-            } catch (error) {
-                handleGetSameUserInputError(error, reject)
-            }
-        })
-    }
-
-    export async function setPaginationButtons(message: Message, pages: MessageEmbed[], authorID: string) {
-
-
-    }
+  
+    export async function setPaginationButtons(message: Message, pages: EmbedBuilder[], authorID: string) {}
 
     export interface arrayToPaginatedArrayOptions {
         numbered?: boolean
@@ -613,15 +301,15 @@ export namespace Prompt {
         title: string,
         mapFunction: (t: any) => string,
         options?: arrayToPaginatedArrayOptions
-    ): MessageEmbed[] {
-        const embeds: MessageEmbed[] = []
+    ): EmbedBuilder[] {
+        const embeds: EmbedBuilder[] = []
         const offset = options?.offset || 1
         const chunk = options?.chunk || 15
         const maxLength = 1000
 
         let i: number, j: number
         for (i = 0, j = arr.length; i < j; i += chunk) {
-            const fields: EmbedFieldData[] = []
+            const fields: EmbedField[] = []
             let f: string[] = []
             let curLength = 0
             const linkChunk = arr.slice(i, i + chunk)
@@ -652,7 +340,7 @@ export namespace Prompt {
                 }
             })
 
-            const message = new MessageEmbed().addFields(fields)
+            const message = new EmbedBuilder().addFields(fields)
             embeds.push(message)
         }
         return embeds

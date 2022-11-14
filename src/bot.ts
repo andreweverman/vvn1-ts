@@ -12,24 +12,23 @@
  * @since  15.10.2020
  */
 
-import { Client, Collection, Message, TextChannel, User } from 'discord.js'
 import dotenv from 'dotenv'
+dotenv.config()
+import { Client, Collection, Message, REST, Events } from 'discord.js'
 import 'fs'
-import { REST } from '@discordjs/rest'
-import { Routes } from 'discord-api-types/v9';
+import { Routes } from 'discord-api-types/v9'
 
-import { NumberConstants } from './util/constants'
-import { getCommandFiles } from './util/fiileUtil'
-import messageEvent from './events/messageEvent'
+import { getCommandFiles } from './util/fileUtil'
 import guildCreateEvent from './events/guildCreateEvent'
 import connect from './db/connect'
-import { runJobs } from './jobs/runner'
-import { Guild } from './db/controllers/guildController'
 
 import mongoose from 'mongoose'
+import { NumberConstants } from './util/constants'
+import { findOrCreateGuild } from './db/controllers/guildController'
+import {lookAtWrist} from './util/queue'
+
 //@ts-ignore
 mongoose.models = {}
-dotenv.config()
 
 export interface CommandParams {
     message: Message
@@ -52,12 +51,11 @@ export interface commandProperties {
     execute: (event: CommandParams) => any
 }
 
-
 const dev: boolean = process.env.NODE_ENV == 'dev' ? true : false
 const prod: boolean = process.env.prod == '1' ? true : false
 export const client = new Client({
-    intents: ['GUILDS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_VOICE_STATES'],
-}),
+        intents: ['Guilds', 'GuildInvites', 'GuildMembers', 'GuildMessages', 'GuildVoiceStates'],
+    }),
     commands: Collection<string, any> = new Collection(),
     cooldowns: Collection<string, Collection<string, number>> = new Collection()
 
@@ -66,46 +64,52 @@ client.once('ready', () => {
 })
 
 // loading all of the commands
-const commandsDeploy: string[] = []
+const commandsDeploy: any[] = []
 const commandFiles: string[] | null = getCommandFiles()
 if (!commandFiles) {
     !dev ? process.exit(1) : console.log('WARNING: There are no commands configured')
 } else {
     for (const file of commandFiles) {
         const command = require(file).default
-        if (!command.name) {
+        if (!command.name && command.data) {
             commands.set(command.data.name, command)
-            commandsDeploy.push(command.data.toJSON());
+            commandsDeploy.push(command.data.toJSON())
+        } else if (command.type == 2) {
+            commands.set(command.name, command)
+            commandsDeploy.push(command)
         }
     }
 }
 
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isCommand()) return;
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!(interaction.isChatInputCommand() || interaction.isUserContextMenuCommand())) return
 
-    const command = commands.get(interaction.commandName);
+    const command = commands.get(interaction.commandName)
 
-    if (!command) return;
+    if (!command) return
 
     try {
-        await command.execute(interaction);
+        await command.execute(interaction)
     } catch (error) {
-        console.error(error);
-        return interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+        console.error(error)
+        //         return interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true })
     }
-});
-
-client.on('messageCreate', async (message) => {
-    // todo get this from mongo again
-    messageEvent(message).catch((error) => {
-        // todo: use winston to log this
-        console.log(error)
-    })
+})
+client.on(Events.MessageCreate, async (message) => {
+    if (message.author.bot && message.author.id != process.env.BOT_USER_ID!) {
+        try {
+            setTimeout(() => {
+                if (message.deletable){
+                    message.delete()
+                }
+            }, NumberConstants.mins * 1)
+        } catch (err) {
+            console.log('Message was already deleted')
+        }
+    }
 })
 
-
-
-client.on('guildCreate', async (guild) => {
+client.on(Events.GuildCreate, async (guild) => {
     guildCreateEvent(guild).catch((error) => {
         console.log(error)
     })
@@ -122,15 +126,16 @@ if (!db) {
 }
 connect({ db })
 
-runJobs()
-
 function deployCommands(commands: any) {
-    const rest = new REST({ version: '9' }).setToken(process.env.TOKEN!);
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN!)
 
+    const CLIENT_ID = process.env.CLIENT_ID!
+    const GUILD_ID = process.env.GUILD_ID!
 
-    rest.put(Routes.applicationGuildCommands('563969098950639636', '135977616057434112'), { body: commands })
+    rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands })
         .then(() => console.log('Successfully registered application commands.'))
-        .catch(console.error);
+        .catch(console.error)
 }
 
-deployCommands(commandsDeploy)
+setTimeout(() => lookAtWrist(),5000)
+// deployCommands(commandsDeploy)

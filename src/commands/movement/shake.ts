@@ -9,51 +9,36 @@
  * @since  16.7.2020
  */
 
-import { CommandParams, commandProperties } from '../../bot'
-import { replyUtil } from '../../util/messageUtil'
-import { AliasUtil } from '../../util/generalUtil'
-import { Alias } from '../../db/controllers/guildController'
-import { VoiceChannel } from 'discord.js'
+import { CommandInteraction, VoiceChannel } from 'discord.js'
+import { assertGuildTextCommand } from '../../util/interactionUtil'
+import {} from '../../bot'
 
-const command: commandProperties = {
-    name: 'shake',
-    description: 'Moves everyone in current channel to the main channel',
-    aliases: ['s'],
-    usage: '[user_id|alias]+',
-    args: true,
-    cooldown: 5 * 60,
-    guildOnly: true,
-
-    async execute(e: CommandParams) {
+const command = {
+    type: 2,
+    name: 'Shake',
+    async execute(interaction: CommandInteraction) {
         try {
-            const message = e.message
-            const guild = e.message.guild!
-            const afk_channel = await Alias.lookupAlias(guild.id, 'afk')
-            if (!afk_channel) {
-                replyUtil(message, `Couldn't find a channel with alias afk. Add one with the cretealias command.`)
-                return
-            }
+            const { guild } = assertGuildTextCommand(interaction)
 
-            const afk = guild.channels.resolve(afk_channel.id) as VoiceChannel
+            const shakee = interaction.options.getUser('user')!
+            const member = guild.members.cache.get(shakee.id)!
+            const afk = guild.channels.resolve(guild.afkChannel!) as VoiceChannel
 
-            const { members } = await AliasUtil.parseChannelsAndMembers(guild, e.args, { member: message.member! })
-
-            // for each person in the voice channel, shake them around
-            members.forEach((member) => {
-                if (member.voice.channel == null) return
-                let original = member.voice.channel
-                if (member.voice.channel != null) {
-                    for (let i = 0; i < 10; i++) {
-                        let channel = i % 2 == 0 ? afk : original as VoiceChannel
-                        member.voice
-                            .setChannel(channel)
-                            .then()
-                            .catch((err) => console.error(err))
-                    }
+            if (member.voice.channel == null) return
+            let original = member.voice.channel
+            if (member.voice.channel != null) {
+                for (let i = 0; i < 10; i++) {
+                    let channel = i % 2 == 0 ? afk : (original as VoiceChannel)
+                    member.voice
+                        .setChannel(channel)
+                        .then()
+                        .catch((err: any) => console.error(err))
                 }
-            })
-        } catch (error) {
-            throw error
+            }
+        } catch (error: any) {
+            if (error.name != 'FilteredInputError') {
+                throw error
+            }
         }
     },
 }
