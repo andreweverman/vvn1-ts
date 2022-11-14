@@ -25,7 +25,8 @@ import connect from './db/connect'
 import mongoose from 'mongoose'
 import { NumberConstants } from './util/constants'
 import { findOrCreateGuild } from './db/controllers/guildController'
-import {runStatusUpdate} from './util/queue'
+import { runStatusUpdate } from './util/queue'
+import { isBotWhitelisted } from './db/controllers/botWhitelistController'
 
 //@ts-ignore
 mongoose.models = {}
@@ -96,15 +97,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 })
 client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot && message.author.id != process.env.BOT_USER_ID!) {
-        try {
-            setTimeout(() => {
-                if (message.deletable){
-                    message.delete()
-                }
-            }, NumberConstants.mins * 1)
-        } catch (err) {
-            console.log('Message was already deleted')
+    if (message.author.bot && message.author.id != process.env.BOT_USER_ID! && message.guildId) {
+        const whitelisted = await isBotWhitelisted(message.guildId, message.author.id)
+        if (!whitelisted) {
+            try {
+                setTimeout(() => {
+                    if (message.deletable) {
+                        message.delete()
+                    }
+                }, NumberConstants.mins * 1)
+            } catch (err) {
+                console.log('Message was already deleted')
+            }
         }
     }
 })
@@ -137,5 +141,5 @@ function deployCommands(commands: any) {
         .catch(console.error)
 }
 
-setTimeout(() => runStatusUpdate(),5000)
+setTimeout(() => runStatusUpdate(), 5000)
 deployCommands(commandsDeploy)
