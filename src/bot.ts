@@ -25,7 +25,7 @@ import connect from './db/connect'
 import mongoose from 'mongoose'
 import { NumberConstants } from './util/constants'
 import { findOrCreateGuild } from './db/controllers/guildController'
-import {lookAtWrist} from './util/queue'
+import {runStatusUpdate} from './util/queue'
 
 //@ts-ignore
 mongoose.models = {}
@@ -137,5 +137,5 @@ function deployCommands(commands: any) {
         .catch(console.error)
 }
 
-setTimeout(() => lookAtWrist(),5000)
-// deployCommands(commandsDeploy)
+setTimeout(() => runStatusUpdate(),5000)
+deployCommands(commandsDeploy)

@@ -57,7 +57,7 @@ export interface StatusUpdateMessage {
     timeRemaining:number
 }
 
-export function lookAtWrist() {
+export function runStatusUpdate() {
     ch.assertQueue(Queues.statusUpdate, {
         durable: true,
     })
@@ -67,7 +67,6 @@ export function lookAtWrist() {
         function (msg) {
             if (msg) {
                 let status: StatusUpdateMessage = JSON.parse(msg.content.toString())
-
                 updateStatus(status)
             }
         },
