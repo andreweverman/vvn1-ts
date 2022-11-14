@@ -18,22 +18,12 @@ import {
     GuildChannel,
     Client,
     User,
-    VoiceChannel,
-    GuildChannelResolvable,
-    MessageReaction,
-    MessageEmbed,
     ThreadChannel,
     VoiceChannelResolvable,
-    MessagePayload,
-    TextBasedChannels,
-    StageChannel,
 } from 'discord.js'
 
 import { validUserID } from './stringUtil'
 import _ from 'lodash'
-import { AliasUtil } from './generalUtil'
-import { deleteMessage } from './messageUtil'
-import { NumberConstants, ready } from './constants'
 export interface ValidUserOptions {
     mustBeBot?: boolean
     mustBeHuman?: boolean
@@ -120,71 +110,4 @@ export function moveMembers(targetChannel: VoiceChannelResolvable, members: Guil
     })
 }
 
-export interface VoiceChannelResolve {
-    voiceChannels?: (VoiceChannel|StageChannel)[]
-    moveChannel?: VoiceChannel| StageChannel
-}
-export async function getVoiceChannelFromAliases(
-    guild: Guild,
-    voiceChannelNames: string[],
-    moveMode: boolean
-): Promise<VoiceChannelResolve | null> {
-    try {
-        const { voiceChannels, moveChannel } = await AliasUtil.parseChannelsAndMembers(guild, voiceChannelNames, {
-            moveMode: moveMode,
-        })
-        if (moveChannel) {
-            return { moveChannel: moveChannel }
-        } else if (voiceChannels.length > 0) {
-            return { voiceChannels: voiceChannels }
-        } else return null
-    } catch (error) {
-        throw error
-    }
-}
 
-export async function readyCheck(
-    guild: Guild,
-    textChannel: TextBasedChannels,
-    voiceChannel: VoiceChannel | StageChannel,
-    waitTime = 1
-) {
-    const ready_members: any[] = []
-
-    const msg = new MessageEmbed()
-        .setTitle('Ready Check')
-        .addField('Instructions', 'React to this message when fully ready to go.', false)
-
-    const payload: MessagePayload = MessagePayload.create(textChannel, { embeds: [msg] })
-    const instr_msg = await textChannel.send({}).catch((err) => {
-        console.error(err)
-        return Promise.reject('Error sending')
-    })
-
-    const filter = (reaction: MessageReaction, user: User) => {
-        const notAlreaadyReady = !ready_members.find((x) => user.id == x)
-        const guildMember = guild.members.cache.get(user.id)
-        const inVoice = guildMember && guildMember.voice.channelId == voiceChannel.id
-        return notAlreaadyReady && inVoice == true
-    }
-    // not in there already and in the voice channel we are checking
-
-    return new Promise((resolve, reject) => {
-        const reaction_collector = instr_msg.createReactionCollector({ filter, time: waitTime * NumberConstants.mins })
-        reaction_collector.on('collect', (reaction, user) => {
-            ready_members.push(user)
-
-            let vc_people = extractVCMembers(voiceChannel)
-            let vcIDs = vc_people.filter((x) => !x.user.bot).map((x) => x.id)
-
-            if (vcIDs.every((x: any) => ready_members.find((y) => x == y))) {
-                reaction_collector.stop(ready)
-            }
-        })
-
-        reaction_collector.on('end', (collected, reason) => {
-            deleteMessage(instr_msg, 0)
-            reason == ready ? resolve(ready) : resolve(null)
-        })
-    })
-}

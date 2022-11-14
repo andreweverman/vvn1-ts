@@ -1,7 +1,7 @@
 
 import { timeInPast, TimeInPastOptions, dateInPast } from './timeUtil'
-import { Collection, GuildEmoji, Message } from 'discord.js'
-import { stringMatch, matchOptions, spaceCommaRegex, guildEmojiRegex } from './stringUtil'
+import { Collection, GuildEmoji, } from 'discord.js'
+import { stringMatch, matchOptions,  guildEmojiRegex } from './stringUtil'
 
 export namespace GeneralFilter {
 	export function anyFilter(): boolean {

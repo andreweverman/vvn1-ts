@@ -15,7 +15,7 @@ import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import events from 'events'
 import { mocked } from 'ts-jest/utils'
-import { Message, MessageEmbed } from 'discord.js'
+import { Message, EmbedBuilder } from 'discord.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -80,7 +80,7 @@ export namespace Mocks {
         }
     }
 
-    export function mockMessage(content: string | MessageEmbed, authorID: string, channelType: string): Message {
+    export function mockMessage(content: string | EmbedBuilder, authorID: string, channelType: string): Message {
         const msg = {
             content: content,
             author: { id: authorID },
@@ -97,7 +97,7 @@ export namespace Mocks {
         }
         return {
             type: channelType,
-            send: async (content: string | MessageEmbed) => mockMessage(content, process.env.BOT_USER_ID!, channelType),
+            send: async (content: string | EmbedBuilder) => mockMessage(content, process.env.BOT_USER_ID!, channelType),
             createMessageCollector: jest.fn().mockImplementationOnce((filter, _) => {
                 const self = new TCEventEmitter()
 
