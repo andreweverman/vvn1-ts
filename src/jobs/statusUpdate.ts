@@ -20,6 +20,7 @@ export async function updateStatus(status: StatusUpdateMessage) {
         }% ${remainingStr}`
     } else {
         updateString = `${status.movieName} has been uploaded'`
+        message.edit(updateString)
         deleteMessage(message, 30 * NumberConstants.secs)
         return
     }

@@ -27,6 +27,7 @@ import { NumberConstants } from './util/constants'
 import { findOrCreateGuild } from './db/controllers/guildController'
 import { runStatusUpdate } from './util/queue'
 import { isBotWhitelisted } from './db/controllers/botWhitelistController'
+import { deleteMessage } from './util/messageUtil'
 
 //@ts-ignore
 mongoose.models = {}
@@ -101,11 +102,7 @@ client.on(Events.MessageCreate, async (message) => {
         const whitelisted = await isBotWhitelisted(message.guildId, message.author.id)
         if (!whitelisted) {
             try {
-                setTimeout(() => {
-                    if (message.deletable) {
-                        message.delete()
-                    }
-                }, NumberConstants.mins * 1)
+                deleteMessage(message, 60)
             } catch (err) {
                 console.log('Message was already deleted')
             }
