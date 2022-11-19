@@ -52,12 +52,12 @@ const command = {
             const torrentLink = interaction.options.getString('link')!
 
             if (movieName.trim() === '') {
-                interaction.reply({ content: 'Invalid movie name', ephemeral: true })
+                interEditReplyUtil(interaction, { content: 'Invalid movie name' })
                 return
             }
 
             if (!GeneralFilter.regexFilter(torrentLink, magnetRegex, true)) {
-                interaction.reply({ content: 'Invalid magnet link', ephemeral: true })
+                interEditReplyUtil(interaction, { content: 'Invalid magnet link' })
                 return
             }
 
